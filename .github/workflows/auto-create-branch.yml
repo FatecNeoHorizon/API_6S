@@ -120,3 +120,44 @@ jobs:
               body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Issue:** #${issueNum}`
             });
 
+      - name: Add issue to Projects v2
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNum = ${{ steps.branch_info.outputs.issue_num }};
+            const projectId = '3'; // API_6S Project ID
+            
+            try {
+              // Buscar o ID da issue usando GraphQL
+              const issueQuery = await github.graphql(`
+                query {
+                  repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                    issue(number: ${issueNum}) {
+                      id
+                    }
+                  }
+                }
+              `);
+              
+              const issueId = issueQuery.repository.issue.id;
+              
+              // Adicionar issue ao projeto usando GraphQL
+              const addToProjectMutation = await github.graphql(`
+                mutation {
+                  addProjectV2ItemById(input: {projectId: "PVT_${projectId}", contentId: "${issueId}"}) {
+                    item {
+                      id
+                    }
+                  }
+                }
+              `);
+              
+              if (addToProjectMutation.addProjectV2ItemById.item) {
+                console.log(`✅ Issue #${issueNum} adicionada ao Project API_6S`);
+              }
+            } catch (error) {
+              console.log(`⚠️ Erro ao adicionar issue ao project: ${error.message}`);
+              console.log(`Dica: A issue precisará ser adicionada manualmente ao Projects`);
+            }
+

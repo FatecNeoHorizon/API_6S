@@ -1,0 +1,144 @@
+name: 📘 User Story
+description: Template padrão para criação de User Story (Scrum + DevOps)
+title: "[SPRINT XX] - "
+labels: ["type:story"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: "## 📝 User Story"
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: "Descrição da User Story"
+      description: "Descreva a história no formato padrão"
+      value: |
+        Como **<tipo de usuário>**
+        Eu quero **<ação/objetivo>**
+        Para que **<benefício/valor gerado>**
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📌 Contexto"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Contexto"
+      description: "Problema, cenário atual e motivação da mudança"
+      placeholder: "Descreva o contexto dessa história..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## ✅ Critérios de Aceite"
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: "Critérios de Aceite"
+      description: "O que deve ser feito para considerar a história completa?"
+      value: |
+        - [ ] Critério 1
+        - [ ] Critério 2
+        - [ ] Critério 3
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📊 Requisitos Não Funcionais (DevOps)"
+
+  - type: checkboxes
+    id: devops-requirements
+    attributes:
+      label: "Requisitos DevOps"
+      description: "Checklist de requisitos não funcionais"
+      options:
+        - label: "Pipeline CI passando (build + testes + lint)"
+        - label: "Métricas expostas (ex: endpoint `/metrics`)"
+        - label: "Monitoramento configurado"
+        - label: "Documentação atualizada"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: "## 📦 Impacto Técnico"
+
+  - type: textarea
+    id: affected-services
+    attributes:
+      label: "Serviços Afetados"
+      description: "Quais serviços/módulos serão impactados?"
+      placeholder: "Ex: auth-service, payment-api, frontend, etc"
+
+  - type: textarea
+    id: database-impact
+    attributes:
+      label: "Impacto no Banco de Dados"
+      description: "Há mudanças no schema, migrations necessárias?"
+      placeholder: "Descreva alterações no BD ou deixe em branco..."
+
+  - type: textarea
+    id: external-apis
+    attributes:
+      label: "APIs Externas"
+      description: "Integração com APIs externas ou terceiros?"
+      placeholder: "Integração necessária com quais serviços?"
+
+  - type: textarea
+    id: infrastructure
+    attributes:
+      label: "Infraestrutura (IaC)"
+      description: "Mudanças na infraestrutura, variáveis de ambiente?"
+      placeholder: "Alterações no Terraform, Docker, etc..."
+
+  - type: markdown
+    attributes:
+      value: "## 🔐 Segurança"
+
+  - type: checkboxes
+    id: security-checklist
+    attributes:
+      label: "Checklist de Segurança"
+      description: "Validações de segurança a considerar"
+      options:
+        - label: "Validação de inputs implementada"
+        - label: "Autenticação/Autorização revisada"
+        - label: "Dados sensíveis protegidos"
+        - label: "Vulnerabilidades OWASP verificadas"
+    validations:
+      required: false
+
+  - type: text
+    id: sprint
+    attributes:
+      label: "Sprint"
+      description: "Em qual sprint esta história será desenvolvida?"
+      placeholder: "SPRINT 01, SPRINT 02, etc"
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Prioridade"
+      description: "Qual é a prioridade desta história?"
+      options:
+        - Baixa
+        - Média
+        - Alta
+        - Crítica
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: "Notas Adicionais"
+      description: "Qualquer informação adicional relevante"
+      placeholder: "Informações extras, links úteis, etc..."

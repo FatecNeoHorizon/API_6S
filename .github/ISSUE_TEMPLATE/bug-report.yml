@@ -67,7 +67,7 @@ body:
     validations:
       required: true
 
-  - type: text
+  - type: input
     id: version
     attributes:
       label: "Versão da Aplicação"
@@ -113,8 +113,8 @@ body:
   - type: markdown
     attributes:
       value: "## 🛠 Análise Técnica (Opcional)"
-
-  - type: text
+      
+  - type: input
     id: affected-service
     attributes:
       label: "Serviço Impactado"

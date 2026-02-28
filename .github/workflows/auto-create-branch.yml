@@ -8,7 +8,7 @@ jobs:
   create-branch:
     runs-on: ubuntu-latest
     permissions:
-      issues: read
+      issues: write
       contents: write
     
     steps:

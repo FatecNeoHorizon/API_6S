@@ -1,0 +1,121 @@
+name: "Auto Create Branch from Issue"
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract branch info
+        id: branch_info
+        run: |
+          ISSUE_NUM=${{ github.event.issue.number }}
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_LABELS="${{ join(github.event.issue.labels.*.name) }}"
+          
+          # Remove prefixos [TIPO] do título
+          CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
+          
+          # Converter para kebab-case e remover caracteres inválidos
+          SLUG=$(echo "$CLEAN_TITLE" | \
+            tr '[:upper:]' '[:lower:]' | \
+            sed 's/[^a-z0-9]/-/g' | \
+            sed 's/-\+/-/g' | \
+            sed 's/^-\|-$//')
+          
+          # Incluir número do issue na branch: numero-slug
+          BRANCH_NAME="${ISSUE_NUM}-${SLUG}"
+          # Determinar tipo baseado nos labels
+          TYPE="feature"
+          
+          # Verificar labels type:xxx (novo padrão)
+          if [[ "$ISSUE_LABELS" =~ type:bug ]]; then
+            TYPE="bugfix"
+          elif [[ "$ISSUE_LABELS" =~ type:hotfix ]] || [[ "$ISSUE_LABELS" == *"urgent"* ]]; then
+            TYPE="hotfix"
+          elif [[ "$ISSUE_LABELS" =~ type:documentation ]]; then
+            TYPE="docs"
+          elif [[ "$ISSUE_LABELS" =~ type:feature ]]; then
+            TYPE="feature"
+          elif [[ "$ISSUE_LABELS" =~ type:story ]]; then
+            TYPE="feature"
+          # Labels antigos (fallback para compatibilidade)
+          elif [[ "$ISSUE_LABELS" == *"bugfix"* ]] || [[ "$ISSUE_LABELS" == *"type:bug"* ]]; then
+            TYPE="bugfix"
+          elif [[ "$ISSUE_LABELS" == *"docs"* ]] || [[ "$ISSUE_LABELS" == *"type:documentation"* ]]; then
+            TYPE="docs"
+          elif [[ "$ISSUE_LABELS" == *"refactor"* ]]; then
+            TYPE="refactor"
+          elif [[ "$ISSUE_LABELS" == *"perf"* ]]; then
+            TYPE="perf"
+          elif [[ "$ISSUE_LABELS" == *"test"* ]]; then
+            TYPE="test"
+          elif [[ "$ISSUE_LABELS" == *"chore"* ]]; then
+            TYPE="chore"
+          fi
+          
+          FULL_BRANCH_NAME="${TYPE}/${BRANCH_NAME}"
+          
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          echo "branch=$FULL_BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "issue_num=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          
+          echo "📌 Branch a criar: $FULL_BRANCH_NAME"
+          echo "📝 Tipo: $TYPE"
+          echo "🔢 Issue: #$ISSUE_NUM"
+          echo "🏷️  Labels: $ISSUE_LABELS"
+
+      - name: Create branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BRANCH_EXISTS=$(git ls-remote --heads origin ${{ steps.branch_info.outputs.branch }} | wc -l)
+          
+          if [ "$BRANCH_EXISTS" -eq 0 ]; then
+            git checkout -b ${{ steps.branch_info.outputs.branch }}
+            git push -u origin ${{ steps.branch_info.outputs.branch }}
+            echo "✅ Branch criada com sucesso: ${{ steps.branch_info.outputs.branch }}"
+          else
+            echo "⚠️  Branch já existe: ${{ steps.branch_info.outputs.branch }}"
+          fi
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.branch_info.outputs.branch }}';
+            const issueNum = ${{ steps.branch_info.outputs.issue_num }};
+            const branchType = '${{ steps.branch_info.outputs.type }}';
+            
+            const typeEmojis = {
+              'feature': '✨',
+              'bugfix': '🐛',
+              'hotfix': '🚨',
+              'docs': '📚',
+              'refactor': '♻️',
+              'perf': '⚡',
+              'test': '🧪',
+              'chore': '🔧'
+            };
+            
+            const emoji = typeEmojis[branchType] || '🌳';
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Issue:** #${issueNum}`
+            });
+

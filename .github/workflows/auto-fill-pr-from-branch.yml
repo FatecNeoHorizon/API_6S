@@ -1,0 +1,99 @@
+name: "Auto-Fill PR from Branch"
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  extract-issue-and-update-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Extract issue number from branch
+        id: extract
+        run: |
+          # Branch format: tipo/123-descricao
+          BRANCH_NAME="${{ github.head_ref }}"
+          
+          # Extrair número (primeiro número após a barra)
+          ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '(?<=/)\d+' | head -1)
+          
+          # Extrair tipo
+          TYPE=$(echo "$BRANCH_NAME" | cut -d'/' -f1)
+          
+          # Se não encontrou número, tentar alternativa
+          if [ -z "$ISSUE_NUM" ]; then
+            ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '^\d+' | head -1)
+          fi
+          
+          echo "issue_num=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "branch_type=$TYPE" >> $GITHUB_OUTPUT
+          
+          echo "📌 Branch: $BRANCH_NAME"
+          echo "🔢 Issue: #$ISSUE_NUM"
+          echo "📦 Tipo: $TYPE"
+
+      - name: Comment on PR with issue info
+        if: steps.extract.outputs.issue_num != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNum = '${{ steps.extract.outputs.issue_num }}';
+            const branchType = '${{ steps.extract.outputs.branch_type }}';
+            const prNumber = context.issue.number;
+            
+            const typeEmojis = {
+              'feature': '✨',
+              'bugfix': '🐛',
+              'hotfix': '🚨',
+              'docs': '📚',
+              'refactor': '♻️',
+              'perf': '⚡',
+              'test': '🧪',
+              'chore': '🔧'
+            };
+            
+            const emoji = typeEmojis[branchType] || '🌳';
+            
+            // Adicionar comment informativo
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `# ${emoji} Informações de Rastreio\n\n**Issue Relacionada:** #${issueNum}\n**Tipo:** \`${branchType}\`\n**Branch:** \`${{ github.head_ref }}\`\n\n**Ao fazer merge, adicione na descrição do PR:**\n\\\`\\\`\\\`\nCloses #${issueNum}\n\\\`\\\`\\\``
+            });
+
+      - name: Update PR body with close link
+        if: steps.extract.outputs.issue_num != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNum = '${{ steps.extract.outputs.issue_num }}';
+            const prNumber = context.issue.number;
+            
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            let body = pr.data.body || '';
+            
+            // Se ainda não tem "Closes", adicionar
+            if (!body.includes('Closes #')) {
+              body += `\n\nCloses #${issueNum}`;
+              
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                body: body
+              });
+              
+              console.log(`✅ PR #${prNumber} atualizado com Closes #${issueNum}`);
+            } else {
+              console.log(`ℹ️ PR já contém Closes`);
+            }

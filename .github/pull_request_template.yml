@@ -8,13 +8,22 @@ body:
 
   - type: markdown
     attributes:
-      value: "### 🔗 Issue Relacionada"
+      value: "### 🔗 Issue Relacionada (Auto-detectada)"
 
-  - type: text
+  - type: markdown
+    attributes:
+      value: |
+        A issue é **detectada automaticamente** da branch!
+        
+        **Branch:** `feature/123-descricao` → **Issue:** #123
+        
+        Basta confirmar que está correto ou editar se necessário.
+
+  - type: input
     id: issue-number
     attributes:
       label: "Número da Issue"
-      description: "Qual issue este PR resolve? (ex: #123)"
+      description: "Auto-preenchido da branch. Editar se necessário."
       placeholder: "Closes #..."
     validations:
       required: true
@@ -70,14 +79,14 @@ body:
     validations:
       required: true
 
-  - type: text
+  - type: input
     id: coverage-before
     attributes:
       label: "Cobertura Antes (%)"
       description: "Cobertura de testes antes das mudanças"
       placeholder: "Ex: 75"
 
-  - type: text
+  - type: input
     id: coverage-after
     attributes:
       label: "Cobertura Depois (%)"
@@ -159,28 +168,28 @@ body:
     attributes:
       value: "## 📊 Impacto nas Métricas DORA"
 
-  - type: text
+  - type: input
     id: lead-time
     attributes:
       label: "Lead Time (dias)"
       description: "Tempo do commit até deploy em produção"
       placeholder: "Ex: 3"
 
-  - type: text
+  - type: input
     id: deployment-frequency
     attributes:
       label: "Deployment Frequency"
       description: "Frequência de deployments esperada"
       placeholder: "Ex: Diária, Semanal, etc"
 
-  - type: text
+  - type: input
     id: change-failure-rate
     attributes:
       label: "Change Failure Rate (%)"
       description: "Taxa esperada de falha desta mudança"
       placeholder: "Ex: 5"
 
-  - type: text
+  - type: input
     id: mttr
     attributes:
       label: "MTTR (horas)"
@@ -191,26 +200,179 @@ body:
     attributes:
       value: "## 🏷️ Scrum"
 
-  - type: text
+  - type: input
     id: sprint
     attributes:
       label: "Sprint"
       description: "Em qual sprint está sendo desenvolvido?"
       placeholder: "SPRINT 01"
 
-  - type: text
+  - type: input
     id: story-points
     attributes:
       label: "Story Points"
       description: "Quantos story points vale essa tarefa?"
       placeholder: "Ex: 5, 8, 13"
 
-  - type: text
+  - type: input
     id: reviewers
     attributes:
       label: "Revisores"
       description: "Quem deve revisar este PR? (@username)"
       placeholder: "@user1, @user2"
+
+  - type: checkboxes
+    id: definition-of-done
+    attributes:
+      label: "Definition of Done"
+      description: "Atende todos os critérios de conclusão?"
+      options:
+        - label: "Todos os critérios de Definition of Done foram atendidos"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📸 Evidências"
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Prints, Logs ou Outputs"
+      description: "Adicione screenshots, logs ou outputs relevantes"
+      placeholder: "Cole links de prints, logs ou outputs aqui..."
+
+  - type: markdown
+    attributes:
+      value: "---"
+
+  - type: markdown
+    attributes:
+      value: "## ✅ Checklist Final"
+
+  - type: checkboxes
+    id: final-checklist
+    attributes:
+      label: "Antes de fazer o merge"
+      options:
+        - label: "Meu código segue o style guide do projeto"
+        - label: "Revisei meu próprio código antes de submeter"
+        - label: "Adicionei comentários para código complexo, especialmente em algo não óbvio"
+        - label: "Atualizei a documentação conforme necessário"
+        - label: "Minhas mudanças não geram novos warnings"
+        - label: "Adicionei testes que provam que meu fix/feature funciona"
+        - label: "Os testes novos e existentes passam com minhas mudanças"
+
+  - type: markdown
+    attributes:
+      value: "### 📝 Descrição"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Descrição das Mudanças"
+      description: "Explique o que foi feito e por quê. Seja detalhado."
+      placeholder: "Descreva as mudanças implementadas..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "### 📦 Tipo de Mudança"
+
+  - type: dropdown
+    id: change-type
+    attributes:
+      label: "Tipo de Mudança"
+      description: "Qual melhor descreve este PR?"
+      options:
+        - Feature (Nova funcionalidade)
+        - Bugfix (Correção de bug)
+        - Refactor (Refatoração sem mudança de funcionamento)
+        - Hotfix (Correção urgente em produção)
+        - Melhoria de Performance
+        - Atualização de Infraestrutura (IaC)
+        - Documentação
+        - Outro
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🧪 Testes"
+
+  - type: checkboxes
+    id: testing-checklist
+    attributes:
+      label: "Testes Realizados"
+      description: "Quais testes foram adicionados ou executados?"
+      options:
+        - label: "Testes unitários adicionados/atualizados"
+        - label: "Testes de integração"
+        - label: "Testes manuais realizados"
+        - label: "Cobertura mantida ou aumentada"
+    validations:
+      required: true
+
+  - type: input
+    id: coverage-before
+    attributes:
+      label: "Cobertura Antes (%)"
+      description: "Cobertura de testes antes das mudanças"
+      placeholder: "Ex: 75"
+
+  - type: input
+    id: coverage-after
+    attributes:
+      label: "Cobertura Depois (%)"
+      description: "Cobertura de testes depois das mudanças"
+      placeholder: "Ex: 82"
+
+  - type: markdown
+    attributes:
+      value: "## 🔍 Checklist DevOps"
+
+  - type: markdown
+    attributes:
+      value: "### CI/CD"
+
+  - type: checkboxes
+    id: cicd-checklist
+    attributes:
+      label: "CI/CD"
+      description: "Validações de CI/CD"
+      options:
+        - label: "Pipeline passou com sucesso"
+        - label: "Build validado"
+        - label: "Linter sem erros (lint passing)"
+        - label: "Scan de segurança executado"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "### 🏗️ Infraestrutura"
+
+  - type: checkboxes
+    id: infrastructure-checklist
+    attributes:
+      label: "Infraestrutura (IaC)"
+      description: "Mudanças de infraestrutura"
+      options:
+        - label: "Código de infraestrutura versionado (Terraform/Bicep)"
+        - label: "Variáveis sensíveis protegidas"
+        - label: "Documentação de infraestrutura atualizada"
+
+  - type: markdown
+    attributes:
+      value: "## 🏷️ Scrum"
+
+  - type: input
+    id: sprint
+    attributes:
+      label: "Sprint"
+      description: "Em qual sprint está sendo desenvolvido?"
+      placeholder: "SPRINT 01"
 
   - type: checkboxes
     id: definition-of-done

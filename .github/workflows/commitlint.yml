@@ -1,0 +1,20 @@
+name: Validar Commits (CommitLint)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar commits
+        uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: .commitlintrc.json
+          helpURL: "https://www.conventionalcommits.org/"

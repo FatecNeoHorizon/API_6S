@@ -27,9 +27,9 @@ jobs:
           # Remove prefixos [TIPO] do título
           CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
           
-          # Converter para kebab-case: normalizar acentos → remover caracteres inválidos
+          # Converter para kebab-case: remover acentos → lowercase → remover caracteres inválidos
           SLUG=$(echo "$CLEAN_TITLE" | \
-            iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null || cat | \
+            tr 'ÀÁÂÃÄÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝÇÑ' 'aaaaaeeeeiiiiooooouu​uycn' | \
             tr '[:upper:]' '[:lower:]' | \
             sed 's/[^a-z0-9]/-/g' | \
             sed 's/-\+/-/g' | \

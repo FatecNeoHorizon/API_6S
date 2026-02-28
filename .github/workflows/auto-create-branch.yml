@@ -28,29 +28,18 @@ jobs:
           CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
           
           # Converter para kebab-case usando Python (mais robusto)
-          SLUG=$(python3 << 'EOF'
+          SLUG=$(python3 -c "
 import unicodedata
 import re
-import sys
 
-title = """$CLEAN_TITLE"""
-
-# Normalizar Unicode (remove acentos)
+title = '''$CLEAN_TITLE'''
 nfd = unicodedata.normalize('NFD', title)
 slug = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
-
-# Lowercase
 slug = slug.lower()
-
-# Remover caracteres inválidos, substituir espaços por hífens
 slug = re.sub(r'[^a-z0-9]+', '-', slug)
-
-# Remover hífens no início/fim
 slug = slug.strip('-')
-
 print(slug)
-EOF
-)
+")
           
           # Incluir número do issue na branch: numero-slug
           BRANCH_NAME="${ISSUE_NUM}-${SLUG}"

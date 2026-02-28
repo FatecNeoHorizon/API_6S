@@ -2,7 +2,7 @@ name: "Auto Create Branch from Issue"
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
 
 jobs:
   create-branch:

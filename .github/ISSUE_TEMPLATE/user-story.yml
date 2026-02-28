@@ -116,7 +116,7 @@ body:
     validations:
       required: false
 
-  - type: text
+  - type: input
     id: sprint
     attributes:
       label: "Sprint"

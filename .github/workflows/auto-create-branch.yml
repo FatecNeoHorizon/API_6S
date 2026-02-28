@@ -27,19 +27,13 @@ jobs:
           # Remove prefixos [TIPO] do título
           CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
           
-          # Converter para kebab-case usando Python (mais robusto)
-          SLUG=$(python3 -c "
-import unicodedata
-import re
-
-title = '''$CLEAN_TITLE'''
-nfd = unicodedata.normalize('NFD', title)
-slug = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
-slug = slug.lower()
-slug = re.sub(r'[^a-z0-9]+', '-', slug)
-slug = slug.strip('-')
-print(slug)
-")
+          # Converter para kebab-case usando sed (simples e robusto)
+          SLUG=$(echo "$CLEAN_TITLE" | \
+            sed 's/[àáâãä]/a/g; s/[èéêë]/e/g; s/[ìíîï]/i/g; s/[òóôõö]/o/g; s/[ùúûü]/u/g; s/[ç]/c/g; s/[ñ]/n/g' | \
+            tr '[:upper:]' '[:lower:]' | \
+            sed 's/[^a-z0-9]/-/g' | \
+            sed 's/-\+/-/g' | \
+            sed 's/^-\|-$//')
           
           # Incluir número do issue na branch: numero-slug
           BRANCH_NAME="${ISSUE_NUM}-${SLUG}"

@@ -1,0 +1,78 @@
+name: "🚨 Hotfix"
+description: "Correção crítica em produção (Prioridade máxima)"
+title: "[HOTFIX] - "
+labels: ["type:hotfix", "urgent"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: "## 🔴 Problema Crítico"
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "O que está quebrado em produção?"
+      description: "Descreva o problema crítico que afeta produção"
+      placeholder: "Ex: API retornando erro 500 para todos os usuários..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📊 Impacto"
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: "Impacto"
+      description: "Quantos usuários/funcionalidades são afetadas?"
+      placeholder: "Ex: 100% dos usuários não conseguem fazer login..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severidade"
+      description: "Qual é a severidade?"
+      options:
+        - Alta
+        - Crítica
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## ✅ Solução Proposta"
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Como corrigir?"
+      description: "Descreva a solução proposta"
+      placeholder: "Ex: Revalidar token antes de usar..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🧪 Validação"
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: "Como validar o fix?"
+      description: "Passos para confirmar que o problema foi resolvido"
+      placeholder: "Ex: Fazer login e verificar se o token está válido..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: "Plano de Rollback"
+      description: "Se necessário, como revertir esta mudança?"
+      placeholder: "Ex: Revert do commit ou redeploy da versão anterior..."
+    validations:
+      required: true

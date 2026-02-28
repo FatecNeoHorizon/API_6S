@@ -122,6 +122,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Issue:** #${issueNum}`
+              body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/numero-descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Branch:** \`${branchName}\`\n**Issue:** #${issueNum}`
             });
 

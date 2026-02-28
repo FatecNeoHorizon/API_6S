@@ -1,0 +1,122 @@
+name: 🐞 Bug Report
+description: Reportar defeito seguindo padrão Scrum + DevOps
+title: "[BUG] - "
+labels: ["type:bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: "## 🐛 Descrição do Bug"
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: "🔎 Comportamento Atual"
+      description: "O que está acontecendo? Descreva o problema em detalhes."
+      placeholder: "Descreva o comportamento incorreto aqui..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "✅ Comportamento Esperado"
+      description: "Como deveria ser? O que deveria acontecer?"
+      placeholder: "Descreva o comportamento correto esperado..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🔁 Passos para Reproduzir"
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Passos para Reproduzir"
+      description: "Liste os passos necessários para reproduzir o bug"
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "📷 Evidências"
+      description: "Logs, screenshots, stacktrace ou qualquer informação que ajude"
+      placeholder: "Cole logs, prints ou stacktrace aqui..."
+
+  - type: markdown
+    attributes:
+      value: "## 🌍 Ambiente"
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: "Ambiente"
+      description: "Em qual ambiente o bug foi encontrado?"
+      options:
+        - Desenvolvimento
+        - QA
+        - Staging
+        - Produção
+    validations:
+      required: true
+
+  - type: text
+    id: version
+    attributes:
+      label: "Versão da Aplicação"
+      description: "Versão ou hash do commit"
+      placeholder: "v1.0.0 ou abc1234def"
+
+
+  - type: markdown
+    attributes:
+      value: "## 📊 Impacto"
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severidade"
+      description: "Qual é a severidade deste bug?"
+      options:
+        - Baixa
+        - Média
+        - Alta
+        - Crítica
+    validations:
+      required: true
+
+  - type: textarea
+    id: business-impact
+    attributes:
+      label: "Impacto no Negócio"
+      description: "Qual é o impacto desta falha para o usuário/negócio?"
+      placeholder: "Descreva o impacto..."
+
+  - type: checkboxes
+    id: customer-impact
+    attributes:
+      label: "Afeta Clientes?"
+      description: "Este bug impacta os clientes?"
+      options:
+        - label: "Sim, afeta clientes em produção"
+        - label: "Não afeta clientes"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🛠 Análise Técnica (Opcional)"
+
+  - type: text
+    id: affected-service
+    attributes:
+      label: "Serviço Impactado"
+      description: "Qual serviço/módulo está afetado?"
+      placeholder: "Ex: auth-service, payment-api, etc"

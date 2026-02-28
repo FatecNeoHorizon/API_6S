@@ -82,14 +82,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          BRANCH_EXISTS=$(git ls-remote --heads origin ${{ steps.branch_info.outputs.branch }} | wc -l)
+          # Limpar qualquer mudança no working directory
+          git reset --hard HEAD
+          git clean -fd
+          
+          BRANCH="${{ steps.branch_info.outputs.branch }}"
+          BRANCH_EXISTS=$(git ls-remote --heads origin "$BRANCH" | wc -l)
           
           if [ "$BRANCH_EXISTS" -eq 0 ]; then
-            git checkout -b ${{ steps.branch_info.outputs.branch }}
-            git push -u origin ${{ steps.branch_info.outputs.branch }}
-            echo "✅ Branch criada com sucesso: ${{ steps.branch_info.outputs.branch }}"
+            git checkout -b "$BRANCH"
+            git push -u origin "$BRANCH"
+            echo "✅ Branch criada com sucesso: $BRANCH"
           else
-            echo "⚠️  Branch já existe: ${{ steps.branch_info.outputs.branch }}"
+            echo "⚠️  Branch já existe: $BRANCH"
           fi
 
       - name: Comment on issue

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
@@ -13,12 +14,11 @@ import com.zeus.burndown.service.BurndownChartGenerator;
 import com.zeus.burndown.service.BurndownDataMapper;
 import com.zeus.burndown.service.ProjectDataProvider;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class ScheduledBurndownChartGenerator {
+public class ScheduledBurndownChartGenerator implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(ScheduledBurndownChartGenerator.class);
 
@@ -26,8 +26,8 @@ public class ScheduledBurndownChartGenerator {
     private final BurndownDataMapper burndownDataMapper;
     private final BurndownChartGenerator burndownChartGenerator;
 
-    @PostConstruct
-    public void genereteDailyChart(){
+    @Override
+    public void run(String... args) throws Exception {
         logger.info("🔄 [BURNDOWN] Iniciando geração de gráfico de burndown...");
 
         try {

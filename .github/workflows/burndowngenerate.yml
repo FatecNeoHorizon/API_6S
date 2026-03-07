@@ -1,0 +1,51 @@
+name: Burndown Chart Generation
+
+on:
+  schedule:
+    # Executa diariamente às 16:30 (UTC)
+    - cron: '30 17 * * *'
+  
+  workflow_dispatch:
+    # Permite execução manual
+
+jobs:
+  generate-burndown:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      
+      - name: Build with Maven
+        working-directory: ./burndown
+        run: mvn clean package -DskipTests
+      
+      - name: Run Burndown Chart Generation
+        working-directory: ./burndown
+        env:
+          GITHUB_TOKEN: ${{ secrets.ISSUE_TOKEN_API }}
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ ERRO: ISSUE_TOKEN_API secret não está configurado!"
+            exit 1
+          fi
+          java -jar target/burndown-0.0.1-SNAPSHOT.jar
+
+      - name: Commit and Push changes
+        run: |
+          cd burndown
+          if [ -n "$(git status --porcelain)" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add src/main/resources/static/
+            git commit -m "chore: atualizar gráfico de burndown"
+            git push
+          else
+            echo "Nenhuma mudança para commit"
+          fi

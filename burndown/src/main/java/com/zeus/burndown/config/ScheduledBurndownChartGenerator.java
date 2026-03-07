@@ -3,7 +3,6 @@ package com.zeus.burndown.config;
 import java.io.File;
 import java.util.List;
 
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
@@ -12,10 +11,10 @@ import com.zeus.burndown.service.BurndownChartGenerator;
 import com.zeus.burndown.service.BurndownDataMapper;
 import com.zeus.burndown.service.ProjectDataProvider;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
 @Component
-@EnableScheduling
 @RequiredArgsConstructor
 public class ScheduledBurndownChartGenerator {
 
@@ -23,6 +22,7 @@ public class ScheduledBurndownChartGenerator {
     private final BurndownDataMapper burndownDataMapper;
     private final BurndownChartGenerator burndownChartGenerator;
 
+    @PostConstruct
     public void genereteDailyChart(){
 
         try {

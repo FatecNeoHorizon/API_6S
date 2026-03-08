@@ -51,23 +51,23 @@ public class BurndownDataMapper {
         LocalDate today = LocalDate.now();
         SprintPeriod activeSprint = findActiveSprint(today);
         
-        System.out.println("\n[DEBUG MAPPER] ====================================");
-        System.out.println("[DEBUG MAPPER] Data atual: " + today);
-        System.out.println("[DEBUG MAPPER] Sprint ativa: " + activeSprint.name);
-        System.out.println("[DEBUG MAPPER] Período: " + activeSprint.start + " até " + activeSprint.end);
-        System.out.println("[DEBUG MAPPER] Total de issues extraídas: " + allIssues.size());
+        logger.debug("[DEBUG MAPPER] ====================================");
+        logger.debug("[DEBUG MAPPER] Data atual: {}", today);
+        logger.debug("[DEBUG MAPPER] Sprint ativa: {}", activeSprint.name);
+        logger.debug("[DEBUG MAPPER] Período: {} até {}", activeSprint.start, activeSprint.end);
+        logger.debug("[DEBUG MAPPER] Total de issues extraídas: {}", allIssues.size());
         
         if (!allIssues.isEmpty()) {
-            System.out.println("[DEBUG MAPPER] Detalhes das issues:");
+            logger.debug("[DEBUG MAPPER] Detalhes das issues:");
             allIssues.forEach(issue -> {
                 LocalDate created = toLocalDate(issue.getCreatedAt());
                 LocalDate closed = issue.getClosedAt() != null ? toLocalDate(issue.getClosedAt()) : null;
-                System.out.println("  - Criada: " + created + " | Fechada: " + closed + " | Estado: " + issue.getState());
+                logger.debug("  - Criada: {} | Fechada: {} | Estado: {}", created, closed, issue.getState());
             });
         } else {
-            System.out.println("[DEBUG MAPPER] ❌ NENHUMA ISSUE FOI EXTRAÍDA!");
+            logger.debug("[DEBUG MAPPER] NENHUMA ISSUE FOI EXTRAÍDA!");
         }
-        System.out.println("[DEBUG MAPPER] ====================================\n");
+        logger.debug("[DEBUG MAPPER] ====================================");
 
         result.add(generateSprint(activeSprint.name,
                 activeSprint.start,

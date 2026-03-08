@@ -8,9 +8,14 @@ on:
   workflow_dispatch:
     # Permite execução manual
 
+permissions:
+  contents: write
+  issues: read
+
 jobs:
   generate-burndown:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
       - name: Checkout code
@@ -35,17 +40,18 @@ jobs:
             echo "❌ ERRO: ISSUE_TOKEN_API secret não está configurado!"
             exit 1
           fi
+
           java -jar target/burndown-0.0.1-SNAPSHOT.jar
 
       - name: Commit and Push changes
+        working-directory: ./burndown
         run: |
-          cd burndown
-          if [ -n "$(git status --porcelain)" ]; then
+          if ! git diff --quiet -- src/main/resources/static/burndown.png; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add src/main/resources/static/
+            git add src/main/resources/static/burndown.png
             git commit -m "chore: atualizar gráfico de burndown"
             git push
           else
-            echo "Nenhuma mudança para commit"
+            echo "Nenhuma mudança no gráfico para commit"
           fi

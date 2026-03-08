@@ -109,10 +109,16 @@
 
 </br>
 
-## Gráfico Burndow
+## Gráfico Burndown
 
 <img src="burndown/src/main/resources/static/burndown.png">
 
 </br>
 
 ## Tecnologias Utilizadas
+
+## Burndown Automatico
+
+Guia completo de uso, execução local e CI:
+
+- `burndown/README.md`

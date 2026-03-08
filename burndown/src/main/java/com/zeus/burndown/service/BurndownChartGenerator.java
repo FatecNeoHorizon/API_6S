@@ -107,10 +107,6 @@ public class BurndownChartGenerator {
 
         renderer.setSeriesShapesVisible(0, false);
 
-        /*
-         * LINHA REAL
-         */
-
         renderer.setSeriesPaint(1, new Color(33,150,243));
 
         renderer.setSeriesStroke(
@@ -129,10 +125,6 @@ public class BurndownChartGenerator {
 
         renderer.setSeriesShapesVisible(1, true);
 
-        /*
-         * PLOT
-         */
-
         XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
 
         plot.setBackgroundPaint(new Color(250,250,250));
@@ -147,9 +139,6 @@ public class BurndownChartGenerator {
 
         plot.setOutlineVisible(false);
 
-        /*
-         * ESPESSURA DOS EIXOS
-         */
 
         plot.getDomainAxis().setAxisLineStroke(new BasicStroke(2f));
         plot.getRangeAxis().setAxisLineStroke(new BasicStroke(2f));
@@ -161,7 +150,6 @@ public class BurndownChartGenerator {
                 true
         );
 
-        // Subtítulo
         chart.addSubtitle(new TextTitle(
                 "Burndown Chart - Neo Horizon",
                 new Font("SansSerif", Font.PLAIN, 24)
@@ -169,7 +157,6 @@ public class BurndownChartGenerator {
 
         chart.setBackgroundPaint(Color.WHITE);
 
-        // Anti-alias
         chart.getRenderingHints().put(
                 RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON

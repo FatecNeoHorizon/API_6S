@@ -2,11 +2,15 @@ name: Burndown Chart Generation
 
 on:
   schedule:
-    # Executa diariamente às 16:30 (UTC)
-    - cron: '30 17 * * *'
+    # Executa diariamente às 18:45 (UTC)
+    - cron: '45 18 * * *'
   
   workflow_dispatch:
     # Permite execução manual
+
+concurrency:
+  group: burndown-generation-main
+  cancel-in-progress: false
 
 permissions:
   contents: write

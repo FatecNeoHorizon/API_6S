@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
@@ -23,7 +24,9 @@ public class BurndownApplication {
 	private static final String DEFAULT_OUTPUT_PATH = "src/main/resources/static/burndown.png";
 
 	public static void main(String[] args) {
-		ConfigurableApplicationContext context = SpringApplication.run(BurndownApplication.class, args);
+		SpringApplication application = new SpringApplication(BurndownApplication.class);
+		application.setWebApplicationType(WebApplicationType.NONE);
+		ConfigurableApplicationContext context = application.run(args);
 
 		int exitCode = runBurndown(context);
 		int springExitCode = SpringApplication.exit(context, () -> exitCode);

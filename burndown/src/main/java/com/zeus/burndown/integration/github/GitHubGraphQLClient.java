@@ -24,17 +24,6 @@ public class GitHubGraphQLClient {
     private static final org.slf4j.Logger logger4j = LoggerFactory.getLogger(GitHubGraphQLClient.class);
     private final WebClient webClient;
 
-    /**
-     * Construtor que inicializa o cliente GraphQL do GitHub.
-     * 
-     * Cria uma instância do WebClient com as configurações necessárias para fazer 
-     * requisições à API GraphQL do GitHub. Se o token não estiver configurado, 
-     * um aviso será registrado, mas a aplicação continuará funcionando (útil para desenvolvimento).
-     * 
-     * @param apiUrl URL base da API do GitHub (obtida da propriedade github.api.url)
-     * @param apiToken Token de autenticação do GitHub (obtido da propriedade github.api.token)
-     */
-
     public GitHubGraphQLClient(
                                 @Value("${burndown.github.api.url:${github.api.url}}") String apiUrl,
                                 @Value("${github.api.token}") String apiToken) {
@@ -57,18 +46,6 @@ public class GitHubGraphQLClient {
         this.webClient = builder.build();
     }
 
-    /**
-     * Executa uma query GraphQL contra a API do GitHub.
-     * 
-     * Constrói uma requisição GraphQL com a query e variáveis fornecidas,
-     * envia para a API do GitHub e retorna a resposta serializada como objeto.
-     * 
-     * @param query A query GraphQL a ser executada
-     * @param variables Mapa de variáveis para substituir na query (pode ser null)
-     * @return GraphQLResponse contendo os dados ou erros retornados pela API
-     * @throws Exception se houver erro na comunicação com a API
-     */
-
     public GraphQLResponse execute(String query, Map<String, Object> variables) {
         
         GraphQLRequest request = new GraphQLRequest();
@@ -83,10 +60,7 @@ public class GitHubGraphQLClient {
                         .block();
     }
 
-    /**
-     * Executa uma query GraphQL e retorna a resposta bruta como Map.
-     * Útil para debug e análise da resposta completa.
-     */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> executeRaw(String query, Map<String, Object> variables) {
         
         GraphQLRequest request = new GraphQLRequest();

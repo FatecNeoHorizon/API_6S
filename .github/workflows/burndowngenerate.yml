@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-          java -jar target/burndown-0.0.1-SNAPSHOT.jar
+          java -jar target/burndown-0.0.1-SNAPSHOT.jar --spring.main.web-application-type=none
 
       - name: Commit and Push changes
         working-directory: ./burndown

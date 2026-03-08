@@ -35,18 +35,20 @@ jobs:
         working-directory: ./burndown
         env:
           GITHUB_TOKEN: ${{ secrets.ISSUE_TOKEN_API }}
+          SPRING_MAIN_WEB_APPLICATION_TYPE: none
         run: |
           if [ -z "$GITHUB_TOKEN" ]; then
             echo "❌ ERRO: ISSUE_TOKEN_API secret não está configurado!"
             exit 1
           fi
 
+          echo "Executando burndown em modo CLI..."
           java -jar target/burndown-0.0.1-SNAPSHOT.jar --spring.main.web-application-type=none
 
       - name: Commit and Push changes
         working-directory: ./burndown
         run: |
-          if ! git diff --quiet -- src/main/resources/static/burndown.png; then
+          if [ -n "$(git status --porcelain -- src/main/resources/static/burndown.png)" ]; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git add src/main/resources/static/burndown.png

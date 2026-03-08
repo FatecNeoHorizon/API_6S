@@ -36,7 +36,7 @@ public class GitHubGraphQLClient {
      */
 
     public GitHubGraphQLClient(
-                                @Value("${github.api.url}") String apiUrl,
+                                @Value("${burndown.github.api.url:${github.api.url}}") String apiUrl,
                                 @Value("${github.api.token}") String apiToken) {
         if (apiToken == null || apiToken.isBlank()) {
             logger4j.error("GitHub token not configured. API calls will fail without a valid token.");

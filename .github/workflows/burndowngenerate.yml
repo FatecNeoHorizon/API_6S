@@ -53,7 +53,13 @@ jobs:
             git config --local user.name "GitHub Action"
             git add src/main/resources/static/burndown.png
             git commit -m "chore: atualizar gráfico de burndown"
-            git push
+
+            # Evita erro de non-fast-forward quando o remoto avancou durante o job.
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push origin HEAD:main && break
+              echo "Tentativa $attempt de push falhou; tentando novamente..."
+              sleep 2
+            done
           else
             echo "Nenhuma mudança no gráfico para commit"
           fi

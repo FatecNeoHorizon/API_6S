@@ -1,5 +1,5 @@
-name: 🐞 Bug Report
-description: Reportar defeito seguindo padrão Scrum + DevOps
+name: "🐛 Bug Report"
+description: "Reportar um comportamento inesperado"
 title: "[BUG] - "
 labels: ["type:bug"]
 assignees: []
@@ -10,20 +10,19 @@ body:
       value: "## 🐛 Descrição do Bug"
 
   - type: textarea
-    id: current-behavior
+    id: description
     attributes:
-      label: "🔎 Comportamento Atual"
-      description: "O que está acontecendo? Descreva o problema em detalhes."
-      placeholder: "Descreva o comportamento incorreto aqui..."
+      label: "O que está acontecendo?"
+      description: "Descreva o comportamento inesperado"
+      placeholder: "Ex: Endpoint GET /indicadores retorna 500 ao filtrar por tipo_rede=transmissão..."
     validations:
       required: true
 
   - type: textarea
-    id: expected-behavior
+    id: expected
     attributes:
-      label: "✅ Comportamento Esperado"
-      description: "Como deveria ser? O que deveria acontecer?"
-      placeholder: "Descreva o comportamento correto esperado..."
+      label: "Comportamento esperado"
+      placeholder: "Ex: Deve retornar os indicadores filtrados com status 200..."
     validations:
       required: true
 
@@ -32,10 +31,9 @@ body:
       value: "## 🔁 Passos para Reproduzir"
 
   - type: textarea
-    id: reproduction-steps
+    id: steps
     attributes:
-      label: "Passos para Reproduzir"
-      description: "Liste os passos necessários para reproduzir o bug"
+      label: "Como reproduzir?"
       value: |
         1. 
         2. 
@@ -44,79 +42,80 @@ body:
       required: true
 
   - type: textarea
-    id: evidence
+    id: error-output
     attributes:
-      label: "📷 Evidências"
-      description: "Logs, screenshots, stacktrace ou qualquer informação que ajude"
-      placeholder: "Cole logs, prints ou stacktrace aqui..."
+      label: "Mensagem de erro / Stack trace"
+      description: "Cole o erro completo se disponível"
+      render: shell
 
   - type: markdown
     attributes:
-      value: "## 🌍 Ambiente"
+      value: "## 🗂️ Rastreabilidade"
 
   - type: dropdown
-    id: environment
+    id: sprint
     attributes:
-      label: "Ambiente"
-      description: "Em qual ambiente o bug foi encontrado?"
+      label: "Sprint onde o bug foi encontrado"
       options:
-        - Desenvolvimento
-        - QA
-        - Staging
-        - Produção
+        - Sprint 1
+        - Sprint 2
+        - Sprint 3
     validations:
       required: true
 
   - type: input
-    id: version
+    id: related-task
     attributes:
-      label: "Versão da Aplicação"
-      description: "Versão ou hash do commit"
-      placeholder: "v1.0.0 ou abc1234def"
-
+      label: "Task relacionada (se houver)"
+      placeholder: "Ex: TASK-08"
 
   - type: markdown
     attributes:
-      value: "## 📊 Impacto"
+      value: "## 🏷️ Classificação"
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: "Domínio"
+      options:
+        - "[BACK]"
+        - "[FRONT]"
+        - "[INFRA]"
+        - "[DATA]"
+        - "[ML]"
+        - "[SEC]"
+        - "[QA]"
+    validations:
+      required: true
 
   - type: dropdown
     id: severity
     attributes:
       label: "Severidade"
-      description: "Qual é a severidade deste bug?"
       options:
-        - Baixa
-        - Média
-        - Alta
-        - Crítica
-    validations:
-      required: true
-
-  - type: textarea
-    id: business-impact
-    attributes:
-      label: "Impacto no Negócio"
-      description: "Qual é o impacto desta falha para o usuário/negócio?"
-      placeholder: "Descreva o impacto..."
-
-  - type: checkboxes
-    id: customer-impact
-    attributes:
-      label: "Afeta Clientes?"
-      description: "Este bug impacta os clientes?"
-      options:
-        - label: "Sim, afeta clientes em produção"
-        - label: "Não afeta clientes"
+        - 🔴 Alta — bloqueia funcionalidade crítica
+        - 🟡 Média — funcionalidade parcialmente comprometida
+        - 🟢 Baixa — comportamento inesperado sem impacto crítico
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🛠 Análise Técnica (Opcional)"
-      
-  - type: input
-    id: affected-service
+      value: "## 🌍 Ambiente"
+
+  - type: checkboxes
+    id: environment
     attributes:
-      label: "Serviço Impactado"
-      description: "Qual serviço/módulo está afetado?"
-      placeholder: "Ex: auth-service, payment-api, etc"
+      label: "Onde o bug ocorre?"
+      options:
+        - label: "Local (Docker Compose)"
+        - label: "Backend (FastAPI)"
+        - label: "Frontend (React)"
+        - label: "MongoDB"
+        - label: "PostgreSQL"
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: "Notas adicionais"
+      placeholder: "Prints, logs, ou contexto extra..."

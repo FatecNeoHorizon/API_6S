@@ -49,13 +49,44 @@ jobs:
           echo "Executando burndown em modo CLI..."
           java -jar target/burndown-0.0.1-SNAPSHOT.jar --spring.main.web-application-type=none
 
-      - name: Commit and Push changes
+      - name: Commit and Push changes (PNG + README cache-busting)
         working-directory: ./burndown
         run: |
-          if [ -n "$(git status --porcelain -- src/main/resources/static/burndown.png)" ]; then
+          set -euo pipefail
+
+          PNG_PATH="src/main/resources/static/burndown.png"
+          README_PATH="../README.md"
+
+          if [ -n "$(git status --porcelain -- "$PNG_PATH")" ]; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add src/main/resources/static/burndown.png
+
+            # Atualiza o README principal para:
+            # - apontar para o caminho correto dentro da pasta burndown
+            # - adicionar cache busting pra evitar imagem antiga por cache
+            #
+            # Exemplo final no README:
+            # <img src="burndown/src/main/resources/static/burndown.png?v=<sha>">
+            if [ -f "$README_PATH" ]; then
+              VERSION="${GITHUB_SHA}"
+
+              # 1) Corrige casos antigos que estavam como src="burndown/src..."
+              # 2) Garante que exista ?v=... e atualiza o valor
+              #
+              # Você pode adaptar o padrão se o README tiver variações.
+              sed -i \
+                -e 's/src="burndown\/src\/main\/resources\/static\/burndown\.png[^"]*"/src="burndown\/src\/main\/resources\/static\/burndown.png?v='"${VERSION}"'"/g' \
+                -e 's/src="src\/main\/resources\/static\/burndown\.png[^"]*"/src="burndown\/src\/main\/resources\/static\/burndown.png?v='"${VERSION}"'"/g' \
+                "$README_PATH"
+            else
+              echo "README principal não encontrado em $README_PATH; pulando atualização do README."
+            fi
+
+            git add "$PNG_PATH"
+            if [ -f "$README_PATH" ]; then
+              git add "$README_PATH"
+            fi
+
             git commit -m "chore: atualizar gráfico de burndown"
 
             # Evita erro de non-fast-forward quando o remoto avancou durante o job.

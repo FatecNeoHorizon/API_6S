@@ -21,8 +21,8 @@ public class BurndownDataMapper {
 
     private static final Logger logger = LoggerFactory.getLogger(BurndownDataMapper.class);
     private static final ZoneId ZONE = ZoneId.systemDefault();
+    private static final double DEFAULT_ITEM_HOURS = 1d;
     
-    // Definição das sprints
     private static class SprintPeriod {
         String name;
         LocalDate start;
@@ -36,7 +36,6 @@ public class BurndownDataMapper {
     }
     
     private static final List<SprintPeriod> SPRINTS = List.of(
-        new SprintPeriod("Sprint 0", 1, 2, 10, 3),    // 01/02 - 10/03 (Teste)
         new SprintPeriod("Sprint 1", 16, 3, 5, 4),    // 16/03 - 05/04
         new SprintPeriod("Sprint 2", 13, 4, 3, 5),    // 13/04 - 03/05
         new SprintPeriod("Sprint 3", 11, 5, 31, 5)    // 11/05 - 31/05
@@ -44,7 +43,7 @@ public class BurndownDataMapper {
 
     public List<BurndownData> map(GitHubProjectQueryData data) {
 
-        List<IssueContent> allIssues = extractIssues(data);
+        List<ProjectItemNode> allIssues = extractIssueNodes(data);
 
         List<BurndownData> result = new ArrayList<>();
 
@@ -59,10 +58,15 @@ public class BurndownDataMapper {
         
         if (!allIssues.isEmpty()) {
             logger.debug("[DEBUG MAPPER] Detalhes das issues:");
-            allIssues.forEach(issue -> {
+            allIssues.forEach(node -> {
+                IssueContent issue = node.getContent();
                 LocalDate created = toLocalDate(issue.getCreatedAt());
                 LocalDate closed = issue.getClosedAt() != null ? toLocalDate(issue.getClosedAt()) : null;
-                logger.debug("  - Criada: {} | Fechada: {} | Estado: {}", created, closed, issue.getState());
+                logger.debug("  - Criada: {} | Fechada: {} | Estado: {} | Estimativa(h): {}",
+                        created,
+                        closed,
+                        issue.getState(),
+                        resolveEstimateHours(node));
             });
         } else {
             logger.debug("[DEBUG MAPPER] NENHUMA ISSUE FOI EXTRAÍDA!");
@@ -77,32 +81,38 @@ public class BurndownDataMapper {
         return result;
     }
 
-    /**
-     * Encontra qual sprint está ativa baseado na data atual
-     */
     private SprintPeriod findActiveSprint(LocalDate today) {
         for (SprintPeriod sprint : SPRINTS) {
             if (!today.isBefore(sprint.start) && !today.isAfter(sprint.end)) {
                 return sprint;
             }
         }
-        
-        // Se nenhuma sprint estiver ativa, retorna a última
-        logger.warn("Nenhuma sprint ativa na data {}. Usando Sprint 3 (padrão)", today);
-        return SPRINTS.get(SPRINTS.size() - 1);
+
+        for (SprintPeriod sprint : SPRINTS) {
+            if (today.isBefore(sprint.start)) {
+                logger.warn("Nenhuma sprint ativa na data {}. Usando próxima sprint: {}", today, sprint.name);
+                return sprint;
+            }
+        }
+
+        SprintPeriod fallbackSprint = SPRINTS.stream()
+                .filter(sprint -> "Sprint 3".equals(sprint.name))
+                .findFirst()
+                .orElse(SPRINTS.get(SPRINTS.size() - 1));
+
+        logger.warn("Nenhuma sprint ativa ou próxima na data {}. Usando {} (padrão)", today, fallbackSprint.name);
+        return fallbackSprint;
     }
 
-    private List<IssueContent> extractIssues(GitHubProjectQueryData data) {
+    private List<ProjectItemNode> extractIssueNodes(GitHubProjectQueryData data) {
 
 
-        List<IssueContent> issues = data.getOrganization()
+        List<ProjectItemNode> issues = data.getOrganization()
                 .getProject()
                 .getItems()
                 .getNodes()
                 .stream()
-                .map(ProjectItemNode::getContent)
-                .filter(content -> content != null)
-                .filter(content -> "Issue".equals(content.getTypename()))
+                .filter(this::isIssueNode)
                 .collect(Collectors.toList());
         
         return issues;
@@ -111,19 +121,22 @@ public class BurndownDataMapper {
     private BurndownData generateSprint(String sprintName,
                                         LocalDate start,
                                         LocalDate end,
-                                        List<IssueContent> allIssues) {
+                                        List<ProjectItemNode> allIssues) {
 
         LocalDate today = LocalDate.now();
         LocalDate effectiveEnd = end.isAfter(today) ? today : end;
 
-        List<IssueContent> sprintIssues = allIssues.stream()
-                .filter(issue -> {
-                    LocalDate created = toLocalDate(issue.getCreatedAt());
+        List<ProjectItemNode> sprintIssues = allIssues.stream()
+            .filter(node -> {
+                LocalDate created = toLocalDate(node.getContent().getCreatedAt());
                     return !created.isBefore(start) && !created.isAfter(effectiveEnd);
                 })
                 .collect(Collectors.toList());
 
-        int totalIssues = sprintIssues.size();
+        double totalHours = sprintIssues.stream()
+            .mapToDouble(this::resolveEstimateHours)
+            .sum();
+
         long totalDays = start.datesUntil(end.plusDays(1)).count();
 
         List<LocalDate> dates = new ArrayList<>();
@@ -137,20 +150,27 @@ public class BurndownDataMapper {
             final LocalDate currentDate = date;
             dates.add(currentDate);
 
-            double idealRemaining = totalIssues -
-                    ((double) totalIssues * dayIndex / (totalDays - 1));
+            double idealRemaining;
+            if (totalDays <= 1) {
+                idealRemaining = totalHours;
+            } else {
+                idealRemaining = totalHours -
+                        (totalHours * dayIndex / (totalDays - 1));
+            }
 
             idealLine.add(Math.max(idealRemaining, 0));
 
-            long closedCount = sprintIssues.stream()
-                    .filter(issue -> {
+            double closedHours = sprintIssues.stream()
+                    .filter(node -> {
+                        IssueContent issue = node.getContent();
                         if (issue.getClosedAt() == null) return false;
                         LocalDate closed = toLocalDate(issue.getClosedAt());
                         return !closed.isAfter(currentDate);
                     })
-                    .count();
+                    .mapToDouble(this::resolveEstimateHours)
+                    .sum();
 
-            double realRemaining = totalIssues - closedCount;
+            double realRemaining = totalHours - closedHours;
 
             realLine.add(Math.max(realRemaining, 0));
 
@@ -170,5 +190,46 @@ public class BurndownDataMapper {
 
     private LocalDate toLocalDate(OffsetDateTime dateTime) {
         return dateTime.atZoneSameInstant(ZONE).toLocalDate();
+    }
+
+    private boolean isIssueNode(ProjectItemNode node) {
+        IssueContent content = node.getContent();
+        return content != null && "Issue".equals(content.getTypename());
+    }
+
+    private double resolveEstimateHours(ProjectItemNode node) {
+        if (node.getEstimativa() == null) {
+            return DEFAULT_ITEM_HOURS;
+        }
+
+        if (node.getEstimativa().getNumber() != null) {
+            return normalizeHours(node.getEstimativa().getNumber());
+        }
+
+        if (node.getEstimativa().getText() != null) {
+            return parseEstimateText(node.getEstimativa().getText());
+        }
+
+        return DEFAULT_ITEM_HOURS;
+    }
+
+    private double parseEstimateText(String value) {
+        String normalized = value.trim().replace(',', '.').replaceAll("[^0-9.]", "");
+        if (normalized.isBlank()) {
+            return DEFAULT_ITEM_HOURS;
+        }
+
+        try {
+            return normalizeHours(Double.parseDouble(normalized));
+        } catch (NumberFormatException ex) {
+            logger.warn("Não foi possível converter estimativa textual '{}' para número. Assumindo {}h.",
+                    value,
+                    DEFAULT_ITEM_HOURS);
+            return DEFAULT_ITEM_HOURS;
+        }
+    }
+
+    private double normalizeHours(double hours) {
+        return hours <= 0d ? DEFAULT_ITEM_HOURS : hours;
     }
 }

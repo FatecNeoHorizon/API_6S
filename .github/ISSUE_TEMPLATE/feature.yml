@@ -1,5 +1,5 @@
-name: "✨ Feature Request"
-description: "Propor uma nova funcionalidade (Scrum + DevOps)"
+name: "✨ Feature"
+description: "Nova funcionalidade"
 title: "[FEATURE] - "
 labels: ["type:feature"]
 assignees: []
@@ -7,14 +7,14 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      value: "## 📝 Descrição da Feature"
+      value: "## 📝 Descrição"
 
   - type: textarea
     id: description
     attributes:
       label: "Descrição"
       description: "Descreva a funcionalidade que será desenvolvida"
-      placeholder: "Ex: Implementar autenticação com JWT para melhorar segurança..."
+      placeholder: "Ex: Implementar endpoint de criticidade consumindo o modelo K-Means..."
     validations:
       required: true
 
@@ -25,9 +25,84 @@ body:
   - type: textarea
     id: objective
     attributes:
-      label: "Qual é o objetivo desta feature?"
-      description: "Qual problema resolve ou valor agrega?"
-      placeholder: "Ex: Melhorar autenticação e segurança da API..."
+      label: "Qual problema resolve ou valor agrega?"
+      placeholder: "Ex: Permitir que o analista filtre regiões por criticidade via API..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🗂️ Rastreabilidade"
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "Sprint"
+      options:
+        - Sprint 1
+        - Sprint 2
+        - Sprint 3
+    validations:
+      required: true
+
+  - type: input
+    id: user-story
+    attributes:
+      label: "User Story relacionada"
+      placeholder: "Ex: US05"
+    validations:
+      required: true
+
+  - type: input
+    id: requirements
+    attributes:
+      label: "Requisitos relacionados"
+      placeholder: "Ex: RF05, RNF01"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🏷️ Classificação"
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: "Domínio"
+      description: "Área técnica desta task"
+      options:
+        - "[BACK]"
+        - "[FRONT]"
+        - "[INFRA]"
+        - "[DATA]"
+        - "[ML]"
+        - "[SEC]"
+        - "[QA]"
+        - "[DOC]"
+        - "[BACK][SEC]"
+        - "[FRONT][SEC]"
+        - "[ML][DATA]"
+        - "[DOC][ML]"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Prioridade"
+      options:
+        - Highest
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimativa"
+      placeholder: "Ex: 6h"
     validations:
       required: true
 
@@ -39,62 +114,38 @@ body:
     id: acceptance-criteria
     attributes:
       label: "Critérios de Aceite"
-      description: "O que deve ser feito para considerar completo?"
+      description: "O que deve estar feito para considerar completo?"
       value: |
         - [ ] Funcionalidade implementada
-        - [ ] Testes unitários (min 80% cobertura)
-        - [ ] Testes de integração
-        - [ ] Documentação atualizada
+        - [ ] Documentado no Swagger (se endpoint)
+        - [ ] Testes básicos validados
+        - [ ] Código revisado via PR
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "## 📊 Requisitos Não Funcionais"
-
-  - type: checkboxes
-    id: nonfunctional-requirements
-    attributes:
-      label: "Requisitos DevOps"
-      description: "Checklist de requisitos não funcionais"
-      options:
-        - label: "Pipeline CI passando (build + testes + lint)"
-        - label: "Métricas e logs implementados"
-        - label: "Documentação na API (Swagger/OpenAPI)"
-        - label: "Testes de performance considerados"
-        - label: "Monitoramento configurado"
 
   - type: markdown
     attributes:
       value: "## 📦 Impacto Técnico"
 
   - type: textarea
-    id: affected-services
+    id: affected-modules
     attributes:
-      label: "Serviços/Módulos Afetados"
-      description: "Quais serviços, módulos ou componentes são impactados?"
-      placeholder: "Ex: auth-service, API, frontend..."
+      label: "Módulos / Camadas afetadas"
+      placeholder: "Ex: backend/routers, frontend/pages/criticidade..."
+
+  - type: textarea
+    id: bdgd-layers
+    attributes:
+      label: "Layers da BDGD envolvidos"
+      description: "Preencher se a task lê ou processa dados da BDGD"
+      placeholder: "Ex: CTMT (PERD_MED), UCBT_tab (DIC_XX)..."
 
   - type: textarea
     id: database-impact
     attributes:
-      label: "Impacto no Banco de Dados"
-      description: "Há mudanças no schema ou migrations necessárias?"
-      placeholder: "Descreva alterações ou deixe em branco..."
-
-  - type: textarea
-    id: external-apis
-    attributes:
-      label: "Integrações Externas"
-      description: "Integração com APIs externas ou terceiros?"
-      placeholder: "Ex: Stripe, SendGrid, etc..."
-
-  - type: textarea
-    id: infrastructure
-    attributes:
-      label: "Infraestrutura (IaC)"
-      description: "Mudanças no Terraform, Docker, variáveis de ambiente?"
-      placeholder: "Alterações na infraestrutura..."
+      label: "Impacto no banco de dados"
+      description: "Mudanças de schema, novas coleções ou índices necessários?"
+      placeholder: "Ex: Criar índice {DIST, CONJ} na coleção CTMT..."
 
   - type: markdown
     attributes:
@@ -106,30 +157,15 @@ body:
       label: "Checklist de Segurança"
       options:
         - label: "Validação de inputs implementada"
-        - label: "Autenticação/Autorização revisada"
-        - label: "Dados sensíveis protegidos"
-        - label: "Vulnerabilidades OWASP verificadas"
+        - label: "Endpoint protegido por autenticação JWT (se aplicável)"
+        - label: "Dados sensíveis não expostos na resposta"
 
   - type: markdown
     attributes:
       value: "## 📌 Contexto Adicional"
 
-  - type: dropdown
-    id: priority
-    attributes:
-      label: "Prioridade"
-      description: "Qual é a prioridade desta feature?"
-      options:
-        - Baixa
-        - Média
-        - Alta
-        - Crítica
-    validations:
-      required: true
-
   - type: textarea
     id: additional-notes
     attributes:
-      label: "Notas Adicionais"
-      description: "Links, referências, ou informações extras"
-      placeholder: "Informações adicionais relevantes..."
+      label: "Notas adicionais"
+      placeholder: "Links, referências técnicas ou decisões de arquitetura relevantes..."

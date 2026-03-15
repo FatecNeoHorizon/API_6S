@@ -11,4 +11,7 @@ public class ProjectItemNode {
 
     @JsonProperty("content")
     private IssueContent content;
+
+    @JsonProperty("estimativa")
+    private ProjectItemEstimateValue estimativa;
 }

@@ -50,6 +50,15 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
                           }
                         }
                       }
+                      estimativa: fieldValueByName(name: "Estimativa (h)") {
+                        __typename
+                        ... on ProjectV2ItemFieldNumberValue {
+                          number
+                        }
+                        ... on ProjectV2ItemFieldTextValue {
+                          text
+                        }
+                      }
                     }
                   }
                 }

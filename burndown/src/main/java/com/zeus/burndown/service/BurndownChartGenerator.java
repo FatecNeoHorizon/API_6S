@@ -59,9 +59,7 @@ public class BurndownChartGenerator {
         dataset.addSeries(realSeries);
 
         DateAxis xAxis = new DateAxis("Sprint Days");
-        NumberAxis yAxis = new NumberAxis("Remaining Issues");
-
-        yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        NumberAxis yAxis = new NumberAxis("Remaining Hours");
 
         xAxis.setLabelFont(new Font("SansSerif", Font.BOLD, 20));
         xAxis.setTickLabelFont(new Font("SansSerif", Font.PLAIN, 16));

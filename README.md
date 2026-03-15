@@ -160,7 +160,7 @@ O objetivo do projeto é desenvolver uma plataforma que realize o tratamento e a
 
 ## Evolução do Projeto (Burndown)<a id="burndown"></a>
 
-<img src="burndown/src/main/resources/static/burndown.png?v=9ea14aec912b12134ba7eaeb2b9e3ff8cc534998">
+<img src="burndown/src/main/resources/static/burndown.png?v=78b57b36baf69f59ae4b1e9d47372526beb4185b">
 
 </br>
 

@@ -124,7 +124,12 @@ public class BurndownDataMapper {
                                         List<ProjectItemNode> allIssues) {
 
         LocalDate today = LocalDate.now();
-        LocalDate effectiveEnd = end.isAfter(today) ? today : end;
+        LocalDate effectiveEnd;
+        if (today.isBefore(start)) {
+            effectiveEnd = start;
+        } else {
+            effectiveEnd = end.isAfter(today) ? today : end;
+        }
 
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {

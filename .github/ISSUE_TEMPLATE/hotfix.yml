@@ -1,5 +1,5 @@
 name: "🚨 Hotfix"
-description: "Correção crítica em produção (Prioridade máxima)"
+description: "Correção crítica urgente"
 title: "[HOTFIX] - "
 labels: ["type:hotfix", "urgent"]
 assignees: []
@@ -7,72 +7,124 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      value: "## 🔴 Problema Crítico"
+      value: "## 🚨 Descrição do Problema Crítico"
 
   - type: textarea
-    id: problem
+    id: description
     attributes:
-      label: "O que está quebrado em produção?"
-      description: "Descreva o problema crítico que afeta produção"
-      placeholder: "Ex: API retornando erro 500 para todos os usuários..."
+      label: "O que está quebrado?"
+      description: "Descreva o problema crítico que precisa de correção imediata"
+      placeholder: "Ex: Pipeline ETL travando ao ingerir UCBT_tab — sistema sem dados atualizados..."
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "## 📊 Impacto"
 
   - type: textarea
     id: impact
     attributes:
       label: "Impacto"
-      description: "Quantos usuários/funcionalidades são afetadas?"
-      placeholder: "Ex: 100% dos usuários não conseguem fazer login..."
-    validations:
-      required: true
-
-  - type: dropdown
-    id: severity
-    attributes:
-      label: "Severidade"
-      description: "Qual é a severidade?"
-      options:
-        - Alta
-        - Crítica
+      description: "Quais funcionalidades estão comprometidas?"
+      placeholder: "Ex: Indicadores DEC/FEC não estão sendo atualizados. Afeta dashboard principal e sprint review..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## ✅ Solução Proposta"
+      value: "## 🔁 Como Reproduzir"
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Passos para reproduzir"
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: "Erro / Stack trace"
+      render: shell
+
+  - type: markdown
+    attributes:
+      value: "## 🗂️ Rastreabilidade"
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "Sprint afetada"
+      options:
+        - Sprint 1
+        - Sprint 2
+        - Sprint 3
+    validations:
+      required: true
+
+  - type: input
+    id: related-task
+    attributes:
+      label: "Task relacionada"
+      placeholder: "Ex: TASK-06"
+
+  - type: markdown
+    attributes:
+      value: "## 🏷️ Classificação"
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: "Domínio"
+      options:
+        - "[BACK]"
+        - "[FRONT]"
+        - "[INFRA]"
+        - "[DATA]"
+        - "[ML]"
+        - "[SEC]"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🩹 Solução Proposta"
 
   - type: textarea
     id: solution
     attributes:
-      label: "Como corrigir?"
-      description: "Descreva a solução proposta"
-      placeholder: "Ex: Revalidar token antes de usar..."
+      label: "Como será corrigido?"
+      placeholder: "Ex: Reduzir chunk size de 100k para 50k linhas e adicionar retry em caso de timeout..."
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimativa de resolução"
+      placeholder: "Ex: 2h"
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🧪 Validação"
+      value: "## ✅ Critérios de Resolução"
 
   - type: textarea
-    id: testing
+    id: acceptance-criteria
     attributes:
-      label: "Como validar o fix?"
-      description: "Passos para confirmar que o problema foi resolvido"
-      placeholder: "Ex: Fazer login e verificar se o token está válido..."
+      label: "Como validar que o problema foi resolvido?"
+      value: |
+        - [ ] Problema não reproduz mais
+        - [ ] Funcionalidade crítica restaurada
+        - [ ] Testado localmente via Docker Compose
+        - [ ] PR revisado e mergeado
     validations:
       required: true
 
   - type: textarea
-    id: rollback
+    id: additional-notes
     attributes:
-      label: "Plano de Rollback"
-      description: "Se necessário, como revertir esta mudança?"
-      placeholder: "Ex: Revert do commit ou redeploy da versão anterior..."
-    validations:
-      required: true
+      label: "Notas adicionais"
+      placeholder: "Logs, prints ou contexto extra..."

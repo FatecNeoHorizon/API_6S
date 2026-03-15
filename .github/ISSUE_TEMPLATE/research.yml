@@ -1,0 +1,160 @@
+name: "🔬 Research / Spike"
+description: "Investigação técnica ou experimento de ML"
+title: "[RESEARCH] - "
+labels: ["type:research"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: "## 🔬 Descrição"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "O que será investigado ou experimentado?"
+      placeholder: "Ex: Avaliar qual algoritmo de clustering (K-Means vs DBSCAN) produz melhor separação das regiões por criticidade..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## ❓ Hipótese"
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: "Qual é a hipótese?"
+      description: "O que você espera descobrir ou validar?"
+      placeholder: "Ex: K-Means com 3 clusters deve produzir Silhouette Score > 0.4 usando DEC, FEC e PERD_MED como features..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🧪 Abordagem"
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: "Como será feita a investigação?"
+      placeholder: |
+        Ex:
+        1. Preparar dataset agregado por CONJ (TASK-15)
+        2. Treinar K-Means com k=3
+        3. Calcular Silhouette Score
+        4. Se Score < 0.4, testar DBSCAN
+        5. Documentar resultados em docs/ML-METRICAS.md
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📊 Dados Necessários"
+
+  - type: textarea
+    id: bdgd-layers
+    attributes:
+      label: "Layers da BDGD / features utilizadas"
+      placeholder: |
+        Ex:
+        - CTMT.PERD_MED — perda média do circuito
+        - UCBT_tab: DIC_01..12 agregado por CONJ (DEC médio)
+        - UCBT_tab: FIC_01..12 agregado por CONJ (FEC médio)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🎯 Critério de Validação"
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: "Como o resultado será avaliado?"
+      description: "Qual métrica define se a abordagem funcionou?"
+      placeholder: |
+        Ex:
+        - Silhouette Score ≥ 0.4 para clustering
+        - RMSE ≤ X para regressão (definir após análise exploratória)
+        - Clusters interpretáveis em termos de negócio (baixa/média/alta criticidade)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🗂️ Rastreabilidade"
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "Sprint"
+      options:
+        - Sprint 1
+        - Sprint 2
+        - Sprint 3
+    validations:
+      required: true
+
+  - type: input
+    id: user-story
+    attributes:
+      label: "User Story relacionada"
+      placeholder: "Ex: US05, US09"
+    validations:
+      required: true
+
+  - type: input
+    id: requirements
+    attributes:
+      label: "Requisitos relacionados"
+      placeholder: "Ex: RF05, RNF04"
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimativa"
+      placeholder: "Ex: 6h"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## ✅ Critérios de Aceite"
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: "O que deve ser entregue ao final?"
+      value: |
+        - [ ] Experimento executado e documentado
+        - [ ] Métrica de validação calculada e registrada
+        - [ ] Decisão técnica registrada (qual abordagem adotar e por quê)
+        - [ ] Resultado disponível em docs/ML-METRICAS.md
+        - [ ] Modelo salvo (joblib) se aprovado
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📌 Resultado Esperado"
+
+  - type: dropdown
+    id: expected-output
+    attributes:
+      label: "O que esta research deve produzir?"
+      options:
+        - Decisão técnica documentada (qual abordagem usar)
+        - Modelo treinado e salvo
+        - Ambos — decisão + modelo
+        - Dataset ou feature preparados
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: "Notas adicionais"
+      placeholder: "Papers, referências técnicas ou decisões de arquitetura relevantes..."

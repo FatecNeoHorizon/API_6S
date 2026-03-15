@@ -55,7 +55,7 @@ body:
   - type: dropdown
     id: sprint
     attributes:
-      label: "Sprint afetada"
+      label: "Sprint"
       options:
         - Sprint 1
         - Sprint 2
@@ -66,8 +66,23 @@ body:
   - type: input
     id: related-task
     attributes:
-      label: "Task relacionada"
-      placeholder: "Ex: TASK-06"
+      label: "Task relacionada (se houver)"
+      placeholder: "Ex: TASK-08"
+
+  - type: input
+    id: related-requirement
+    attributes:
+      label: "Requisito relacionado"
+      placeholder: "Ex: RF-01, RF-02, RNF-05"
+
+  - type: textarea
+    id: related-user-stories
+    attributes:
+      label: "User Stories relacionadas"
+      placeholder: |
+        Ex:
+        - US-12: Como usuário, espero que o endpoint retorne 200...
+        - US-07: Como analista, preciso que os filtros funcionem corretamente...
 
   - type: markdown
     attributes:

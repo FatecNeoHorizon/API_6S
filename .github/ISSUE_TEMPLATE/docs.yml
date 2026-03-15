@@ -40,14 +40,28 @@ body:
   - type: dropdown
     id: sprint
     attributes:
-      label: "Sprint"
+      label: "Sprint onde o bug foi encontrado"
       options:
         - Sprint 1
         - Sprint 2
         - Sprint 3
-        - Geral (não vinculada a sprint)
     validations:
       required: true
+
+  - type: input
+    id: related-requirement
+    attributes:
+      label: "Requisito relacionado"
+      placeholder: "Ex: RF-01, RF-02, RNF-05"
+
+  - type: textarea
+    id: related-user-stories
+    attributes:
+      label: "User Stories relacionadas"
+      placeholder: |
+        Ex:
+        - US-12: Como usuário, espero que o endpoint retorne 200...
+        - US-07: Como analista, preciso que os filtros funcionem corretamente...
 
   - type: input
     id: related-task

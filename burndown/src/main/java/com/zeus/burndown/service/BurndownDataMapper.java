@@ -126,7 +126,7 @@ public class BurndownDataMapper {
         LocalDate today = LocalDate.now();
         LocalDate effectiveEnd;
         if (today.isBefore(start)) {
-            effectiveEnd = start;
+            effectiveEnd = end;
         } else {
             effectiveEnd = end.isAfter(today) ? today : end;
         }

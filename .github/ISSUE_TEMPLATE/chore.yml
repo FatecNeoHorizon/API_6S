@@ -58,6 +58,21 @@ body:
       label: "Task relacionada"
       placeholder: "Ex: TASK-01, TASK-02"
 
+  - type: input
+    id: related-requirement
+    attributes:
+      label: "Requisito relacionado"
+      placeholder: "Ex: RF-01, RF-02, RNF-05"
+
+  - type: textarea
+    id: related-user-stories
+    attributes:
+      label: "User Stories relacionadas"
+      placeholder: |
+        Ex:
+        - US-12: Como admin, quero que os índices estejam criados antes da ingestão...
+        - US-07: Como analista, preciso que as queries sejam performáticas...
+        
   - type: markdown
     attributes:
       value: "## 🏷️ Classificação"

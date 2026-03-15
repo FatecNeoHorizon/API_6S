@@ -69,6 +69,21 @@ body:
       label: "Task relacionada (se houver)"
       placeholder: "Ex: TASK-08"
 
+  - type: input
+    id: related-requirement
+    attributes:
+      label: "Requisito relacionado"
+      placeholder: "Ex: RF-01, RF-02, RNF-05"
+
+  - type: textarea
+    id: related-user-stories
+    attributes:
+      label: "User Stories relacionadas"
+      placeholder: |
+        Ex:
+        - US-12: Como usuário, espero que o endpoint retorne 200...
+        - US-07: Como analista, preciso que os filtros funcionem corretamente...
+
   - type: markdown
     attributes:
       value: "## 🏷️ Classificação"

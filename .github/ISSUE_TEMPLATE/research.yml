@@ -97,20 +97,25 @@ body:
       required: true
 
   - type: input
-    id: user-story
+    id: related-task
     attributes:
-      label: "User Story relacionada"
-      placeholder: "Ex: US05, US09"
-    validations:
-      required: true
+      label: "Task relacionada (se houver)"
+      placeholder: "Ex: TASK-08"
 
   - type: input
-    id: requirements
+    id: related-requirement
     attributes:
-      label: "Requisitos relacionados"
-      placeholder: "Ex: RF05, RNF04"
-    validations:
-      required: true
+      label: "Requisito relacionado"
+      placeholder: "Ex: RF-01, RF-02, RNF-05"
+
+  - type: textarea
+    id: related-user-stories
+    attributes:
+      label: "User Stories relacionadas"
+      placeholder: |
+        Ex:
+        - US-12: Como usuário, espero que o endpoint retorne 200...
+        - US-07: Como analista, preciso que os filtros funcionem corretamente...
 
   - type: input
     id: estimate

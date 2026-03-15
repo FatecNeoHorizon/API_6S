@@ -8,7 +8,10 @@ import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -33,6 +36,7 @@ public class BurndownChartGenerator {
 
     private static final int WIDTH = 1920;
     private static final int HEIGHT = 1080;
+        private static final long HALF_DAY_IN_MILLIS = 12L * 60 * 60 * 1000;
 
     public void generateBurndownChart(BurndownData data,
                                       String outputPath,
@@ -60,6 +64,10 @@ public class BurndownChartGenerator {
 
         DateAxis xAxis = new DateAxis("Sprint Days");
         NumberAxis yAxis = new NumberAxis("Remaining Hours");
+
+        xAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM"));
+        configureXAxisRange(xAxis, dates);
+        configureYAxisRange(yAxis, data);
 
         xAxis.setLabelFont(new Font("SansSerif", Font.BOLD, 20));
         xAxis.setTickLabelFont(new Font("SansSerif", Font.PLAIN, 16));
@@ -184,5 +192,56 @@ public class BurndownChartGenerator {
         );
         
     }
+
+        private void configureXAxisRange(DateAxis xAxis, List<LocalDate> dates) {
+                if (dates == null || dates.isEmpty()) {
+                        return;
+                }
+
+                if (dates.size() == 1) {
+                        long center = dates.get(0)
+                                        .atStartOfDay(ZoneId.systemDefault())
+                                        .toInstant()
+                                        .toEpochMilli();
+
+                        xAxis.setRange(new Date(center - HALF_DAY_IN_MILLIS), new Date(center + HALF_DAY_IN_MILLIS));
+                        return;
+                }
+
+                long start = dates.get(0)
+                                .atStartOfDay(ZoneId.systemDefault())
+                                .toInstant()
+                                .toEpochMilli();
+                long end = dates.get(dates.size() - 1)
+                                .atStartOfDay(ZoneId.systemDefault())
+                                .toInstant()
+                                .toEpochMilli();
+
+                xAxis.setRange(new Date(start - HALF_DAY_IN_MILLIS), new Date(end + HALF_DAY_IN_MILLIS));
+        }
+
+        private void configureYAxisRange(NumberAxis yAxis, BurndownData data) {
+                double max = 0d;
+
+                if (data.getIdealLine() != null) {
+                        for (Double value : data.getIdealLine()) {
+                                if (value != null && value > max) {
+                                        max = value;
+                                }
+                        }
+                }
+
+                if (data.getRealLine() != null) {
+                        for (Double value : data.getRealLine()) {
+                                if (value != null && value > max) {
+                                        max = value;
+                                }
+                        }
+                }
+
+                double upperBound = max <= 0d ? 1d : Math.ceil(max * 1.1d);
+                yAxis.setRange(0d, upperBound);
+                yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        }
 
 }

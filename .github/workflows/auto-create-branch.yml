@@ -37,25 +37,30 @@ jobs:
           
           # Incluir número do issue na branch: numero-slug
           BRANCH_NAME="${ISSUE_NUM}-${SLUG}"
+
           # Determinar tipo baseado nos labels
           TYPE="feature"
           
-          # Verificar labels type:xxx (novo padrão)
+          # Verificar labels type:xxx
           if [[ "$ISSUE_LABELS" =~ type:bug ]]; then
             TYPE="bugfix"
           elif [[ "$ISSUE_LABELS" =~ type:hotfix ]] || [[ "$ISSUE_LABELS" == *"urgent"* ]]; then
             TYPE="hotfix"
           elif [[ "$ISSUE_LABELS" =~ type:documentation ]]; then
             TYPE="docs"
+          elif [[ "$ISSUE_LABELS" =~ type:research ]]; then
+            TYPE="research"
           elif [[ "$ISSUE_LABELS" =~ type:feature ]]; then
             TYPE="feature"
           elif [[ "$ISSUE_LABELS" =~ type:story ]]; then
             TYPE="feature"
-          # Labels antigos (fallback para compatibilidade)
+          # Labels fallback para compatibilidade
           elif [[ "$ISSUE_LABELS" == *"bugfix"* ]] || [[ "$ISSUE_LABELS" == *"type:bug"* ]]; then
             TYPE="bugfix"
           elif [[ "$ISSUE_LABELS" == *"docs"* ]] || [[ "$ISSUE_LABELS" == *"type:documentation"* ]]; then
             TYPE="docs"
+          elif [[ "$ISSUE_LABELS" == *"research"* ]]; then
+            TYPE="research"
           elif [[ "$ISSUE_LABELS" == *"refactor"* ]]; then
             TYPE="refactor"
           elif [[ "$ISSUE_LABELS" == *"perf"* ]]; then
@@ -110,6 +115,7 @@ jobs:
               'bugfix': '🐛',
               'hotfix': '🚨',
               'docs': '📚',
+              'research': '🔬',
               'refactor': '♻️',
               'perf': '⚡',
               'test': '🧪',
@@ -124,4 +130,3 @@ jobs:
               issue_number: context.issue.number,
               body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/numero-descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Branch:** \`${branchName}\`\n**Issue:** #${issueNum}`
             });
-

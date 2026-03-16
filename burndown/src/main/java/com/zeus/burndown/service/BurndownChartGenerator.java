@@ -49,6 +49,7 @@ public class BurndownChartGenerator {
         TimeSeries realSeries = new TimeSeries("Real Line");
  
         List<LocalDate> dates = data.getDates();
+        LocalDate today = LocalDate.now();
  
         for (int i = 0; i < dates.size(); i++) {
             LocalDate date = dates.get(i);

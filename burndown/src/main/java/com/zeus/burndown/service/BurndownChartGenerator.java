@@ -54,7 +54,13 @@ public class BurndownChartGenerator {
             LocalDate date = dates.get(i);
             Day day = new Day(date.getDayOfMonth(), date.getMonthValue(), date.getYear());
             idealSeries.add(day, data.getIdealLine().get(i));
-            realSeries.add(day, data.getRealLine().get(i));
+            
+            if (!date.isAfter(today)) {
+                Double realValue = data.getRealLine().get(i);
+                if (realValue != null) {
+                    realSeries.add(day, realValue);
+                }
+            }
         }
  
         TimeSeriesCollection dataset = new TimeSeriesCollection();

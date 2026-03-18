@@ -13,6 +13,7 @@
   <a href=#backlog-do-produto>Backlog do Produto</a> •
   <a href=#date-sprint-backlog>Sprint Backlog</a> •
   <a href=#padroes-processos>Padrões de Processo</a> •
+  <a href=#documentacao-tecnica>Documentação Técnica</a> •
   <a href=#integrantes-equipe>Integrantes da Equipe</a> •
   <a href=#tecnologias-utilizadas>Tecnologias Utilizadas</a> •
   <a href=#como-rodar-com-docker>Como Rodar com Docker</a> •
@@ -159,6 +160,13 @@ O objetivo do projeto é desenvolver uma plataforma que realize o tratamento e a
 
 </br>
 
+## Documentação Técnica <a id="documentacao-tecnica"></a>
+
+[Prototipagem](docs/FLUXO-FIGMA.md)  
+[Como rodar o projeto](docs/COMO-RODAR-PROJETO.md)
+
+</br>
+
 ## Evolução do Projeto (Burndown)<a id="burndown"></a>
 
 <img src="burndown/src/main/resources/static/burndown.png?v=9ea14aec912b12134ba7eaeb2b9e3ff8cc534998">
@@ -189,77 +197,6 @@ Esta solução é composta por uma aplicação principal e por um módulo de apo
 ### 💬 Comunicação
 [![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://slack.com/)
 
-<br>
-
-## :whale: Como Rodar com Docker <a id="como-rodar-com-docker"></a>
-
-### Pré-requisitos
-
-- Docker instalado
-- Docker Compose (`docker compose`) habilitado
-
-### 1. Criar arquivo de ambiente
-
-Na raiz do projeto, crie um arquivo `.env` com as variáveis usadas no `docker-compose.yml`.
-
-Exemplo mínimo:
-
-```env
-POSTGRES_DB=zeus
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=admin
-```
-
-### 2. Subir os serviços
-
-Na raiz do projeto (`API_6S`):
-
-```bash
-docker compose up --build -d
-```
-
-Serviços iniciados:
-
-- `frontend` em `http://localhost:5173`
-- `backend` em `http://localhost:8000`
-- `postgres` em `localhost:5432`
-- `mongo` em `localhost:27017`
-
-### 3. Ver logs (opcional)
-
-```bash
-docker compose logs -f
-```
-
-Ou de um serviço especifico:
-
-```bash
-docker compose logs -f backend
-```
-
-### 4. Parar o ambiente
-
-```bash
-docker compose down
-```
-
-Para remover tambem os volumes de banco:
-
-```bash
-docker compose down -v
-```
-
-### 5. Reiniciar apenas um serviço (opcional)
-
-```bash
-docker compose up -d --build backend
-```
-
-```bash
-docker compose restart frontend
-```
 
 <br>
 

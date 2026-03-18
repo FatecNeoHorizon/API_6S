@@ -2,7 +2,7 @@
 
 
 <p align="center">
-  <img src="docs/Zeus.png" alt="Descrição da imagem" width="400">
+  <img src="image/logo/Zeus.png" alt="Descrição da imagem" width="400">
 </p>
 
 
@@ -13,6 +13,7 @@
   <a href=#backlog-do-produto>Backlog do Produto</a> •
   <a href=#date-sprint-backlog>Sprint Backlog</a> •
   <a href=#padroes-processos>Padrões de Processo</a> •
+  <a href=#documentacao-tecnica>Documentação Técnica</a> •  
   <a href=#integrantes-equipe>Integrantes da Equipe</a> •
   <a href=#tecnologias-utilizadas>Tecnologias Utilizadas</a> •
   <a href=#burndown>Evolução do Projeto (Burndown)</a> •
@@ -155,6 +156,10 @@ O objetivo do projeto é desenvolver uma plataforma que realize o tratamento e a
 [Documentação Geral](docs/DOCUMENTACAO.md)  
 [Padrões de Commits e Branches](docs/PADROES-COMMITS-BRANCHES.md)  
 [Rastreio de Issues](docs/RASTREIO-ISSUES.md)
+
+## Documentação Técnica <a id="documentacao-tecnica"></a>
+
+[Prototipagem](docs/FLUXO-FIGMA.md)
 
 </br>
 

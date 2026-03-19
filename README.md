@@ -16,6 +16,7 @@
   <a href=#documentacao-tecnica>Documentação Técnica</a> •  
   <a href=#integrantes-equipe>Integrantes da Equipe</a> •
   <a href=#tecnologias-utilizadas>Tecnologias Utilizadas</a> •
+  <a href=#como-rodar-com-docker>Como Rodar com Docker</a> •
   <a href=#burndown>Evolução do Projeto (Burndown)</a> •
   <a href=#cronograma>Cronograma</a>
 
@@ -163,6 +164,13 @@ O objetivo do projeto é desenvolver uma plataforma que realize o tratamento e a
 
 </br>
 
+## Documentação Técnica <a id="documentacao-tecnica"></a>
+
+[Prototipagem](docs/FLUXO-FIGMA.md)  
+[Como rodar o projeto](docs/COMO-RODAR-PROJETO.md)
+
+</br>
+
 ## Evolução do Projeto (Burndown)<a id="burndown"></a>
 
 <img src="burndown/src/main/resources/static/burndown.png?v=8d70dd7a33cd07f389c3953c22ac62816954eb24">
@@ -192,6 +200,7 @@ Esta solução é composta por uma aplicação principal e por um módulo de apo
 
 ### 💬 Comunicação
 [![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://slack.com/)
+
 
 <br>
 

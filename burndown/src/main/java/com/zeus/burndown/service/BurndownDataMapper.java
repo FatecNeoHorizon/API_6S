@@ -115,10 +115,10 @@ public class BurndownDataMapper {
     }
  
     private BurndownData generateSprint(String sprintName,
-                                        LocalDate start,
-                                        LocalDate end,
-                                        List<ProjectItemNode> allIssues) {
- 
+                                    LocalDate start,
+                                    LocalDate end,
+                                    List<ProjectItemNode> allIssues) {
+
         LocalDate today = LocalDate.now();
         LocalDate effectiveEnd;
         if (today.isBefore(start)) {
@@ -127,24 +127,19 @@ public class BurndownDataMapper {
             effectiveEnd = end.isAfter(today) ? today : end;
         }
  
-        // FIX: remover filtro por data de criação da issue.
-        // Issues podem ter sido criadas antes do início do sprint (backlog refinement,
-        // planejamento antecipado, etc). Filtrar por createdAt excluía todas as issues
-        // criadas antes de 16/03, zerando totalHours e quebrando o gráfico.
-        // Inclui todas as issues que foram abertas até o fim efetivo do sprint.
         List<ProjectItemNode> sprintIssues = allIssues.stream()
-                .filter(node -> {
-                    LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                    return !created.isAfter(effectiveEnd);
-                })
-                .collect(Collectors.toList());
+            .filter(node -> {
+                LocalDate created = toLocalDate(node.getContent().getCreatedAt());
+                return !created.isAfter(end); // usa end, não effectiveEnd
+            })
+            .collect(Collectors.toList());
  
         logger.debug("[DEBUG MAPPER] Issues do sprint '{}': {} de {} totais",
                 sprintName, sprintIssues.size(), allIssues.size());
  
         double totalHours = sprintIssues.stream()
-                .mapToDouble(this::resolveEstimateHours)
-                .sum();
+                                        .mapToDouble(this::resolveEstimateHours)
+                                        .sum();
  
         logger.debug("[DEBUG MAPPER] Total de horas do sprint: {}", totalHours);
  
@@ -153,23 +148,20 @@ public class BurndownDataMapper {
         List<LocalDate> dates = new ArrayList<>();
         List<Double> idealLine = new ArrayList<>();
         List<Double> realLine = new ArrayList<>();
- 
+     
         long dayIndex = 0;
  
-        for (LocalDate date = start; !date.isAfter(effectiveEnd); date = date.plusDays(1)) {
- 
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+
             final LocalDate currentDate = date;
             dates.add(currentDate);
- 
-            double idealRemaining;
-            if (totalDays <= 1) {
-                idealRemaining = totalHours;
-            } else {
-                idealRemaining = totalHours - (totalHours * dayIndex / (totalDays - 1));
-            }
- 
+    
+            double idealRemaining = totalDays <= 1
+                    ? totalHours
+                    : totalHours - (totalHours * dayIndex / (totalDays - 1));
+    
             idealLine.add(Math.max(idealRemaining, 0));
- 
+    
             double closedHours = sprintIssues.stream()
                     .filter(node -> {
                         IssueContent issue = node.getContent();
@@ -179,10 +171,9 @@ public class BurndownDataMapper {
                     })
                     .mapToDouble(this::resolveEstimateHours)
                     .sum();
- 
-            double realRemaining = totalHours - closedHours;
-            realLine.add(Math.max(realRemaining, 0));
- 
+    
+            realLine.add(Math.max(totalHours - closedHours, 0));
+    
             dayIndex++;
         }
  
@@ -193,7 +184,7 @@ public class BurndownDataMapper {
         burndown.setDates(dates);
         burndown.setIdealLine(idealLine);
         burndown.setRealLine(realLine);
- 
+    
         return burndown;
     }
  

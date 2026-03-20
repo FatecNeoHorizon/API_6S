@@ -27,5 +27,6 @@
     "body-leading-blank": [2, "always"],
     "footer-leading-blank": [2, "always"]
   },
-  "helpURL": "https://www.conventionalcommits.org/"
+  "helpURL": "https://www.conventionalcommits.org/",
+  "_comment": "Issue number pattern: feat(scope): description #42 — #number at the end links the commit to the GitHub issue card. No rule changes needed as #42 passes all existing validations."
 }

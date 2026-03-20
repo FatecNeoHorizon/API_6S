@@ -2,7 +2,7 @@ name: "Auto Create Branch from Issue"
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 jobs:
   create-branch:
@@ -24,10 +24,10 @@ jobs:
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_LABELS="${{ join(github.event.issue.labels.*.name) }}"
           
-          # Remove prefixos [TIPO] do título
+          # Remove [TYPE] prefixes from title
           CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
           
-          # Converter para kebab-case usando sed (simples e robusto)
+          # Convert to kebab-case using sed (simple and robust)
           SLUG=$(echo "$CLEAN_TITLE" | \
             sed 's/[àáâãä]/a/g; s/[èéêë]/e/g; s/[ìíîï]/i/g; s/[òóôõö]/o/g; s/[ùúûü]/u/g; s/[ç]/c/g; s/[ñ]/n/g' | \
             tr '[:upper:]' '[:lower:]' | \
@@ -35,13 +35,13 @@ jobs:
             sed 's/-\+/-/g' | \
             sed 's/^-\|-$//')
           
-          # Incluir número do issue na branch: numero-slug
+          # Include issue number in branch: number-slug
           BRANCH_NAME="${ISSUE_NUM}-${SLUG}"
 
-          # Determinar tipo baseado nos labels
+          # Determine type based on labels
           TYPE="feature"
           
-          # Verificar labels type:xxx
+          # Check type:xxx labels
           if [[ "$ISSUE_LABELS" =~ type:bug ]]; then
             TYPE="bugfix"
           elif [[ "$ISSUE_LABELS" =~ type:hotfix ]] || [[ "$ISSUE_LABELS" == *"urgent"* ]]; then
@@ -54,7 +54,7 @@ jobs:
             TYPE="feature"
           elif [[ "$ISSUE_LABELS" =~ type:story ]]; then
             TYPE="feature"
-          # Labels fallback para compatibilidade
+          # Fallback labels for compatibility
           elif [[ "$ISSUE_LABELS" == *"bugfix"* ]] || [[ "$ISSUE_LABELS" == *"type:bug"* ]]; then
             TYPE="bugfix"
           elif [[ "$ISSUE_LABELS" == *"docs"* ]] || [[ "$ISSUE_LABELS" == *"type:documentation"* ]]; then
@@ -77,8 +77,8 @@ jobs:
           echo "branch=$FULL_BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "issue_num=$ISSUE_NUM" >> $GITHUB_OUTPUT
           
-          echo "📌 Branch a criar: $FULL_BRANCH_NAME"
-          echo "📝 Tipo: $TYPE"
+          echo "📌 Branch to create: $FULL_BRANCH_NAME"
+          echo "📝 Type: $TYPE"
           echo "🔢 Issue: #$ISSUE_NUM"
           echo "🏷️  Labels: $ISSUE_LABELS"
 
@@ -87,7 +87,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Limpar qualquer mudança no working directory
+          # Clean any changes in working directory
           git reset --hard HEAD
           git clean -fd
           
@@ -97,9 +97,9 @@ jobs:
           if [ "$BRANCH_EXISTS" -eq 0 ]; then
             git checkout -b "$BRANCH"
             git push -u origin "$BRANCH"
-            echo "✅ Branch criada com sucesso: $BRANCH"
+            echo "✅ Branch successfully created: $BRANCH"
           else
-            echo "⚠️  Branch já existe: $BRANCH"
+            echo "⚠️  Branch already exists: $BRANCH"
           fi
 
       - name: Comment on issue
@@ -128,5 +128,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `# ${emoji} Branch Criada Automaticamente\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Padrão:** \`tipo/numero-descricao-em-kebab-case\`\n**Tipo:** \`${branchType}\`\n**Branch:** \`${branchName}\`\n**Issue:** #${issueNum}`
+              body: `# ${emoji} Branch Automatically Created\n\n\`\`\`bash\ngit checkout ${branchName}\n\`\`\`\n\n**Pattern:** \`type/number-description-in-kebab-case\`\n**Type:** \`${branchType}\`\n**Branch:** \`${branchName}\`\n**Issue:** #${issueNum}`
             });

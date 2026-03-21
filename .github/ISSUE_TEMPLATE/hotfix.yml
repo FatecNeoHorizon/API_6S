@@ -1,5 +1,5 @@
 name: "🚨 Hotfix"
-description: "Correção crítica urgente"
+description: "Critical urgent fix"
 title: "[HOTFIX] - "
 labels: ["type:hotfix", "urgent"]
 assignees: []
@@ -7,34 +7,34 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      value: "## 🚨 Descrição do Problema Crítico"
+      value: "## 🚨 Critical Problem Description"
 
   - type: textarea
     id: description
     attributes:
-      label: "O que está quebrado?"
-      description: "Descreva o problema crítico que precisa de correção imediata"
-      placeholder: "Ex: Pipeline ETL travando ao ingerir UCBT_tab — sistema sem dados atualizados..."
+      label: "What is broken?"
+      description: "Describe the critical problem that needs immediate fixing"
+      placeholder: "Ex: ETL pipeline freezing when ingesting UCBT_tab — system without updated data..."
     validations:
       required: true
 
   - type: textarea
     id: impact
     attributes:
-      label: "Impacto"
-      description: "Quais funcionalidades estão comprometidas?"
-      placeholder: "Ex: Indicadores DEC/FEC não estão sendo atualizados. Afeta dashboard principal e sprint review..."
+      label: "Impact"
+      description: "Which functionalities are compromised?"
+      placeholder: "Ex: DEC/FEC indicators not being updated. Affects main dashboard and sprint review..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🔁 Como Reproduzir"
+      value: "## 🔁 Steps to Reproduce"
 
   - type: textarea
     id: steps
     attributes:
-      label: "Passos para reproduzir"
+      label: "Steps to reproduce"
       value: |
         1. 
         2. 
@@ -45,53 +45,41 @@ body:
   - type: textarea
     id: error-output
     attributes:
-      label: "Erro / Stack trace"
+      label: "Error / Stack trace"
       render: shell
 
   - type: markdown
     attributes:
-      value: "## 🗂️ Rastreabilidade"
-
-  - type: dropdown
-    id: sprint
-    attributes:
-      label: "Sprint"
-      options:
-        - Sprint 1
-        - Sprint 2
-        - Sprint 3
-    validations:
-      required: true
-
-  - type: input
-    id: related-task
-    attributes:
-      label: "Task relacionada (se houver)"
-      placeholder: "Ex: TASK-08"
+      value: "## 🗂️ Traceability"
 
   - type: input
     id: related-requirement
     attributes:
-      label: "Requisito relacionado"
-      placeholder: "Ex: RF-01, RF-02, RNF-05"
+      label: "Related requirement"
+      description: |
+        Link directly to the requirement in the README using markdown.
+        Example: [RF01](../../README.md#RF01)
+        The README must have an anchor like <a id="RF01"> on the requirement line.
+      placeholder: "[RF01](../../README.md#RF01)"
 
-  - type: textarea
+  - type: input
     id: related-user-stories
     attributes:
-      label: "User Stories relacionadas"
-      placeholder: |
-        Ex:
-        - US-12: Como usuário, espero que o endpoint retorne 200...
-        - US-07: Como analista, preciso que os filtros funcionem corretamente...
+      label: "Related user story"
+      description: |
+        Link directly to the user story in the README using markdown.
+        Example: [US01](../../README.md#backlog-do-produto)
+        To link a specific US, add an anchor like <a id="US01"> to the README backlog table.
+      placeholder: "[US01](../../README.md#backlog-do-produto)"
 
   - type: markdown
     attributes:
-      value: "## 🏷️ Classificação"
+      value: "## 🏷️ Classification"
 
   - type: dropdown
     id: domain
     attributes:
-      label: "Domínio"
+      label: "Domain"
       options:
         - "[BACK]"
         - "[FRONT]"
@@ -99,47 +87,35 @@ body:
         - "[DATA]"
         - "[ML]"
         - "[SEC]"
+        - "[QA]"
+        - "[DOC]"
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🩹 Solução Proposta"
+      value: "## 🩹 Proposed Solution"
 
   - type: textarea
     id: solution
     attributes:
-      label: "Como será corrigido?"
-      placeholder: "Ex: Reduzir chunk size de 100k para 50k linhas e adicionar retry em caso de timeout..."
-    validations:
-      required: true
-
-  - type: input
-    id: estimate
-    attributes:
-      label: "Estimativa de resolução"
-      placeholder: "Ex: 2h"
+      label: "How will it be fixed?"
+      placeholder: "Ex: Reduce chunk size from 100k to 50k rows and add retry on timeout..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## ✅ Critérios de Resolução"
+      value: "## ✅ Resolution Criteria"
 
   - type: textarea
     id: acceptance-criteria
     attributes:
-      label: "Como validar que o problema foi resolvido?"
+      label: "How to validate the problem is resolved?"
       value: |
-        - [ ] Problema não reproduz mais
-        - [ ] Funcionalidade crítica restaurada
-        - [ ] Testado localmente via Docker Compose
-        - [ ] PR revisado e mergeado
+        - [ ] Problem no longer reproduces
+        - [ ] Critical functionality restored
+        - [ ] Tested locally via Docker Compose
+        - [ ] PR reviewed and merged
     validations:
       required: true
-
-  - type: textarea
-    id: additional-notes
-    attributes:
-      label: "Notas adicionais"
-      placeholder: "Logs, prints ou contexto extra..."

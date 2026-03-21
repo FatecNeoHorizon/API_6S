@@ -1,28 +1,64 @@
-import { PageContainer } from "../components/common/PageContainer";
-import { SectionTitle } from "../components/common/SectionTitle";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { Link } from "react-router-dom";
+
+import { PageContainer } from "@/components/common/PageContainer";
+import { SectionTitle } from "@/components/common/SectionTitle";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
     <PageContainer>
       <SectionTitle
-        title="Frontend Zeus preparado"
-        subtitle="Ambiente base pronto para receber páginas reais no futuro."
+        title="Frontend Setup Completed"
+        subtitle="Use the links below to navigate through the application pages."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Status da estrutura</CardTitle>
-          <CardDescription>
-            Rotas, componentes reutilizáveis e padrão de API já preparados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-600">
-            Esta página é mockada e existe apenas para validar a estrutura inicial.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        
+        {/* Login */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>Access the login page</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/login">
+              <Button className="w-full">Go to Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* First Access */}
+        <Card>
+          <CardHeader>
+            <CardTitle>First Access</CardTitle>
+            <CardDescription>Set your password</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/primeiro-acesso">
+              <Button variant="secondary" className="w-full">
+                Go to First Access
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Dashboard */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Dashboard</CardTitle>
+            <CardDescription>Main application area</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/dashboard">
+              <Button variant="outline" className="w-full">
+                Go to Dashboard
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+      </div>
     </PageContainer>
   );
 }

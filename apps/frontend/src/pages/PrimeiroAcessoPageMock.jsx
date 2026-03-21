@@ -2,7 +2,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { FormField } from "../components/common/FormField";
-import { PageContainer } from "../components/common/pageContainer";
+import { PageContainer } from "../components/common/PageContainer";
 
 export default function PrimeiroAcessoPageMock() {
   return (

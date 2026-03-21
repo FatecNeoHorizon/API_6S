@@ -16,16 +16,16 @@ jobs:
       - name: Extract issue number from branch
         id: extract
         run: |
-          # Branch format: tipo/123-descricao
+          # Branch format: type/123-description
           BRANCH_NAME="${{ github.head_ref }}"
           
-          # Extrair número (primeiro número após a barra)
+          # Extract number (first number after the slash)
           ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '(?<=/)\d+' | head -1)
           
-          # Extrair tipo
+          # Extract type
           TYPE=$(echo "$BRANCH_NAME" | cut -d'/' -f1)
           
-          # Se não encontrou número, tentar alternativa
+          # If number not found, try alternative
           if [ -z "$ISSUE_NUM" ]; then
             ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '^\d+' | head -1)
           fi
@@ -35,7 +35,7 @@ jobs:
           
           echo "📌 Branch: $BRANCH_NAME"
           echo "🔢 Issue: #$ISSUE_NUM"
-          echo "📦 Tipo: $TYPE"
+          echo "📦 Type: $TYPE"
 
       - name: Comment on PR with issue info
         if: steps.extract.outputs.issue_num != ''
@@ -51,6 +51,7 @@ jobs:
               'bugfix': '🐛',
               'hotfix': '🚨',
               'docs': '📚',
+              'research': '🔬',
               'refactor': '♻️',
               'perf': '⚡',
               'test': '🧪',
@@ -59,12 +60,12 @@ jobs:
             
             const emoji = typeEmojis[branchType] || '🌳';
             
-            // Adicionar comment informativo
+            // Add informative comment
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `# ${emoji} Informações de Rastreio\n\n**Issue Relacionada:** #${issueNum}\n**Tipo:** \`${branchType}\`\n**Branch:** \`${{ github.head_ref }}\`\n\n**Ao fazer merge, adicione na descrição do PR:**\n\\\`\\\`\\\`\nCloses #${issueNum}\n\\\`\\\`\\\``
+              body: `# ${emoji} Traceability Info\n\n**Related Issue:** #${issueNum}\n**Type:** \`${branchType}\`\n**Branch:** \`${{ github.head_ref }}\`\n\n**When merging, add to the PR description:**\n\\\`\\\`\\\`\nCloses #${issueNum}\n\\\`\\\`\\\``
             });
 
       - name: Update PR body with close link
@@ -83,7 +84,7 @@ jobs:
             
             let body = pr.data.body || '';
             
-            // Se ainda não tem "Closes", adicionar
+            // If "Closes" not present yet, add it
             if (!body.includes('Closes #')) {
               body += `\n\nCloses #${issueNum}`;
               
@@ -94,7 +95,7 @@ jobs:
                 body: body
               });
               
-              console.log(`✅ PR #${prNumber} atualizado com Closes #${issueNum}`);
+              console.log(`✅ PR #${prNumber} updated with Closes #${issueNum}`);
             } else {
-              console.log(`ℹ️ PR já contém Closes`);
+              console.log(`ℹ️ PR already contains Closes`);
             }

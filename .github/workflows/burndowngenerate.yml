@@ -2,14 +2,14 @@ name: Burndown Chart Generation
 
 on:
   schedule:
-    # Executa diariamente às 18:45 (UTC)
+    # Runs daily at 18:45 (UTC)
     - cron: '45 18 * * *'
   
   workflow_dispatch:
-    # Permite execução manual
+    # Allows manual execution
 
 concurrency:
-  group: burndown-generation-main
+  group: burndown-generation-sprint-1
   cancel-in-progress: false
 
 permissions:
@@ -42,11 +42,11 @@ jobs:
           SPRING_MAIN_WEB_APPLICATION_TYPE: none
         run: |
           if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ ERRO: ISSUE_TOKEN_API secret não está configurado!"
+            echo "❌ ERROR: ISSUE_TOKEN_API secret is not configured!"
             exit 1
           fi
 
-          echo "Executando burndown em modo CLI..."
+          echo "Running burndown in CLI mode..."
           java -jar target/burndown-0.0.1-SNAPSHOT.jar --spring.main.web-application-type=none
 
       - name: Commit and Push changes (PNG + README cache-busting)
@@ -61,25 +61,23 @@ jobs:
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
 
-            # Atualiza o README principal para:
-            # - apontar para o caminho correto dentro da pasta burndown
-            # - adicionar cache busting pra evitar imagem antiga por cache
+            # Updates the main README to:
+            # - point to the correct path inside the burndown folder
+            # - add cache busting to avoid stale image from cache
             #
-            # Exemplo final no README:
+            # Final example in README:
             # <img src="burndown/src/main/resources/static/burndown.png?v=<sha>">
             if [ -f "$README_PATH" ]; then
               VERSION="${GITHUB_SHA}"
 
-              # 1) Corrige casos antigos que estavam como src="burndown/src..."
-              # 2) Garante que exista ?v=... e atualiza o valor
-              #
-              # Você pode adaptar o padrão se o README tiver variações.
+              # 1) Fixes old cases that were using src="burndown/src..."
+              # 2) Ensures ?v=... exists and updates its value
               sed -i \
                 -e 's/src="burndown\/src\/main\/resources\/static\/burndown\.png[^"]*"/src="burndown\/src\/main\/resources\/static\/burndown.png?v='"${VERSION}"'"/g' \
                 -e 's/src="src\/main\/resources\/static\/burndown\.png[^"]*"/src="burndown\/src\/main\/resources\/static\/burndown.png?v='"${VERSION}"'"/g' \
                 "$README_PATH"
             else
-              echo "README principal não encontrado em $README_PATH; pulando atualização do README."
+              echo "Main README not found at $README_PATH; skipping README update."
             fi
 
             git add "$PNG_PATH"
@@ -87,14 +85,14 @@ jobs:
               git add "$README_PATH"
             fi
 
-            git commit -m "chore: atualizar gráfico de burndown"
+            git commit -m "chore: update burndown chart"
 
-            # Evita erro de non-fast-forward quando o remoto avancou durante o job.
+            # Avoids non-fast-forward error when remote has advanced during the job.
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push origin HEAD:main && break
-              echo "Tentativa $attempt de push falhou; tentando novamente..."
+              git pull --rebase origin sprint-1 && git push origin HEAD:sprint-1 && break
+              echo "Push attempt $attempt failed; retrying..."
               sleep 2
             done
           else
-            echo "Nenhuma mudança no gráfico para commit"
+            echo "No changes in chart to commit"
           fi

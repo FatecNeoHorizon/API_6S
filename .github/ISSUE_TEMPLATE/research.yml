@@ -1,5 +1,5 @@
 name: "🔬 Research / Spike"
-description: "Investigação técnica ou experimento de ML"
+description: "Technical investigation or ML experiment"
 title: "[RESEARCH] - "
 labels: ["type:research"]
 assignees: []
@@ -7,159 +7,117 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      value: "## 🔬 Descrição"
+      value: "## 🔬 Description"
 
   - type: textarea
     id: description
     attributes:
-      label: "O que será investigado ou experimentado?"
-      placeholder: "Ex: Avaliar qual algoritmo de clustering (K-Means vs DBSCAN) produz melhor separação das regiões por criticidade..."
+      label: "What will be investigated or experimented?"
+      placeholder: "Ex: Evaluate which clustering algorithm (K-Means vs DBSCAN) produces better separation of regions by criticality..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## ❓ Hipótese"
+      value: "## ❓ Hypothesis"
 
   - type: textarea
     id: hypothesis
     attributes:
-      label: "Qual é a hipótese?"
-      description: "O que você espera descobrir ou validar?"
-      placeholder: "Ex: K-Means com 3 clusters deve produzir Silhouette Score > 0.4 usando DEC, FEC e PERD_MED como features..."
+      label: "What is the hypothesis?"
+      description: "What do you expect to discover or validate?"
+      placeholder: "Ex: K-Means with 3 clusters should produce Silhouette Score > 0.4 using DEC, FEC and PERD_MED as features..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🧪 Abordagem"
+      value: "## 🧪 Approach"
 
   - type: textarea
     id: approach
     attributes:
-      label: "Como será feita a investigação?"
+      label: "How will the investigation be conducted?"
       placeholder: |
         Ex:
-        1. Preparar dataset agregado por CONJ (TASK-15)
-        2. Treinar K-Means com k=3
-        3. Calcular Silhouette Score
-        4. Se Score < 0.4, testar DBSCAN
-        5. Documentar resultados em docs/ML-METRICAS.md
+        1. Prepare dataset aggregated by CONJ (TASK-15)
+        2. Train K-Means with k=3
+        3. Calculate Silhouette Score
+        4. If Score < 0.4, test DBSCAN
+        5. Document results in docs/ML-METRICS.md
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 📊 Dados Necessários"
-
-  - type: textarea
-    id: bdgd-layers
-    attributes:
-      label: "Layers da BDGD / features utilizadas"
-      placeholder: |
-        Ex:
-        - CTMT.PERD_MED — perda média do circuito
-        - UCBT_tab: DIC_01..12 agregado por CONJ (DEC médio)
-        - UCBT_tab: FIC_01..12 agregado por CONJ (FEC médio)
-    validations:
-      required: true
-
-  - type: markdown
-    attributes:
-      value: "## 🎯 Critério de Validação"
+      value: "## 🎯 Validation Criteria"
 
   - type: textarea
     id: validation
     attributes:
-      label: "Como o resultado será avaliado?"
-      description: "Qual métrica define se a abordagem funcionou?"
+      label: "How will the result be evaluated?"
+      description: "Which metric defines whether the approach worked?"
       placeholder: |
         Ex:
-        - Silhouette Score ≥ 0.4 para clustering
-        - RMSE ≤ X para regressão (definir após análise exploratória)
-        - Clusters interpretáveis em termos de negócio (baixa/média/alta criticidade)
+        - Silhouette Score ≥ 0.4 for clustering
+        - RMSE ≤ X for regression (define after exploratory analysis)
+        - Clusters interpretable in business terms (low/medium/high criticality)
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🗂️ Rastreabilidade"
-
-  - type: dropdown
-    id: sprint
-    attributes:
-      label: "Sprint"
-      options:
-        - Sprint 1
-        - Sprint 2
-        - Sprint 3
-    validations:
-      required: true
-
-  - type: input
-    id: related-task
-    attributes:
-      label: "Task relacionada (se houver)"
-      placeholder: "Ex: TASK-08"
+      value: "## 🗂️ Traceability"
 
   - type: input
     id: related-requirement
     attributes:
-      label: "Requisito relacionado"
-      placeholder: "Ex: RF-01, RF-02, RNF-05"
-
-  - type: textarea
-    id: related-user-stories
-    attributes:
-      label: "User Stories relacionadas"
-      placeholder: |
-        Ex:
-        - US-12: Como usuário, espero que o endpoint retorne 200...
-        - US-07: Como analista, preciso que os filtros funcionem corretamente...
+      label: "Related requirement"
+      description: |
+        Link directly to the requirement in the README using markdown.
+        Example: [RF01](../../README.md#RF01)
+        The README must have an anchor like <a id="RF01"> on the requirement line.
+      placeholder: "[RF01](../../README.md#RF01)"
 
   - type: input
-    id: estimate
+    id: related-user-stories
     attributes:
-      label: "Estimativa"
-      placeholder: "Ex: 6h"
-    validations:
-      required: true
+      label: "Related user story"
+      description: |
+        Link directly to the user story in the README using markdown.
+        Example: [US01](../../README.md#backlog-do-produto)
+        To link a specific US, add an anchor like <a id="US01"> to the README backlog table.
+      placeholder: "[US01](../../README.md#backlog-do-produto)"
 
   - type: markdown
     attributes:
-      value: "## ✅ Critérios de Aceite"
+      value: "## ✅ Acceptance Criteria"
 
   - type: textarea
     id: acceptance-criteria
     attributes:
-      label: "O que deve ser entregue ao final?"
+      label: "What must be delivered at the end?"
       value: |
-        - [ ] Experimento executado e documentado
-        - [ ] Métrica de validação calculada e registrada
-        - [ ] Decisão técnica registrada (qual abordagem adotar e por quê)
-        - [ ] Resultado disponível em docs/ML-METRICAS.md
-        - [ ] Modelo salvo (joblib) se aprovado
+        - [ ] Experiment executed and documented
+        - [ ] Validation metric calculated and recorded
+        - [ ] Technical decision recorded (which approach to adopt and why)
+        - [ ] Result available in docs/ML-METRICS.md
+        - [ ] Model saved (joblib) if approved
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 📌 Resultado Esperado"
+      value: "## 📌 Expected Output"
 
   - type: dropdown
     id: expected-output
     attributes:
-      label: "O que esta research deve produzir?"
+      label: "What should this research produce?"
       options:
-        - Decisão técnica documentada (qual abordagem usar)
-        - Modelo treinado e salvo
-        - Ambos — decisão + modelo
-        - Dataset ou feature preparados
+        - Documented technical decision (which approach to use)
+        - Trained and saved model
+        - Both — decision + model
+        - Dataset or prepared features
     validations:
       required: true
-
-  - type: textarea
-    id: additional-notes
-    attributes:
-      label: "Notas adicionais"
-      placeholder: "Papers, referências técnicas ou decisões de arquitetura relevantes..."

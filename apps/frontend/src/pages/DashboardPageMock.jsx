@@ -1,4 +1,4 @@
-import { PageContainer } from "../components/common/pageContainer";
+import { PageContainer } from "../components/common/PageContainer";
 import { SectionTitle } from "../components/common/SectionTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 

@@ -1,30 +1,32 @@
-# Burndown Automatic Generator
+# Burndown Automatic Generator <a ></a>
 
-Projeto Java/Spring Boot para gerar automaticamente um gráfico burndown com base em dados reais de Issues do GitHub Projects (GraphQL API).
+[Back to main README](../README.md#date-sprint-backlog)
 
-## Visão Geral
+Java/Spring Boot project to automatically generate a burndown chart based on real GitHub Projects Issue data (GraphQL API).
 
-Fluxo de execução:
-1. `ProjectDataProvider` busca dados do GitHub Project via GraphQL.
-2. `BurndownDataMapper` transforma Issues em série temporal da sprint ativa.
-3. `BurndownChartGenerator` gera o PNG do gráfico.
-4. `BurndownApplication` orquestra tudo e encerra a execução com `exit code`.
+## Overview
 
-Saída padrão do gráfico:
+Execution flow:
+1. `ProjectDataProvider` fetches data from the GitHub Project via GraphQL.
+2. `BurndownDataMapper` transforms Issues into a time series for the active sprint.
+3. `BurndownChartGenerator` generates the chart PNG.
+4. `BurndownApplication` orchestrates everything and exits with an `exit code`.
+
+Default chart output:
 - `src/main/resources/static/burndown.png`
 
-## Autoria e Liderança do Projeto
+## Authorship and Project Leadership
 
-Este projeto foi idealizado, arquitetado, implementado e operacionalizado integralmente por **Cesar Pelogia**.
+This project was entirely conceived, architected, implemented and operationalized by **Cesar Pelogia**.
 
-Responsabilidade de ponta a ponta:
-- concepção da ideia e definição do problema
-- desenho da arquitetura e modelagem da solução
-- desenvolvimento da aplicação e integração com GitHub GraphQL API
-- automação de execução no GitHub Actions
-- validação técnica, troubleshooting e estabilização da entrega
+End-to-end responsibilities:
+- idea conception and problem definition
+- architecture design and solution modeling
+- application development and GitHub GraphQL API integration
+- GitHub Actions execution automation
+- technical validation, troubleshooting and delivery stabilization
 
-Perfis profissionais:
+Professional profiles:
 - GitHub: `https://github.com/cesarpelogia`
 - LinkedIn: `http://www.linkedin.com/in/cesar-augusto-anselmo-pelogia-truyts-94a08a268/`
 
@@ -37,25 +39,25 @@ Perfis profissionais:
 - GitHub GraphQL API
 - GitHub Actions
 
-## Estrutura Principal
+## Main Structure
 
-- `src/main/java/com/zeus/burndown/BurndownApplication.java`: ponto de entrada e orquestração
-- `src/main/java/com/zeus/burndown/integration/github/`: cliente e provedor da API do GitHub
-- `src/main/java/com/zeus/burndown/service/`: regras de mapeamento e geração do gráfico
-- `src/main/resources/application.properties`: configurações de ambiente
-- `.github/workflows/burndowngenerate.yml`: automação CI para gerar e publicar o gráfico
+- `src/main/java/com/zeus/burndown/BurndownApplication.java`: entry point and orchestration
+- `src/main/java/com/zeus/burndown/integration/github/`: GitHub API client and provider
+- `src/main/java/com/zeus/burndown/service/`: mapping rules and chart generation
+- `src/main/resources/application.properties`: environment configuration
+- `.github/workflows/burndowngenerate.yml`: CI automation to generate and publish the chart
 
-## Configuração
+## Configuration
 
-### Variáveis/propriedades relevantes
+### Relevant variables/properties
 
-Em `application.properties`:
+In `application.properties`:
 
 ```properties
 github.api.url=https://api.github.com/graphql
 github.api.token=${GITHUB_TOKEN:}
-github.org={Nome_da_Organização}
-github.project-number={Numero_do_Projeto}
+github.org={Organization_Name}
+github.project-number={Project_Number}
 
 burndown.output.path=src/main/resources/static/burndown.png
 burndown.logo.path=
@@ -63,17 +65,17 @@ burndown.logo.path=
 
 ### Token
 
-A aplicação lê o token da variável de ambiente `GITHUB_TOKEN`.
+The application reads the token from the `GITHUB_TOKEN` environment variable.
 
-No GitHub Actions, o secret `ISSUE_TOKEN_API` é mapeado para `GITHUB_TOKEN` no workflow.
+In GitHub Actions, the `ISSUE_TOKEN_API` secret is mapped to `GITHUB_TOKEN` in the workflow.
 
-## Execução Local
+## Local Execution
 
 ### Windows (cmd)
 
 ```bat
 cd burndown
-set GITHUB_TOKEN=seu_token_aqui
+set GITHUB_TOKEN=your_token_here
 mvnw.cmd spring-boot:run
 ```
 
@@ -81,49 +83,49 @@ mvnw.cmd spring-boot:run
 
 ```powershell
 cd burndown
-$env:GITHUB_TOKEN="seu_token_aqui"
+$env:GITHUB_TOKEN="your_token_here"
 ./mvnw.cmd spring-boot:run
 ```
 
-### Execução via JAR (mesmo padrão do CI)
+### Running via JAR (same pattern as CI)
 
 ```bat
 cd burndown
 mvnw.cmd clean package -DskipTests
-set GITHUB_TOKEN=seu_token_aqui
+set GITHUB_TOKEN=your_token_here
 java -jar target/burndown-0.0.1-SNAPSHOT.jar
 ```
 
-## Testes
+## Tests
 
 ```bat
 cd burndown
 mvnw.cmd test
 ```
 
-## GitHub Actions (Automação)
+## GitHub Actions (Automation)
 
 Workflow:
 - `/.github/workflows/burndowngenerate.yml`
 
-Comportamento:
-- roda diariamente por `cron` e também manualmente (`workflow_dispatch`)
-- compila o módulo `burndown`
-- executa o JAR para gerar o PNG
-- faz commit/push de `src/main/resources/static/burndown.png` quando houver alteração
+Behavior:
+- runs daily via `cron` and also manually (`workflow_dispatch`)
+- compiles the `burndown` module
+- executes the JAR to generate the PNG
+- commits/pushes `src/main/resources/static/burndown.png` when there are changes
 
-## Troubleshooting rápido
+## Quick Troubleshooting
 
-- Erro de autenticação no GitHub:
-  - verifique se `GITHUB_TOKEN` foi definido com o valor real do PAT.
-- Sem dados no gráfico:
-  - confirme `github.org` e `github.project-number`.
-- Workflow não commita:
-  - pode ser que o gráfico não tenha mudado naquele dia.
+- GitHub authentication error:
+  - verify that `GITHUB_TOKEN` was set with the actual PAT value.
+- No data in the chart:
+  - confirm `github.org` and `github.project-number`.
+- Workflow does not commit:
+  - the chart may not have changed that day.
 
-## Resultado esperado
+## Expected Result
 
-Ao executar com sucesso:
-- os logs informam início/fim da geração
-- o arquivo `src/main/resources/static/burndown.png` é atualizado
-- no CI, o gráfico pode ser versionado automaticamente via commit
+On successful execution:
+- logs report the start/end of the generation
+- the file `src/main/resources/static/burndown.png` is updated
+- in CI, the chart can be automatically versioned via commit

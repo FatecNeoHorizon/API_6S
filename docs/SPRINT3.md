@@ -1,118 +1,118 @@
-# Sprint 3 — Visão Estratégica e Conformidade
+# Sprint 3 — Strategic Vision and Compliance
 
-[Voltar ao README principal](../README.md#date-sprint-backlog)
+[Back to main README](../README.md#date-sprint-backlog)
 
-> **Período:** 11/05/2026 → 31/05/2026  
-> **Status:** ⏳ Aguardando
-
----
-
-## 🎯 Objetivo da Sprint
-
-Entregar a visão estratégica completa do produto — consolidando o SAM, o mapa de calor geográfico e a conformidade com a LGPD, fechando o ciclo de análise que vai dos dados brutos da BDGD/ANEEL até a priorização comercial de regiões para a Tecsys, com destaque para oportunidades na malha de transmissão.
+> **Period:** 05/11/2026 → 05/31/2026  
+> **Status:** ⏳ Waiting
 
 ---
 
-## ✅ MVC da Sprint — Entregas
+## 🎯 Sprint Goal
 
-### 🟢 Mínimo Comprometido
-O que a equipe se compromete a entregar obrigatoriamente até o fim da sprint.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Mapa de calor geográfico com Leaflet | ⬜ |
-| 2 | Cálculo e exibição do SAM | ⬜ |
-| 3 | Conformidade com LGPD | ⬜ |
-
-### 🔵 Entregas Adicionais
-O que será entregue além do mínimo, caso o tempo e contexto permitissem.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Recálculo automático de indicadores após nova carga de dados | ⬜ |
+Deliver the complete strategic product vision — consolidating the SAM, the geographic heatmap and LGPD compliance, closing the analysis cycle that goes from raw BDGD/ANEEL data to commercial region prioritization for Tecsys, with emphasis on opportunities in the transmission network.
 
 ---
 
-## 📋 User Stories e Requisitos
+## ✅ Sprint MVC — Deliverables
 
-| User Story | Descrição | Requisitos | Prioridade |
-|:-----------|:----------|:----------:|:----------:|
-| US10 | Como analista, quero um indicador de SAM por região. | RF08 | 🔴 Highest |
-| US11 | Como analista comercial, quero uma visualização geográfica para priorizar regiões de abordagem comercial. | RF09 | 🔴 Highest |
-| US12 | Como usuário, quero controle e transparência sobre meus dados pessoais (LGPD). | RF07, RF10 | 🟠 High |
-| US13 | Como analista, quero que os indicadores sejam recalculados automaticamente após cada nova carga de dados. | RNF05 | 🟡 Medium |
+### 🟢 Minimum Commitment
+What the team commits to delivering by the end of the sprint.
 
----
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | Geographic heatmap with Leaflet | ⬜ |
+| 2 | SAM calculation and display | ⬜ |
+| 3 | LGPD compliance | ⬜ |
 
-## 🏗️ Arquitetura e Decisões Técnicas
+### 🔵 Additional Deliverables
+What will be delivered beyond the minimum, if time and context allow.
 
-### Integração do Leaflet com React para o mapa de calor
-
-O mapa de calor será implementado com **Leaflet** integrado ao React via
-`react-leaflet`, com o plugin `leaflet.heat` para renderização do heatmap.
-
-A escolha do Leaflet se justifica por:
-- Curva de aprendizado baixa em relação a alternativas como Google Maps ou Mapbox
-- Suporte nativo a heatmap via plugin oficial
-- Open source e sem custo de API
-- Integração limpa com `react-leaflet` no frontend React
-
-**Estratégia de agregação para o mapa:**  
-O layer `CONJ` (82 polígonos MultiPolygon) é o nível ideal de agregação para
-o heatmap. Em vez de renderizar milhões de pontos individuais, o mapa exibe
-82 zonas geográficas com a criticidade média de cada conjunto — performance
-adequada no navegador sem comprometer a legibilidade da informação.
-
-O mapa suporta **filtro por tipo de rede** (transmissão/distribuição) e por
-indicador (DEC, FEC, perdas), usando o atributo `tipo_rede` definido na Sprint 1.
-
-### Cálculo do SAM
-
-O SAM é obtido aplicando filtros sobre o TAM físico calculado na Sprint 2.
-O campo `ARE_LOC` da BDGD é o critério operacional central:
-
-- **Técnicos:** pontos cuja infraestrutura é compatível com o sensor da Tecsys
-- **Regulatórios:** distribuidoras sob metas obrigatórias de DEC/FEC da ANEEL
-- **Operacionais:** `ARE_LOC != urbano denso` — priorização da malha de
-  transmissão e pontos periurbanos/rurais onde a logística de instalação é viável
-
-> O SAM fecha o ciclo: TAM responde *"quantos pontos existem?"*,
-> SAM responde *"quantos pontos a Tecsys pode realisticamente atender?"*.
-> Para a Tecsys, a resposta está predominantemente em `SUB`, `UNTRAT` e
-> `UNTRMT` com `ARE_LOC` rural ou periurbano.
-
-### Conformidade com LGPD
-
-A adequação à LGPD será implementada sobre a camada de dados sensíveis
-já isolada no PostgreSQL desde a Sprint 1. O sistema coleta apenas os dados
-estritamente necessários: **nome, e-mail, senha e cargo**.
-
-**Anonimização e proteção**
-- Senha armazenada com hash **bcrypt** — nunca em texto plano
-- E-mail e nome mascarados em logs do sistema e relatórios exportados
-- Cargo mantido apenas para controle de perfil de acesso
-
-**Consentimento explícito**
-- Aceite obrigatório nos termos de uso no cadastro, conforme Art. 8º da LGPD
-
-**Política de retenção e exclusão**
-- Dados mantidos enquanto a conta estiver ativa
-- Exclusão completa em até 30 dias após solicitação, conforme Art. 18 da LGPD
-- Logs de acesso retidos por 90 dias para auditoria
-
-**ROPA simplificado**
-- Relatório de tratamento de dados gerado para fins acadêmicos
-
-> A separação entre PostgreSQL (dados sensíveis) e MongoDB (dados públicos BDGD),
-> definida na Sprint 1, foi o principal fator arquitetural que simplificou
-> a implementação da conformidade com a LGPD nesta sprint.
-
-### Recálculo automático de indicadores
-
-Após cada nova carga de dados, o sistema dispara automaticamente o recálculo
-dos indicadores DEC, FEC e perdas. A interface exibe a data/hora da última
-carga e o identificador da versão do lote, garantindo rastreabilidade (RNF05).
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | Automatic recalculation of indicators after each new data load | ⬜ |
 
 ---
 
-*Última atualização: 16/03/2026*
+## 📋 User Stories and Requirements
+
+| User Story | Description | Requirements | Priority |
+|:-----------|:------------|:------------:|:--------:|
+| US10 | As an analyst, I want a SAM indicator per region. | RF08 | 🔴 Highest |
+| US11 | As a commercial analyst, I want a geographic visualization to prioritize regions for commercial outreach. | RF09 | 🔴 Highest |
+| US12 | As a user, I want control and transparency over my personal data (LGPD). | RF07, RF10 | 🟠 High |
+| US13 | As an analyst, I want indicators to be automatically recalculated after each new data load. | RNF05 | 🟡 Medium |
+
+---
+
+## 🏗️ Architecture and Technical Decisions
+
+### Leaflet integration with React for the heatmap
+
+The heatmap will be implemented with **Leaflet** integrated into React via
+`react-leaflet`, with the `leaflet.heat` plugin for heatmap rendering.
+
+The choice of Leaflet is justified by:
+- Lower learning curve compared to alternatives such as Google Maps or Mapbox
+- Native heatmap support via official plugin
+- Open source with no API cost
+- Clean integration with `react-leaflet` in the React frontend
+
+**Aggregation strategy for the map:**  
+The `CONJ` layer (82 MultiPolygon polygons) is the ideal aggregation level for
+the heatmap. Instead of rendering millions of individual points, the map displays
+82 geographic zones with the average criticality of each set — adequate
+browser performance without compromising readability.
+
+The map supports **filtering by network type** (transmission/distribution) and by
+indicator (DEC, FEC, losses), using the `network_type` attribute defined in Sprint 1.
+
+### SAM calculation
+
+The SAM is obtained by applying filters over the physical TAM calculated in Sprint 2.
+The `ARE_LOC` field from BDGD is the central operational criterion:
+
+- **Technical:** points whose infrastructure is compatible with the Tecsys sensor
+- **Regulatory:** distributors under mandatory DEC/FEC targets set by ANEEL
+- **Operational:** `ARE_LOC != dense urban` — prioritization of the transmission
+  network and peri-urban/rural points where installation logistics are viable
+
+> The SAM closes the cycle: TAM answers *"how many points exist?"*,
+> SAM answers *"how many points can Tecsys realistically serve?"*.
+> For Tecsys, the answer lies predominantly in `SUB`, `UNTRAT` and
+> `UNTRMT` with `ARE_LOC` rural or peri-urban.
+
+### LGPD Compliance
+
+LGPD compliance will be implemented on top of the sensitive data layer
+already isolated in PostgreSQL since Sprint 1. The system collects only
+strictly necessary data: **name, email, password and role**.
+
+**Anonymization and protection**
+- Password stored as a **bcrypt** hash — never in plain text
+- Email and name masked in system logs and exported reports
+- Role retained only for access profile control
+
+**Explicit consent**
+- Mandatory acceptance of terms of use at registration, in accordance with Art. 8 of the LGPD
+
+**Retention and deletion policy**
+- Data retained while the account is active
+- Complete deletion within 30 days upon request, in accordance with Art. 18 of the LGPD
+- Access logs retained for 90 days for auditing purposes
+
+**Simplified ROPA**
+- Data processing record generated for academic purposes
+
+> The separation between PostgreSQL (sensitive data) and MongoDB (public BDGD data),
+> defined in Sprint 1, was the main architectural factor that simplified
+> LGPD compliance implementation in this sprint.
+
+### Automatic recalculation of indicators
+
+After each new data load, the system automatically triggers the recalculation
+of DEC, FEC and loss indicators. The interface displays the date/time of the last
+load and the batch version identifier, ensuring traceability (RNF05).
+
+---
+
+*Last updated: 03/16/2026*

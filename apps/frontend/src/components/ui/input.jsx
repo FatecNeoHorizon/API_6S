@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { cn } from "../../lib/utils";
+import { cn } from "../../utils/utils";
 
 export function Input({ className, type = "text", ...props }) {
   return (

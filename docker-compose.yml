@@ -9,7 +9,28 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - db_network
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
 
+  flyway:
+    image: flyway/flyway:9-alpine
+    command: migrate
+    env_file:
+      - .env
+    volumes:
+      - ./database/migrations:/flyway/sql
+    networks:
+      - db_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+        
   mongo:
     image: mongo:6.0
     container_name: mongo_db
@@ -21,6 +42,14 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - app_network
+    healthcheck:
+        test: ["CMD-SHELL", "mongo --username ${MONGO_INITDB_ROOT_USERNAME} --password ${MONGO_INITDB_ROOT_PASSWORD} --eval 'db.adminCommand(\"ping\")'"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
 
   backend:
     build: 
@@ -31,9 +60,16 @@ services:
       - .env
     ports:
       - "8000:8000"
+    networks:
+      - db_network
+      - app_network
     depends_on:
-      - postgres
-      - mongo
+      postgres:
+        condition: service_started
+      flyway:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_started
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -45,9 +81,15 @@ services:
       - .env
     ports:
       - "5173:5173"
+    networks:
+      - app_network
     depends_on:
       - backend
 
 volumes:
   postgres_data:
   mongo_data:
+  
+networks:
+  db_network:
+  app_network:

@@ -1,6 +1,19 @@
-{
-  "extends": ["@commitlint/config-conventional"],
-  "rules": {
+module.exports = {
+  extends: ["@commitlint/config-conventional"],
+  plugins: [
+    {
+      rules: {
+        "footer-issue-reference": ({ footer }) => {
+          const hasRef = /(?:Closes|Ref:)?\s*#\d+/.test(footer ?? "");
+          return [
+            hasRef,
+            "Footer must include an issue reference: #123, Closes #123, or Ref: #123"
+          ];
+        }
+      }
+    }
+  ],
+  rules: {
     "type-enum": [
       2,
       "always",
@@ -25,8 +38,8 @@
     "subject-case": [2, "always", "lower-case"],
     "header-max-length": [2, "always", 100],
     "body-leading-blank": [2, "always"],
-    "footer-leading-blank": [2, "always"]
+    "footer-leading-blank": [2, "always"],
+    "footer-issue-reference": [2, "always"]
   },
-  "helpURL": "https://www.conventionalcommits.org/",
-  "_comment": "Issue number pattern: feat(scope): description #42 — #number at the end links the commit to the GitHub issue card. No rule changes needed as #42 passes all existing validations."
-}
+  helpURL: "https://www.conventionalcommits.org/"
+};

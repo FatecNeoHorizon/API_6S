@@ -27,6 +27,8 @@ def setup():
                     "status":    {"enum": ["active", "inactive"]},
                     "shape_length":    {"bsonType": "double"},
                     "shape_area":      {"bsonType": "double"},
+                    "init_date":    {"bsonType": "date"},      # datetime do Python
+                    "end_date":     {"bsonType": "date"},
                     "geometry": {
                         "bsonType": "object",
                         "required": ["type", "coordinates"],

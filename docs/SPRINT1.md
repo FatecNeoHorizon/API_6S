@@ -1,126 +1,126 @@
-# Sprint 1 — Relatórios e Estrutura de Dados
+# Sprint 1 — Reports and Data Structure
 
-[Voltar ao README principal](../README.md#date-sprint-backlog)
+[Back to main README](../README.md#date-sprint-backlog)
 
-> **Período:** 16/03/2026 → 05/04/2026  
-> **Status:** 🔄 Em andamento
-
----
-
-## 🎯 Objetivo da Sprint
-
-Estabelecer a base de dados e visibilidade da rede elétrica — construindo o pipeline ETL sobre os dados da BDGD/ANEEL e expondo os primeiros indicadores de qualidade (DEC, FEC e perdas) em uma interface funcional e responsiva, contemplando tanto a malha de transmissão quanto a de distribuição.
+> **Period:** 03/16/2026 → 04/05/2026  
+> **Status:** 🔄 In progress
 
 ---
 
-## ✅ MVC da Sprint — Entregas
+## 🎯 Sprint Goal
 
-### 🟢 Mínimo Comprometido
-O que a equipe se compromete a entregar obrigatoriamente até o fim da sprint.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Pipeline ETL funcional com os layers prioritários da BDGD | ⬜ |
-| 2 | Exposição dos indicadores DEC, FEC e perdas agregados por região | ⬜ |
-
-### 🔵 Entregas Adicionais
-O que será entregue além do mínimo, caso o tempo e contexto permitissem.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Dashboard interativo com filtros por região e tipo de rede | ⬜ |
-| 2 | Interface responsiva e compatível com navegadores modernos | ⬜ |
+Establish the data foundation and visibility of the electrical grid — building the ETL pipeline over BDGD/ANEEL data and exposing the first quality indicators (DEC, FEC and losses) through a functional and responsive interface, covering both the transmission and distribution networks.
 
 ---
 
-## 📋 User Stories e Requisitos
+## ✅ Sprint MVC — Deliverables
 
-| User Story | Descrição | Requisitos | Prioridade |
-|:-----------|:----------|:----------:|:----------:|
-| US01 | Como analista, quero acessar relatórios de estruturas das redes de distribuição. | RF01, RF02 | 🔴 Highest |
-| US02 | Como analista, quero que o sistema exponha dados de qualidade (DEC, FEC, perdas). | RF01, RF03 | 🔴 Highest |
-| US03 | Como usuário, quero que o sistema responda rapidamente, sem travamentos. | RNF01, RNF02 | 🟠 High |
-| US04 | Como usuário, quero acessar o sistema por qualquer navegador moderno. | RNF03 | 🟡 Medium |
+### 🟢 Minimum Commitment
+What the team commits to delivering by the end of the sprint.
 
----
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | Functional ETL pipeline with the priority BDGD layers | ⬜ |
+| 2 | DEC, FEC and loss indicators aggregated by region | ⬜ |
 
-## 🏗️ Arquitetura e Decisões Técnicas
+### 🔵 Additional Deliverables
+What will be delivered beyond the minimum, if time and context allow.
 
-### Separação de responsabilidades entre os bancos de dados
-
-A arquitetura de dados foi projetada com dois bancos de dados com responsabilidades distintas e complementares:
-
-**PostgreSQL — dados sensíveis**  
-Responsável pelo armazenamento de dados que exigem conformidade com a LGPD:
-credenciais de usuários, perfis de acesso e qualquer informação pessoal identificável.
-A escolha garante controle transacional, integridade referencial e facilidade
-de auditoria — requisitos essenciais para atender à legislação.
-
-**MongoDB — dados públicos (BDGD)**  
-Responsável pelo armazenamento dos dados da BDGD/ANEEL.
-Por serem dados públicos, não há restrições de privacidade. A escolha se justifica
-pela facilidade de ingestão de grandes volumes de dados semiestruturados e pelo
-suporte nativo a GeoJSON — necessário para os layers com geometria da BDGD.
-
-> Essa separação garante que dados sensíveis nunca trafeguem ou
-> residam no mesmo ambiente que os dados operacionais públicos,
-> simplificando a conformidade com a LGPD e reduzindo a superfície de risco.
-
-### Layers da BDGD e estratégia de ingestão
-
-A BDGD é composta por 43 layers. Nesta sprint, são ingeridos apenas os layers
-de alta prioridade para os indicadores e estrutura da rede:
-
-**Layers obrigatórios na Sprint 1:**
-- `SUB` — subestações com geometria
-- `UNTRAT` — transformadores AT com perdas e energia mensal
-- `UNTRMT` — transformadores MT com geometria e perdas
-- `SSDAT` — segmentos de rede AT com geometria
-- `CTMT` — circuitos MT com indicadores de perdas mensais
-- `UCBT_tab` — consumidores BT com DIC/FIC mensais
-- `UCMT_tab` — consumidores MT com DIC/FIC mensais
-- `UCAT_tab` — consumidores AT com DIC/FIC mensais
-- `CONJ` — conjuntos geográficos — nível de agregação para o heatmap
-
-**Atenção especial:**
-`UCBT_tab` tem 3M de registros (1.4GB em memória). A ingestão deve ser feita
-em chunks de 100.000 linhas. Índice composto `{DIST, MUN, CONJ}` deve ser
-criado antes de qualquer consulta analítica.
-
-### Cálculo dos indicadores DEC e FEC
-
-DEC e FEC são calculados a partir dos campos `DIC_01..DIC_12` e `FIC_01..FIC_12`
-presentes nas tabelas de consumidores (`UCBT_tab`, `UCMT_tab`, `UCAT_tab`).
-O ETL agrega esses valores por `MUN` (município) e `CONJ` (conjunto elétrico)
-— nunca expondo dados individuais por UC.
-
-### Perdas de energia
-
-Três granularidades disponíveis na BDGD:
-- **Por circuito MT:** `CTMT.PERD_MED` — perda média percentual do circuito. Feature principal para o ranking.
-- **Por transformador MT:** `EQTRMT.PER_TOT` — perda total por transformador.
-- **Por transformador AT:** diferença entre `UNTRAT.ENES_XX` (energia secundário) e `UNTRAT.ENET_XX` (energia terciário).
-
-### Estrutura da API com FastAPI
-
-O backend será construído com FastAPI por três razões principais:
-a exposição de dados via API REST para o frontend React, a integração natural
-com bibliotecas de ML (scikit-learn, pandas/geopandas) e a geração automática de
-documentação Swagger — facilitando a comunicação com o cliente e a validação
-das rotas durante as sprint reviews.
-
-### Desenho do pipeline ETL
-
-O pipeline segue o fluxo extração → transformação → carga, com registro de logs
-em cada etapa e controle de versionamento por lote. Cada carga recebe um
-identificador de versão, permitindo rastrear qual conjunto de dados alimentou
-cada indicador exibido na interface.
-
-O atributo `tipo_rede` (transmissão/distribuição) é derivado da tensão nominal
-de cada layer e preservado como campo indexável no MongoDB para uso nas sprints seguintes.
-O campo `ARE_LOC` (área de localização: urbana/rural/periurbana), presente em
-vários layers, é preservado para alimentar o filtro operacional do SAM na Sprint 3.
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | Interactive dashboard with filters by region and network type | ⬜ |
+| 2 | Responsive interface compatible with modern browsers | ⬜ |
 
 ---
 
-*Última atualização: 16/03/2026*
+## 📋 User Stories and Requirements
+
+| User Story | Description | Requirements | Priority |
+|:-----------|:------------|:------------:|:--------:|
+| US01 | As an analyst, I want to access structural reports of distribution networks. | RF01, RF02 | 🔴 Highest |
+| US02 | As an analyst, I want the system to expose quality data (DEC, FEC, losses). | RF01, RF03 | 🔴 Highest |
+| US03 | As a user, I want the system to respond quickly without freezing. | RNF01, RNF02 | 🟠 High |
+| US04 | As a user, I want to access the system from any modern browser. | RNF03 | 🟡 Medium |
+
+---
+
+## 🏗️ Architecture and Technical Decisions
+
+### Separation of responsibilities between databases
+
+The data architecture was designed with two databases with distinct and complementary responsibilities:
+
+**PostgreSQL — sensitive data**  
+Responsible for storing data that requires LGPD compliance:
+user credentials, access profiles, and any personally identifiable information.
+The choice ensures transactional control, referential integrity, and ease
+of auditing — essential requirements for legal compliance.
+
+**MongoDB — public data (BDGD)**  
+Responsible for storing BDGD/ANEEL data.
+Since this is public data, there are no privacy restrictions. The choice is justified
+by the ease of ingesting large volumes of semi-structured data and native
+GeoJSON support — required for BDGD layers with geometry.
+
+> This separation ensures that sensitive data never flows through or
+> resides in the same environment as public operational data,
+> simplifying LGPD compliance and reducing the risk surface.
+
+### BDGD layers and ingestion strategy
+
+The BDGD is composed of 43 layers. In this sprint, only the high-priority layers
+for indicators and network structure are ingested:
+
+**Mandatory layers in Sprint 1:**
+- `SUB` — substations with geometry
+- `UNTRAT` — HV transformers with losses and monthly energy
+- `UNTRMT` — MV transformers with geometry and losses
+- `SSDAT` — HV network segments with geometry
+- `CTMT` — MV circuits with monthly loss indicators
+- `UCBT_tab` — LV consumers with monthly DIC/FIC
+- `UCMT_tab` — MV consumers with monthly DIC/FIC
+- `UCAT_tab` — HV consumers with monthly DIC/FIC
+- `CONJ` — geographic sets — aggregation level for the heatmap
+
+**Special attention:**
+`UCBT_tab` has 3M records (1.4GB in memory). Ingestion must be done
+in chunks of 100,000 rows. A composite index `{DIST, MUN, CONJ}` must be
+created before any analytical query.
+
+### DEC and FEC indicator calculation
+
+DEC and FEC are calculated from the fields `DIC_01..DIC_12` and `FIC_01..FIC_12`
+present in the consumer tables (`UCBT_tab`, `UCMT_tab`, `UCAT_tab`).
+The ETL aggregates these values by `MUN` (municipality) and `CONJ` (electrical set)
+— never exposing individual data by consumer unit.
+
+### Energy losses
+
+Three granularities available in BDGD:
+- **By MV circuit:** `CTMT.PERD_MED` — average percentage loss per circuit. Main feature for ranking.
+- **By MV transformer:** `EQTRMT.PER_TOT` — total loss per transformer.
+- **By HV transformer:** difference between `UNTRAT.ENES_XX` (secondary energy) and `UNTRAT.ENET_XX` (tertiary energy).
+
+### API structure with FastAPI
+
+The backend will be built with FastAPI for three main reasons:
+exposing data via REST API to the React frontend, natural integration
+with ML libraries (scikit-learn, pandas/geopandas), and automatic Swagger
+documentation generation — facilitating client communication and route
+validation during sprint reviews.
+
+### ETL pipeline design
+
+The pipeline follows the extract → transform → load flow, with log entries
+at each stage and batch version control. Each load receives a version
+identifier, allowing traceability of which dataset fed each indicator
+displayed on the interface.
+
+The `network_type` attribute (transmission/distribution) is derived from the nominal
+voltage of each layer and stored as an indexable field in MongoDB for use in
+subsequent sprints. The `ARE_LOC` field (location area: urban/rural/peri-urban),
+present in several layers, is preserved to feed the SAM operational filter in Sprint 3.
+
+---
+
+*Last updated: 03/16/2026*

@@ -2,3 +2,4 @@ fastapi
 uvicorn
 pymongo
 psycopg2-binary
+dotenv

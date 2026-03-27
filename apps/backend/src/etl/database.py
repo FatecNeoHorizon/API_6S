@@ -1,14 +1,18 @@
 from pymongo import MongoClient, GEOSPHERE
+import os 
+from dotenv import load_dotenv
 
-MONGO_URI = "mongodb://localhost:27017/"
-DB_NAME   = "zeus"
+load_dotenv()
+
+db_host = os.getenv('MONGO_URI')
+db_name = os.getenv('DB_MONGO_NAME')
 
 def get_client():
-    return MongoClient(MONGO_URI)
+    return MongoClient(db_host)
 
 def setup():
     client = get_client()
-    db = client[DB_NAME]
+    db = client[db_name]
     collections_exist = db.list_collection_names()
 
     if "geodatabases" not in collections_exist:

@@ -89,8 +89,11 @@ jobs:
 
             # Avoids non-fast-forward error when remote has advanced during the job.
             for attempt in 1 2 3; do
-              git pull --rebase origin sprint-1 && git push origin HEAD:sprint-1 && break
+              if git pull --rebase -Xours origin sprint-1 && git push origin HEAD:sprint-1; then
+                break
+              fi
               echo "Push attempt $attempt failed; retrying..."
+              git rebase --abort 2>/dev/null || true
               sleep 2
             done
           else

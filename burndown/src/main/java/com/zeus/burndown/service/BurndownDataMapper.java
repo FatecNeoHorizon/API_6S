@@ -130,7 +130,7 @@ public class BurndownDataMapper {
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
                 LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isAfter(end); // usa end, não effectiveEnd
+                return !created.isAfter(effectiveEnd);
             })
             .collect(Collectors.toList());
  

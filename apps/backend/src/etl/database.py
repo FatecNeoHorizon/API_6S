@@ -4,15 +4,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-db_host = os.getenv('MONGO_URI')
-db_name = os.getenv('DB_MONGO_NAME')
-
 def get_client():
-    return MongoClient(db_host)
+    host = os.getenv("MONGO_HOST", "localhost")
+    port = os.getenv("MONGO_PORT", "27017")
+    user = os.getenv("MONGO_USER")
+    password = os.getenv("MONGO_PASSWORD")
+    db_name = os.getenv("MONGO_DB_NAME")
+    mongo_uri = f"mongodb://{user}:{password}@mongo_db:{port}/{db_name}?authSource=admin"
+    return MongoClient(mongo_uri)
 
 def setup():
+    mongo_db = os.getenv("MONGO_DB_NAME")
     client = get_client()
-    db = client[db_name]
+    db = client[mongo_db]
+
     collections_exist = db.list_collection_names()
 
     if "geodatabases" not in collections_exist:

@@ -9,14 +9,13 @@ from src.etl.database import setup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import os
     setup()
     yield
 
 app = FastAPI(lifespan=lifespan)
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
-
-app = FastAPI()
 
 @app.get("/")
 async def root():

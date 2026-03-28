@@ -1,0 +1,16 @@
+{
+  "name": "zeus",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "dependencies": {
+    "turbo": "latest"
+  }
+}

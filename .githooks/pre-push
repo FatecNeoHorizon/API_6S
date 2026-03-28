@@ -1,12 +1,17 @@
 #!/bin/bash
 
-# Git Hook: Prevents push of branches with invalid names
-# Standard: Conventional Commits + kebab-case
+# Git Hook: Prevents push of:
+# 1. Branches with invalid names
+# 2. Commits with invalid messages
 
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 BRANCH_PATTERN="^(feature|bugfix|docs|style|refactor|perf|test|chore|ci|revert|hotfix|main|develop)\/[a-z0-9]([a-z0-9\-]*[a-z0-9])?$|^(main|develop)$"
+TYPE_PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?:"
+ISSUE_PATTERN="(Closes|Ref:)?\s*#[0-9]+"
 
-# Validate branch name pattern
+# ─────────────────────────────────────────
+# 1. Validate branch name
+# ─────────────────────────────────────────
 if ! [[ "$BRANCH_NAME" =~ $BRANCH_PATTERN ]]; then
   echo ""
   echo "╔════════════════════════════════════════════════════════════════╗"
@@ -37,5 +42,67 @@ if ! [[ "$BRANCH_NAME" =~ $BRANCH_PATTERN ]]; then
   echo ""
   exit 1
 fi
+
+# ─────────────────────────────────────────
+# 2. Validate commit messages
+# ─────────────────────────────────────────
+while read local_ref local_sha remote_ref remote_sha; do
+  # Branch being created for the first time
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    COMMITS=$(git log --format="%H" "$local_sha" --not --remotes 2>/dev/null)
+  else
+    COMMITS=$(git log --format="%H" "$remote_sha".."$local_sha")
+  fi
+
+  for COMMIT in $COMMITS; do
+    MSG=$(git log --format="%B" -n 1 "$COMMIT")
+
+    # Ignore merge commits
+    if echo "$MSG" | grep -q "^Merge"; then
+      continue
+    fi
+
+    # Validate type pattern
+    if ! echo "$MSG" | grep -qE "$TYPE_PATTERN"; then
+      echo ""
+      echo "╔════════════════════════════════════════════════════════════════╗"
+      echo "║     ❌ ERROR: Invalid commit message!                         ║"
+      echo "╚════════════════════════════════════════════════════════════════╝"
+      echo ""
+      echo "Commit: $(git log --format='%h' -n 1 $COMMIT)"
+      echo "Message: \"$MSG\""
+      echo ""
+      echo "Expected: <type>(<scope>): <description>"
+      echo ""
+      echo "💡 Solution:"
+      echo "   git rebase -i $COMMIT^"
+      echo "   # mark the commit as 'reword' and fix the message"
+      echo ""
+      exit 1
+    fi
+
+    # Validate issue reference
+    if ! echo "$MSG" | grep -qE "$ISSUE_PATTERN"; then
+      echo ""
+      echo "╔════════════════════════════════════════════════════════════════╗"
+      echo "║     ❌ ERROR: Missing issue reference!                        ║"
+      echo "╚════════════════════════════════════════════════════════════════╝"
+      echo ""
+      echo "Commit: $(git log --format='%h' -n 1 $COMMIT)"
+      echo "Message: \"$MSG\""
+      echo ""
+      echo "✅ Add to footer:"
+      echo "   #123"
+      echo "   Ref: #123"
+      echo "   Closes #123"
+      echo ""
+      echo "💡 Solution:"
+      echo "   git rebase -i $COMMIT^"
+      echo "   # mark the commit as 'reword' and fix the message"
+      echo ""
+      exit 1
+    fi
+  done
+done
 
 exit 0

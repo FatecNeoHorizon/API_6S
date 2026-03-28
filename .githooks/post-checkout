@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Git Hook: Valida nomes de branches
+# Padrão: Conventional Commits + kebab-case
+# 
+# Formatos aceitos:
+#   feature/descricao-da-feature
+#   bugfix/descricao-do-bug
+#   docs/descricao-da-documentacao
+#   style/descricao-do-estilo
+#   refactor/descricao-da-refatoracao
+#   perf/descricao-de-performance
+#   test/descricao-do-teste
+#   chore/descricao-da-tarefa
+#   ci/descricao-da-ci
+#   revert/descricao-do-revert
+#   hotfix/descricao-do-hotfix
+#
+# EXEMPLO: feature/adicionar-autenticacao-jwt
+
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+BRANCH_PATTERN="^(feature|bugfix|docs|style|refactor|perf|test|chore|ci|revert|hotfix)\/[a-z0-9]([a-z0-9\-]*[a-z0-9])?$"
+
+# Ignora a branch 'main' e 'develop'
+if [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "develop" ]]; then
+  exit 0
+fi
+
+# Valida o padrão
+if ! [[ "$BRANCH_NAME" =~ $BRANCH_PATTERN ]]; then
+  echo ""
+  echo "╔════════════════════════════════════════════════════════════════╗"
+  echo "║        ⚠️  AVISO: Nome de branch inválido!                     ║"
+  echo "╚════════════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "Sua branch: \"$BRANCH_NAME\""
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📋 Convenção: Conventional Commits + kebab-case"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "✅ Formatos VÁLIDOS:"
+  echo ""
+  echo "  🎯 Nova Funcionalidade:"
+  echo "     feature/adicionar-autenticacao"
+  echo "     feature/implementar-login-jwt"
+  echo ""
+  echo "  🐛 Correção de Bug:"
+  echo "     bugfix/corrigir-erro-autenticacao"
+  echo "     bugfix/fix-query-performance"
+  echo ""
+  echo "  🚨 Hotfix (em produção):"
+  echo "     hotfix/corrigir-crash-api"
+  echo "     hotfix/fix-seguranca-critica"
+  echo ""
+  echo "  📚 Documentação:"
+  echo "     docs/atualizar-readme"
+  echo "     docs/guia-de-contribuicao"
+  echo ""
+  echo "  🎨 Estilo (sem lógica):"
+  echo "     style/corrigir-indentacao"
+  echo "     style/reformatar-codigo"
+  echo ""
+  echo "  ♻️  Refatoração:"
+  echo "     refactor/reorganizar-autenticacao"
+  echo "     refactor/melhorar-estrutura-pastas"
+  echo ""
+  echo "  ⚡ Performance:"
+  echo "     perf/otimizar-busca-usuarios"
+  echo "     perf/reduzir-tamanho-bundle"
+  echo ""
+  echo "  🧪 Testes:"
+  echo "     test/adicionar-testes-unitarios"
+  echo "     test/aumentar-cobertura-autenticacao"
+  echo ""
+  echo "  🔧 Mudanças na Build/Config:"
+  echo "     chore/atualizar-dependencias"
+  echo "     chore/configurar-linter"
+  echo ""
+  echo "  🔄 Integração Contínua:"
+  echo "     ci/atualizar-github-actions"
+  echo "     ci/configurar-pipeline"
+  echo ""
+  echo "  ↩️  Reverter Commit:"
+  echo "     revert/reverter-feat-login"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📝 Estrutura:"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "  <tipo>/<descricao-em-kebab-case>"
+  echo "  │       │"
+  echo "  │       └─ Descrição em minúsculas com hífens"
+  echo "  └─ Obrigatório: feature, bugfix, hotfix, docs, style, refactor, perf, test, chore, ci, revert"
+  echo ""
+  echo "  ✅ CORRETO:   feature/adicionar-login"
+  echo "  ❌ INCORRETO: feature/AdicionarLogin"
+  echo "  ❌ INCORRETO: feature/adicionar_login"
+  echo "  ❌ INCORRETO: feature_adicionar_login"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "💡 Dica: Renomear a branch com:"
+  echo ""
+  echo "   git branch -m <nome-novo>"
+  echo ""
+  echo "   Exemplo:"
+  echo "   git branch -m feature/meu-novo-nome"
+  echo ""
+fi
+
+exit 0

@@ -1,105 +1,105 @@
-# Sprint 2 — Inteligência Comercial e Análise de Mercado
+# Sprint 2 — Commercial Intelligence and Market Analysis
 
-[Voltar ao README principal](../README.md#date-sprint-backlog)
+[Back to main README](../README.md#date-sprint-backlog)
 
-> **Período:** 13/04/2026 → 03/05/2026  
-> **Status:** ⏳ Aguardando
-
----
-
-## 🎯 Objetivo da Sprint
-
-Transformar dados em inteligência comercial — aplicando modelos de Machine Learning para classificar regiões por criticidade, gerar rankings de perdas e calcular o TAM físico, entregando à Tecsys métricas concretas para embasar decisões de mercado, com foco prioritário na malha de transmissão.
+> **Period:** 04/13/2026 → 05/03/2026  
+> **Status:** ⏳ Waiting
 
 ---
 
-## ✅ MVC da Sprint — Entregas
+## 🎯 Sprint Goal
 
-### 🟢 Mínimo Comprometido
-O que a equipe se compromete a entregar obrigatoriamente até o fim da sprint.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Classificação de regiões por criticidade com ML | ⬜ |
-| 2 | Ranking de regiões por perdas de energia | ⬜ |
-| 3 | Cálculo e exibição do TAM físico | ⬜ |
-
-### 🔵 Entregas Adicionais
-O que será entregue além do mínimo, caso o tempo e contexto permitissem.
-
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Gestão de usuários com perfis distintos (Administrador e Analista) | ⬜ |
-| 2 | Métricas de desempenho dos modelos de ML documentadas | ⬜ |
+Transform data into commercial intelligence — applying Machine Learning models to classify regions by criticality, generate loss rankings and calculate the physical TAM, delivering concrete metrics to Tecsys to support market decisions, with a primary focus on the transmission network.
 
 ---
 
-## 📋 User Stories e Requisitos
+## ✅ Sprint MVC — Deliverables
 
-| User Story | Descrição | Requisitos | Prioridade |
-|:-----------|:----------|:----------:|:----------:|
-| US05 | Como analista, quero agrupar regiões por nível de criticidade. | RF05 | 🔴 Highest |
-| US06 | Como analista, quero calcular o TAM físico de instalação de sensores. | RF04 | 🔴 Highest |
-| US07 | Como analista, quero um ranking de regiões por perdas de energia. | RF06 | 🟠 High |
-| US08 | Como administrador, quero cadastrar e gerenciar usuários com perfis distintos. | RF07 | 🟠 High |
-| US09 | Como analista, quero que os modelos de ML tenham desempenho documentado e métricas validadas. | RNF04 | 🟡 Medium |
+### 🟢 Minimum Commitment
+What the team commits to delivering by the end of the sprint.
 
----
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | Region classification by criticality using ML | ⬜ |
+| 2 | Region ranking by energy losses | ⬜ |
+| 3 | Physical TAM calculation and display | ⬜ |
 
-## 🏗️ Arquitetura e Decisões Técnicas
+### 🔵 Additional Deliverables
+What will be delivered beyond the minimum, if time and context allow.
 
-### Features para o modelo de ML
-
-Os dados da BDGD permitem construir features concretas por região (agregadas por `CONJ`):
-
-| Feature | Layer de origem | Campo | Descrição |
-|:--------|:---------------|:------|:----------|
-| DEC médio | UCBT_tab + UCMT_tab | DIC_01..12 (média anual) | Duração média de interrupções |
-| FEC médio | UCBT_tab + UCMT_tab | FIC_01..12 (média anual) | Frequência média de interrupções |
-| Perda média do circuito | CTMT | PERD_MED | Perda percentual média |
-| Perda nos transformadores MT | EQTRMT | PER_TOT (média por CONJ) | Perdas nos transformadores |
-
-### Modelo de clustering para classificação de criticidade
-
-Para classificar regiões por nível de criticidade (alta, média, baixa), foi
-adotado o algoritmo **K-Means** com 3 clusters. A escolha se justifica por:
-
-- Funciona bem com as features tabulares disponíveis (DEC, FEC, perdas por CONJ)
-- Implementação direta via scikit-learn, com documentação ampla e fácil validação acadêmica
-- Número fixo de clusters alinhado ao requisito RF05 (baixa/média/alta)
-
-O modelo é aplicado separadamente para transmissão e distribuição, usando o
-atributo `tipo_rede` definido na Sprint 1. O desempenho é avaliado com **Silhouette Score** (RNF04).
-
-### Modelo de regressão para ranking de perdas
-
-Para o ranking de regiões por perdas, foi adotado o **Random Forest Regressor**.
-A feature principal é `CTMT.PERD_MED` (perda média do circuito MT), enriquecida
-com `EQTRMT.PER_TOT` agregado por `CONJ`. O ranking é gerado separadamente
-para transmissão e distribuição. Avaliado com **RMSE** (RNF04).
-
-### Cálculo do TAM físico
-
-Com base nos dados da BDGD, o TAM físico é calculado contando os pontos
-monitoráveis por tipo de rede:
-
-**Transmissão (foco principal da Tecsys):**
-- `SUB` — subestações com geometria
-- `UNTRAT` — transformadores AT
-- `SSDAT` — trechos de rede AT (pontos de medição potenciais)
-- `UNSEAT` — chaves de manobra AT
-
-**Distribuição (mercado secundário):**
-- `UNTRMT` — transformadores MT
-
-O campo `ARE_LOC` é o critério operacional para separar pontos viáveis de
-difícil acesso. Validar os valores de `ARE_LOC` com a Tecsys antes da sprint review.
-
-### Controle de acesso com JWT
-
-A autenticação será implementada com **JWT (JSON Web Token)** via `python-jose`
-integrado ao FastAPI. Credenciais armazenadas no PostgreSQL com senha em bcrypt.
+| # | Feature | Status |
+|:--|:--------|:------:|
+| 1 | User management with distinct profiles (Administrator and Analyst) | ⬜ |
+| 2 | ML model performance metrics documented | ⬜ |
 
 ---
 
-*Última atualização: 16/03/2026*
+## 📋 User Stories and Requirements
+
+| User Story | Description | Requirements | Priority |
+|:-----------|:------------|:------------:|:--------:|
+| US05 | As an analyst, I want to group regions by criticality level. | RF05 | 🔴 Highest |
+| US06 | As an analyst, I want to calculate the physical TAM for sensor installation. | RF04 | 🔴 Highest |
+| US07 | As an analyst, I want a ranking of regions by energy losses. | RF06 | 🟠 High |
+| US08 | As an administrator, I want to register and manage users with distinct profiles. | RF07 | 🟠 High |
+| US09 | As an analyst, I want ML models to have documented performance and validated metrics. | RNF04 | 🟡 Medium |
+
+---
+
+## 🏗️ Architecture and Technical Decisions
+
+### Features for the ML model
+
+BDGD data allows building concrete features per region (aggregated by `CONJ`):
+
+| Feature | Source Layer | Field | Description |
+|:--------|:------------|:------|:------------|
+| Average DEC | UCBT_tab + UCMT_tab | DIC_01..12 (annual average) | Average outage duration |
+| Average FEC | UCBT_tab + UCMT_tab | FIC_01..12 (annual average) | Average outage frequency |
+| Average circuit loss | CTMT | PERD_MED | Average percentage loss |
+| MV transformer losses | EQTRMT | PER_TOT (average per CONJ) | Transformer losses |
+
+### Clustering model for criticality classification
+
+To classify regions by criticality level (high, medium, low), the **K-Means**
+algorithm with 3 clusters was adopted. The choice is justified by:
+
+- Works well with the available tabular features (DEC, FEC, losses per CONJ)
+- Straightforward implementation via scikit-learn, with extensive documentation and easy academic validation
+- Fixed number of clusters aligned with requirement RF05 (low/medium/high)
+
+The model is applied separately for transmission and distribution, using the
+`network_type` attribute defined in Sprint 1. Performance is evaluated with **Silhouette Score** (RNF04).
+
+### Regression model for loss ranking
+
+For the region loss ranking, the **Random Forest Regressor** was adopted.
+The main feature is `CTMT.PERD_MED` (average MV circuit loss), enriched
+with `EQTRMT.PER_TOT` aggregated by `CONJ`. The ranking is generated separately
+for transmission and distribution. Evaluated with **RMSE** (RNF04).
+
+### Physical TAM calculation
+
+Based on BDGD data, the physical TAM is calculated by counting the
+monitorable points per network type:
+
+**Transmission (Tecsys primary focus):**
+- `SUB` — substations with geometry
+- `UNTRAT` — HV transformers
+- `SSDAT` — HV network segments (potential measurement points)
+- `UNSEAT` — HV switching devices
+
+**Distribution (secondary market):**
+- `UNTRMT` — MV transformers
+
+The `ARE_LOC` field is the operational criterion for separating viable points from
+hard-to-reach ones. Validate `ARE_LOC` values with Tecsys before the sprint review.
+
+### Access control with JWT
+
+Authentication will be implemented with **JWT (JSON Web Token)** via `python-jose`
+integrated with FastAPI. Credentials stored in PostgreSQL with bcrypt-hashed passwords.
+
+---
+
+*Last updated: 03/16/2026*

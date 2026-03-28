@@ -3,7 +3,7 @@
 > Official commit and branch naming guide for the 6th Semester API.
 
 **Date:** February 28, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Status:** ✅ Approved
 
 ---
@@ -245,13 +245,25 @@ git checkout feature/123-add-login
 │                                                      │
 │  #42"                                                │
 │                                                      │
-│  ✅ Hook validates type + footer (both required)     │
-│  ✅ If invalid, commit is rejected                   │
+│  ✅ commit-msg hook validates type + footer          │
+│  ✅ If invalid, commit is rejected immediately       │
 └─────────────────────┬────────────────────────────────┘
                       │
                       ▼
 ┌──────────────────────────────────────────────────────┐
-│ 4️⃣  OPEN PULL REQUEST                                │
+│ 4️⃣  PUSH                                             │
+│                                                      │
+│  $ git push origin feature/42-implement-validation   │
+│                                                      │
+│  ✅ pre-push hook validates branch name              │
+│  ✅ pre-push hook validates all commit messages      │
+│  ✅ If invalid, push is rejected before reaching     │
+│     GitHub                                           │
+└─────────────────────┬────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────┐
+│ 5️⃣  OPEN PULL REQUEST                                │
 │                                                      │
 │  Branch: feature/42-implement-validation             │
 │  Title:  feat(validation): add email validation      │
@@ -261,11 +273,13 @@ git checkout feature/123-add-login
 │                                                      │
 │  ✅ Auto-fill workflow detects issue #42             │
 │  ✅ Informative comment added                        │
+│  ✅ commitlint GitHub Action validates all commits   │
+│  ✅ Ruleset blocks merge if any check fails          │
 └─────────────────────┬────────────────────────────────┘
                       │
                       ▼
 ┌──────────────────────────────────────────────────────┐
-│ 5️⃣  REVIEW & MERGE                                   │
+│ 6️⃣  REVIEW & MERGE                                   │
 │                                                      │
 │  ✅ Code review                                      │
 │  ✅ Tests passing                                    │
@@ -275,7 +289,7 @@ git checkout feature/123-add-login
                       │
                       ▼
 ┌──────────────────────────────────────────────────────┐
-│ 6️⃣  AUTOMATIC CLOSURE                                │
+│ 7️⃣  AUTOMATIC CLOSURE                                │
 │                                                      │
 │  ✅ GitHub detects "Closes #42" in the PR            │
 │  ✅ Issue #42 closes automatically                   │
@@ -288,19 +302,30 @@ git checkout feature/123-add-login
 
 ## 🤖 Automations <a id="automations"></a>
 
+### Validation Layers
+
+This project enforces commit standards in two complementary layers:
+
+| Layer | Tool | When | Can be bypassed? |
+|-------|------|------|-----------------|
+| Local | `commit-msg` hook | On `git commit` | Yes, with `--no-verify` |
+| Local | `pre-push` hook | On `git push` | Yes, with `--no-verify` |
+| Remote | GitHub Actions + Ruleset | On Pull Request | ❌ No |
+
+> The remote layer is the final guarantee — even if a developer bypasses local hooks, the PR cannot be merged without passing all checks.
+
+---
+
 ### 1. `commit-msg` Hook
 
 **File:** `.githooks/commit-msg`
 
-- Validates commit format
+- Validates commit format at the time of `git commit`
 - Rejects commits with an invalid type
 - Rejects commits **missing an issue reference** in the footer (`#number`, `Closes #`, or `Ref: #`)
-- Shows detailed error messages
+- Shows detailed error messages with examples
 
-**Activation:**
-```bash
-git config core.hooksPath .githooks
-```
+---
 
 ### 2. `post-checkout` Hook
 
@@ -309,16 +334,65 @@ git config core.hooksPath .githooks
 - Validates branch name when switching branches
 - Warning only — does not block
 
+---
+
 ### 3. `pre-push` Hook
 
 **File:** `.githooks/pre-push`
 
+Runs automatically on every `git push` and validates **two things**:
+
+**3.1 Branch name**
 - Prevents pushing branches with invalid names
-- Clear error message
+- Shows accepted formats and rename instructions
 
-**Activation:** Automatic after setting `core.hooksPath`
+**3.2 Commit messages**
+- Validates **all commits** that haven't been pushed to remote yet
+- Rejects pushes if any commit has an invalid type or is missing an issue reference
+- Correctly handles first push of a new branch
+- Ignores merge commits automatically
+- Shows which commit failed and how to fix it with `rebase -i`
 
-### 4. `auto-create-branch` Workflow
+```
+╔════════════════════════════════════════════════════════════════╗
+║     ❌ ERROR: Invalid commit message!                         ║
+╚════════════════════════════════════════════════════════════════╝
+
+Commit: a1b2c3d
+Message: "add login feature"
+
+💡 Solution:
+   git rebase -i a1b2c3d^
+   # mark the commit as 'reword' and fix the message
+```
+
+---
+
+### 4. `commitlint` GitHub Action
+
+**File:** `.github/workflows/commitlint.yml`
+
+Triggers on every Pull Request (`opened`, `reopened`, `synchronize`).
+
+- Validates all commits in the PR against `.commitlintrc.json`
+- Fails the check if any commit is invalid
+- Combined with the Branch Ruleset, **blocks merge** until fixed
+
+---
+
+### 5. Branch Ruleset
+
+**Configured on GitHub** → Settings → Rules → Rulesets
+
+Applied to `main` and `sprint-*` branches:
+
+- ✅ Requires PR before merging (no direct push)
+- ✅ Requires `commitlint` check to pass
+- ✅ Cannot be bypassed, even by admins
+
+---
+
+### 6. `auto-create-branch` Workflow
 
 **File:** `.github/workflows/auto-create-branch.yml`
 
@@ -336,7 +410,9 @@ on:
 - Posts a comment on the issue
 - Uses labels `type:feature`, `type:bug`, etc.
 
-### 5. `auto-fill-pr-from-branch` Workflow
+---
+
+### 7. `auto-fill-pr-from-branch` Workflow
 
 **File:** `.github/workflows/auto-fill-pr-from-branch.yml`
 
@@ -382,7 +458,7 @@ git commit -m "feat(auth): implement JWT
 
 Ref: #42"
 
-# Push
+# Push (pre-push hook validates branch name + commits)
 git push origin feature/42-implement-jwt-authentication
 ```
 
@@ -498,6 +574,10 @@ git checkout -b minha_feature
 git checkout -b Feature/123
 
 # ❌ Multiple features in a single branch (create separate branches)
+
+# ❌ Bypassing hooks (the remote layer will still block you)
+git commit --no-verify -m "bad message"
+git push --no-verify
 ```
 
 ### For Scrum Masters
@@ -545,9 +625,9 @@ git log feature/123-description
 
 #### 🔐 Security
 
-- Commit validation
-- Branch protection rules
-- Require PR review
+- Commit validation (local hooks + GitHub Actions)
+- Branch protection via Ruleset
+- Require PR review before merge
 
 ---
 
@@ -567,11 +647,12 @@ git commit --amend -m "feat(auth): implement login
 #42"
 ```
 
+---
+
 ### Problem 2: Commit Rejected — Missing Issue Reference
 
 ```
-❌ ERROR: Invalid commit!
-Missing issue reference in footer.
+❌ ERROR: Missing issue reference!
 Use: #123, Closes #123, or Ref: #123
 ```
 
@@ -582,19 +663,62 @@ git commit --amend -m "feat(auth): implement login
 Ref: #42"
 ```
 
-### Problem 3: Invalid Branch Name
+---
+
+### Problem 3: Push Rejected — Invalid Branch Name
 
 ```
-⚠️  Warning: Invalid branch name!
-Your branch: "my-feature"
+❌ ERROR: Push not allowed!
+Branch: "my-feature"
 ```
 
 **Solution:**
 ```bash
 git branch -m feature/123-my-feature
+git push -u origin feature/123-my-feature
 ```
 
-### Problem 4: Issue Does Not Close
+---
+
+### Problem 4: Push Rejected — Invalid Commit in History
+
+```
+❌ ERROR: Invalid commit message!
+Commit: a1b2c3d
+Message: "add login feature"
+```
+
+This means a commit in your local history (not yet pushed) has an invalid message.
+
+**Solution:**
+```bash
+# Interactive rebase to reword the offending commit
+git rebase -i a1b2c3d^
+# In the editor, mark the commit as 'reword'
+# Save and fix the message in the next prompt
+```
+
+---
+
+### Problem 5: PR Blocked — commitlint Check Failed
+
+Even after fixing locally, the PR check is red.
+
+**Cause:** The invalid commit was already pushed before the fix.
+
+**Solution:**
+```bash
+# Fix the commit message locally
+git rebase -i <commit-hash>^
+# Mark as 'reword', fix the message
+
+# Force push to update the PR branch
+git push --force-with-lease origin <your-branch>
+```
+
+---
+
+### Problem 6: Issue Does Not Close
 
 **Cause:** PR description does not contain `Closes #123`
 
@@ -603,7 +727,9 @@ git branch -m feature/123-my-feature
 Closes #123
 ```
 
-### Problem 5: Branch Was Not Created Automatically
+---
+
+### Problem 7: Branch Was Not Created Automatically
 
 **Cause:** Issue has no label
 
@@ -615,7 +741,9 @@ Closes #123
    git checkout -b feature/123-description
 ```
 
-### Problem 6: Forgot the Issue Number
+---
+
+### Problem 8: Forgot the Issue Number
 
 **Solution:** Use the branch name — it already contains the number!
 
@@ -640,16 +768,19 @@ git branch  # See current branch
 If you are new to the project:
 
 ```bash
-# 1. Activate git hooks
-git config core.hooksPath .githooks
+# 1. Install dependencies
+#    This automatically activates the git hooks via the "prepare" script
+npm install
 
 # 2. Verify it works
 git commit --allow-empty -m "test"
-# Should validate the message
+# Should validate the message and reject it
 
-# 3. Cancel the test commit
+# 3. Cancel the test commit (if it somehow passed)
 git reset --soft HEAD~1
 ```
+
+> ℹ️ The `npm install` command runs `git config core.hooksPath .githooks` automatically via the `prepare` script in `package.json`. You do not need to run it manually.
 
 ---
 
@@ -659,5 +790,5 @@ git reset --soft HEAD~1
 
 ---
 
-**Last updated:** February 28, 2026
+**Last updated:** March 27, 2026
 **Maintained by:** DevOps + Scrum Team

@@ -4,9 +4,18 @@ from pydantic import BaseModel
 from src.model import blogModel
 from src.control import blogProcedures
 
-fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+from contextlib import asynccontextmanager
+from src.etl.database import setup
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import os
+    setup()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
 @app.get("/")
 async def root():

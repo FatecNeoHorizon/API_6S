@@ -1,97 +1,145 @@
 #!/bin/bash
 
-# Git Hook: Valida mensagens de commit
-# Padrão: Conventional Commits
-# 
-# Formatos aceitos:
-#   feat(escopo): descrição
-#   fix(escopo): descrição
-#   docs: descrição
-#   style: descrição
-#   refactor(escopo): descrição
-#   perf(escopo): descrição
-#   test: descrição
-#   chore: descrição
-#   ci: descrição
-#   revert: descrição
+# Git Hook: Validates commit messages
+# Standard: Conventional Commits
+#
+# Accepted formats:
+#   feat(scope): description
+#   fix(scope): description
+#   docs: description
+#   style: description
+#   refactor(scope): description
+#   perf(scope): description
+#   test: description
+#   chore: description
+#   ci: description
+#   revert: description
+#
+# Footer (REQUIRED):
+#   #123
+#   Closes #123
+#   Ref: #123
 
 COMMIT_MSG=$(cat "$1")
-TIPO_PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?:"
+TYPE_PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?:"
+ISSUE_PATTERN="(Closes|Ref:)?\s*#[0-9]+"
 
-# Ignora mensagens que começam com # (comentários do merge, rebase, etc)
+# Ignore messages starting with # (merge, rebase comments, etc.)
 if echo "$COMMIT_MSG" | grep -q "^#"; then
   exit 0
 fi
 
-# Valida o padrão
-if ! echo "$COMMIT_MSG" | grep -qE "$TIPO_PATTERN"; then
+# Validate commit type pattern
+if ! echo "$COMMIT_MSG" | grep -qE "$TYPE_PATTERN"; then
   echo ""
   echo "╔════════════════════════════════════════════════════════════════╗"
-  echo "║          ❌ ERRO: Commit inválido!                            ║"
+  echo "║          ❌ ERROR: Invalid commit!                            ║"
   echo "╚════════════════════════════════════════════════════════════════╝"
   echo ""
-  echo "Sua mensagem: \"$COMMIT_MSG\""
+  echo "Your message: \"$COMMIT_MSG\""
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "📋 Convenção: Conventional Commits"
+  echo "📋 Convention: Conventional Commits"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  echo "✅ Formatos VÁLIDOS:"
+  echo "✅ VALID formats:"
   echo ""
-  echo "  🎯 Nova Funcionalidade:"
-  echo "     feat(auth): implementar login com JWT"
-  echo "     feat(users): adicionar validação de email"
+  echo "  🎯 New Feature:"
+  echo "     feat(auth): implement JWT login"
+  echo "     feat(users): add email validation"
   echo ""
-  echo "  🐛 Correção de Bug:"
-  echo "     fix(api): corrigir erro de autenticação"
-  echo "     fix(db): ajustar query de performance"
+  echo "  🐛 Bug Fix:"
+  echo "     fix(api): fix authentication error"
+  echo "     fix(db): adjust performance query"
   echo ""
-  echo "  📚 Documentação:"
-  echo "     docs: atualizar README"
-  echo "     docs: adicionar guia de contribuição"
+  echo "  📚 Documentation:"
+  echo "     docs: update README"
+  echo "     docs: add contributing guide"
   echo ""
-  echo "  🎨 Estilo (sem lógica):"
-  echo "     style: corrigir indentação"
-  echo "     style: reformatar código"
+  echo "  🎨 Style (no logic):"
+  echo "     style: fix indentation"
+  echo "     style: reformat code"
   echo ""
-  echo "  ♻️  Refatoração:"
-  echo "     refactor(auth): reorganizar código de autenticação"
-  echo "     refactor: melhorar estrutura de pastas"
+  echo "  ♻️  Refactoring:"
+  echo "     refactor(auth): reorganize authentication code"
+  echo "     refactor: improve folder structure"
   echo ""
   echo "  ⚡ Performance:"
-  echo "     perf(api): otimizar busca de usuários"
-  echo "     perf: reduzir tamanho do bundle"
+  echo "     perf(api): optimize user search"
+  echo "     perf: reduce bundle size"
   echo ""
-  echo "  🧪 Testes:"
-  echo "     test: adicionar testes unitários"
-  echo "     test(auth): aumentar cobertura de autenticação"
+  echo "  🧪 Tests:"
+  echo "     test: add unit tests"
+  echo "     test(auth): increase authentication coverage"
   echo ""
-  echo "  🔧 Mudanças na Build/Config:"
-  echo "     chore: atualizar dependências"
-  echo "     chore: configurar linter"
+  echo "  🔧 Build/Config Changes:"
+  echo "     chore: update dependencies"
+  echo "     chore: configure linter"
   echo ""
-  echo "  🔄 Integração Contínua:"
-  echo "     ci: atualizar GitHub Actions"
-  echo "     ci: configurar pipeline"
+  echo "  🔄 Continuous Integration:"
+  echo "     ci: update GitHub Actions"
+  echo "     ci: configure pipeline"
   echo ""
-  echo "  ↩️  Reverter Commit:"
-  echo "     revert: reverter 'feat(auth): implementar login'"
+  echo "  ↩️  Revert Commit:"
+  echo "     revert: revert 'feat(auth): implement login'"
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "📝 Estrutura:"
+  echo "📝 Structure:"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  echo "  <tipo>(<escopo>): <descrição>"
+  echo "  <type>(<scope>): <description>"
   echo "  │      │          │"
-  echo "  │      │          └─ Descrição breve em minúsculas"
-  echo "  │      └─ Opcional: area/módulo afetado"
-  echo "  └─ Obrigatório: feat, fix, docs, style, refactor, perf, test, chore, ci, revert"
+  echo "  │      │          └─ Short description in lowercase"
+  echo "  │      └─ Optional: affected area/module"
+  echo "  └─ Required: feat, fix, docs, style, refactor, perf, test, chore, ci, revert"
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  echo "❌ Commit REJEITADO. Corrija a mensagem e tente novamente:"
+  echo "❌ Commit REJECTED. Fix your message and try again:"
   echo ""
-  echo "   git commit --amend -m \"<tipo>(<escopo>): <descrição>\""
+  echo "   git commit --amend -m \"<type>(<scope>): <description>"
+  echo ""
+  echo "   #<issue-number>\""
+  echo ""
+  exit 1
+fi
+
+# Validate footer issue reference (REQUIRED)
+if ! echo "$COMMIT_MSG" | grep -qE "$ISSUE_PATTERN"; then
+  echo ""
+  echo "╔════════════════════════════════════════════════════════════════╗"
+  echo "║          ❌ ERROR: Missing issue reference!                   ║"
+  echo "╚════════════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "Your message: \"$COMMIT_MSG\""
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📋 Every commit MUST reference an issue in the footer."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "✅ Accepted formats:"
+  echo ""
+  echo "  #123                 (shorthand reference)"
+  echo "  Ref: #123            (reference without closing)"
+  echo "  Closes #123          (closes the issue automatically on merge)"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📝 Full example:"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "  feat(auth): implement JWT login"
+  echo ""
+  echo "  Add stateless authentication with JWT."
+  echo ""
+  echo "  Ref: #42"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "❌ Commit REJECTED. Fix your message and try again:"
+  echo ""
+  echo "   git commit --amend -m \"<type>(<scope>): <description>"
+  echo ""
+  echo "   #<issue-number>\""
   echo ""
   exit 1
 fi

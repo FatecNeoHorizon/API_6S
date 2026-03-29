@@ -1,5 +1,0 @@
-git checkout --ours .env.example apps/backend/src/etl/database.py
-git checkout --theirs burndown/src/main/resources/static/burndown.png
-git add .
-git commit -m "Merge branch 'origin/sprint-1' into hotfix/54 #54"
-git push -f --no-verify origin hotfix/54-mongodb-collections-modeled-without-considering-all-3-data-sources

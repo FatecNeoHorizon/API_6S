@@ -680,6 +680,602 @@ def setup():
             name="idx_cnae"
         )
 
+    # ===========================================================================
+    # COLLECTION: mt_network_segments
+    #
+    # Fonte: camada SEG_SDMT do GDB
+    # Geometry: MultiLineString — trechos físicos da rede de Média Tensão.
+    # É a camada mais importante para o projeto Tecsys — é onde o sensor
+    # de falta é instalado fisicamente na rede.
+    #
+    # Campos de condutor (fases e neutro) descrevem as características
+    # elétricas do trecho, essenciais para o modelo preditivo de falhas.
+    # ===========================================================================
+
+    if "mt_network_segments" not in collections_exist:
+        db.create_collection(
+            "mt_network_segments",
+            validator={
+                "$jsonSchema":{
+                    "bsonType": "object",
+                    "required": [
+                        "code",
+                        "distributor_code",
+                        "connection_phases",
+                        "geometry",
+                        "geodatabase_id"
+                    ],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+                        "code": {
+                            "bsonType": "string",
+                            "description": "Unique segment identifier. Mapped from COD_ID."
+                        },
+                        "distributor_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor code. Mapped from DIST."
+                        },
+                        "description": {
+                            "bsonType": ["string", "null"],
+                            "description": "Segment description. Mapped from DESCR."
+                        },
+                        "geodatabase_id": {
+                            "bsonType": "objectId",
+                            "description": "Reference to the geodatabases collection — which GDB import this came from."
+                        },
+
+                        # --- Network references ---
+                        "connection_point_start":{
+                            "bsonType": ["string", "null"],
+                            "description": "Start connection point of the segment. Mapped from PN_CON_1."
+                        },
+                        "connection_point_end": {
+                            "bsonType": ["string", "null"],
+                            "description": "End connection point of the segment. Mapped from PN_CON_2."
+                        },
+                        "feeder_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Feeder (alimentador) code this segment belongs to. Mapped from ALIM."
+                        },
+                        "line_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Line code. Mapped from LI."
+                        },
+                        "capacitor_unit": {
+                            "bsonType": ["string", "null"],
+                            "description": "Associated capacitor unit. Mapped from UNI_CAP."
+                        },
+                        "regulator_unit": {
+                            "bsonType": ["string", "null"],
+                            "description": "Associated voltage regulator unit. Mapped from UNI_REG."
+                        },
+                        "sectionalizer_unit": {
+                            "bsonType": ["string", "null"],
+                            "description": "Associated sectionalizer unit. Mapped from UNI_SEC."
+                        },
+                        "transformer_unit": {
+                            "bsonType": ["string", "null"],
+                            "description": "[MT only] Distribution transformer unit feeding this segment. Mapped from UNI_TR_D."
+                        },
+
+                        # --- Electrical characteristics ---
+                        "connection_phases": {
+                            "bsonType": "string",
+                            "enum": ["A", "B", "C", "AB", "AC", "BC", "ABC", "ABCN"],
+                            "description": "Connected phases. Mapped from FAS_CON."
+                        },
+                        "cable_formation": {
+                            "bsonType": ["string", "null"],
+                            "description": "Cable formation type code. Mapped from FORM_CAB."
+                        },
+                        "position": {
+                            "bsonType": ["string", "null"],
+                            "description": "Segment position: D = Distribution. Mapped from POS."
+                        },
+                        "voltage_level_code": {
+                            "bsonType": ["int", "null"],
+                            "description": "Voltage level code (kV). Mapped from NIV."
+                        },
+                        "geometry_cable_type": {
+                            "bsonType": ["string", "null"],
+                            "description": "Cable geometry type code. Mapped from GEOM_CAB."
+                        },
+                        "jumper": {
+                            "bsonType": ["string", "null"],
+                            "description": "Jumper indicator. Mapped from JUM."
+                        },
+
+                        # --- Phase conductor properties ---
+                        "phase_conductor": {
+                        "bsonType": "object",
+                        "description": "Phase conductor technical properties.",
+                        "properties": {
+                            "bit":          {"bsonType": ["string", "null"], "description": "Conductor section/gauge. Mapped from BIT_FAS."},
+                            "material":     {"bsonType": ["string", "null"], "description": "Material code. Mapped from MAT_FAS."},
+                            "insulation":   {"bsonType": ["string", "null"], "description": "Insulation type. Mapped from ISO_FAS."},
+                            "odi":          {"bsonType": ["string", "null"], "description": "Odi code. Mapped from ODI_FAS."},
+                            "type":         {"bsonType": ["string", "null"], "description": "Conductor type. Mapped from TI_FAS."},
+                            "ampacity":     {"bsonType": ["double", "null"], "description": "Current carrying capacity (A). Mapped from CM_FAS."},
+                            "tuc":          {"bsonType": ["string", "null"], "description": "TUC code. Mapped from TUC_FAS."},
+                            "resistances":  {
+                                "bsonType": ["array", "null"],
+                                "description": "Resistance values A1-A6. Mapped from A1_FAS to A6_FAS.",
+                                "items": {"bsonType": ["double", "null"]}
+                            },
+                            "iduc":         {"bsonType": ["string", "null"], "description": "IDUC code. Mapped from IDUC_FAS."},
+                            "uar":          {"bsonType": ["string", "null"], "description": "UAR code. Mapped from UAR_FAS."},
+                            }
+                        },
+                        
+                        # --- Neutral conductor properties ---
+                        "neutral_conductor": {
+                            "bsonType": "object",
+                            "description": "Neutral conductor technical properties.",
+                            "properties": {
+                                "bit":          {"bsonType": ["string", "null"], "description": "Conductor section/gauge. Mapped from BIT_NEU."},
+                                "material":     {"bsonType": ["string", "null"], "description": "Material code. Mapped from MAT_NEU."},
+                                "insulation":   {"bsonType": ["string", "null"], "description": "Insulation type. Mapped from ISO_NEU."},
+                                "odi":          {"bsonType": ["string", "null"], "description": "Odi code. Mapped from ODI_NEU."},
+                                "type":         {"bsonType": ["string", "null"], "description": "Conductor type. Mapped from TI_NEU."},
+                                "ampacity":     {"bsonType": ["double", "null"], "description": "Current carrying capacity (A). Mapped from CP_CM_NEU."},
+                                "tuc":          {"bsonType": ["string", "null"], "description": "TUC code. Mapped from TUC_NEU."},
+                                "resistances":  {
+                                    "bsonType": ["array", "null"],
+                                    "description": "Resistance values A1-A6. Mapped from A1_NEU to A6_NEU.",
+                                    "items": {"bsonType": ["double", "null"]}
+                                },
+                                "iduc":         {"bsonType": ["string", "null"], "description": "IDUC code. Mapped from IDUC_NEU."},
+                                "uar":          {"bsonType": ["string", "null"], "description": "UAR code. Mapped from UAR_NEU."},
+                            }
+                        },
+
+                        # --- Physical properties ---
+                        "length_m": {
+                            "bsonType": ["double", "null"],
+                            "description": "Segment length in meters. Mapped from COMP."
+                        },
+                        "shape_length": {
+                            "bsonType": ["double", "null"],
+                            "description": "Shape length from GDB. Mapped from Shape_Length."
+                        },
+
+                         # --- Geometry (GeoJSON MultiLineString) ---
+                        "geometry": {
+                            "bsonType": "object",
+                            "required": ["type", "coordinates"],
+                            "description": "Segment geometry in GeoJSON format.",
+                            "properties": {
+                                "type": {"bsonType": "string", "enum": ["MultiLineString", "LineString"]}
+                            }
+                        }
+                    }
+                } 
+            },
+            validationLevel="strict",
+            validationAction="error"
+        )
+
+        col = db["mt_network_segments"]
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo", unique=True)
+        col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+        col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
+        col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+        col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+        col.create_index([("voltage_level_code", ASCENDING)], name="idx_voltage_level")
+
+    # ===========================================================================
+    # COLLECTION: at_network_segments
+    #
+    # Fonte: camada SEG_SDAT do GDB
+    # Geometry: MultiLineString — trechos físicos da rede de Alta Tensão.
+    # Estrutura quase idêntica ao SEG_SDMT, com diferença que não tem
+    # o campo UNI_TR_D (transformador de distribuição) e o campo de
+    # neutro é CM_NEU ao invés de CP_CM_NEU.
+    # ===========================================================================
+
+    if "at_network_segments" not in collections_exist:
+        db.create_collection(
+            "at_network_segments",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": [
+                        "code",
+                        "distributor_code",
+                        "connection_phases",
+                        "geometry",
+                        "geodatabase_id"
+                    ],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+    
+                        # --- Identification ---
+                        "code": {
+                            "bsonType": "string",
+                            "description": "Unique segment identifier. Mapped from COD_ID."
+                        },
+                        "distributor_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor code. Mapped from DIST."
+                        },
+                        "description": {
+                            "bsonType": ["string", "null"],
+                            "description": "Segment description. Mapped from DESCR."
+                        },
+                        "geodatabase_id": {
+                            "bsonType": "objectId",
+                            "description": "Reference to the geodatabases collection."
+                        },
+    
+                        # --- Network references ---
+                        "connection_point_start": {
+                            "bsonType": ["string", "null"],
+                            "description": "Start connection point. Mapped from PN_CON_1."
+                        },
+                        "connection_point_end": {
+                            "bsonType": ["string", "null"],
+                            "description": "End connection point. Mapped from PN_CON_2."
+                        },
+                        "feeder_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Feeder code. Mapped from ALIM."
+                        },
+                        "line_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Line code. Mapped from LI."
+                        },
+                        "capacitor_unit":    {"bsonType": ["string", "null"], "description": "Mapped from UNI_CAP."},
+                        "regulator_unit":    {"bsonType": ["string", "null"], "description": "Mapped from UNI_REG."},
+                        "sectionalizer_unit":{"bsonType": ["string", "null"], "description": "Mapped from UNI_SEC."},
+    
+                        # --- Electrical characteristics ---
+                        "connection_phases": {
+                            "bsonType": "string",
+                            "enum": ["A", "B", "C", "AB", "AC", "BC", "ABC", "ABCN"],
+                            "description": "Connected phases. Mapped from FAS_CON."
+                        },
+                        "cable_formation":    {"bsonType": ["string", "null"], "description": "Mapped from FORM_CAB."},
+                        "position": {
+                            "bsonType": ["string", "null"],
+                            "enum": ["D", "O", None],
+                            "description": "Position: D = Distribution, O = Other. Mapped from POS."
+                        },
+                        "voltage_level_code": {"bsonType": ["int", "null"],    "description": "Voltage level code (kV). Mapped from NIV."},
+                        "geometry_cable_type":{"bsonType": ["string", "null"], "description": "Mapped from GEOM_CAB."},
+                        "jumper":             {"bsonType": ["string", "null"], "description": "Mapped from JUM."},
+    
+                        # --- Phase conductor ---
+                        "phase_conductor": {
+                            "bsonType": "object",
+                            "properties": {
+                                "bit":         {"bsonType": ["string", "null"]},
+                                "material":    {"bsonType": ["string", "null"]},
+                                "insulation":  {"bsonType": ["string", "null"]},
+                                "odi":         {"bsonType": ["string", "null"]},
+                                "type":        {"bsonType": ["string", "null"]},
+                                "ampacity":    {"bsonType": ["double", "null"]},
+                                "tuc":         {"bsonType": ["string", "null"]},
+                                "resistances": {"bsonType": ["array",  "null"], "items": {"bsonType": ["double", "null"]}},
+                                "iduc":        {"bsonType": ["string", "null"]},
+                                "uar":         {"bsonType": ["string", "null"]},
+                            }
+                        },
+    
+                        # --- Neutral conductor ---
+                        "neutral_conductor": {
+                            "bsonType": "object",
+                            "properties": {
+                                "bit":         {"bsonType": ["string", "null"]},
+                                "material":    {"bsonType": ["string", "null"]},
+                                "insulation":  {"bsonType": ["string", "null"]},
+                                "odi":         {"bsonType": ["string", "null"]},
+                                "type":        {"bsonType": ["string", "null"]},
+                                "ampacity":    {"bsonType": ["double", "null"]},
+                                "tuc":         {"bsonType": ["string", "null"]},
+                                "resistances": {"bsonType": ["array",  "null"], "items": {"bsonType": ["double", "null"]}},
+                                "iduc":        {"bsonType": ["string", "null"]},
+                                "uar":         {"bsonType": ["string", "null"]},
+                            }
+                        },
+    
+                        # --- Physical ---
+                        "length_m":    {"bsonType": ["double", "null"], "description": "Mapped from COMP."},
+                        "shape_length":{"bsonType": ["double", "null"], "description": "Mapped from Shape_Length."},
+    
+                        # --- Geometry ---
+                        "geometry": {
+                            "bsonType": "object",
+                            "required": ["type", "coordinates"],
+                            "properties": {
+                                "type": {"bsonType": "string", "enum": ["MultiLineString", "LineString"]}
+                            }
+                        }
+                    }
+                }
+            },
+            validationLevel="moderate",
+            validationAction="error"
+    )
+ 
+    col = db["at_network_segments"]
+    col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
+    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+    col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
+    col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+    col.create_index([("voltage_level_code", ASCENDING)], name="idx_voltage_level")
+
+    # ===========================================================================
+    # COLLECTION: substations
+    #
+    # Fonte: camada SUB do GDB
+    # Geometry: MultiPolygon — área física da subestação.
+    # Apenas 5 campos úteis além da geometria — schema simples.
+    # ===========================================================================
+    
+    if "substations" not in collections_exist:
+        db.create_collection(
+            "substations",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": ["code", "distributor_code", "geometry", "geodatabase_id"],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+                        "code": {
+                            "bsonType": "string",
+                            "description": "Unique substation identifier. Mapped from COD_ID."
+                        },
+                        "distributor_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor code. Mapped from DIST."
+                        },
+                        "description": {
+                            "bsonType": ["string", "null"],
+                            "description": "Substation description. Mapped from DESCR."
+                        },
+                        "shape_length": {
+                            "bsonType": ["double", "null"],
+                            "description": "Perimeter length. Mapped from Shape_Length."
+                        },
+                        "shape_area": {
+                            "bsonType": ["double", "null"],
+                            "description": "Area in map units. Mapped from Shape_Area."
+                        },
+                        "geodatabase_id": {
+                            "bsonType": "objectId",
+                            "description": "Reference to the geodatabases collection."
+                        },
+                        "geometry": {
+                            "bsonType": "object",
+                            "required": ["type", "coordinates"],
+                            "properties": {
+                                "type": {"bsonType": "string", "enum": ["MultiPolygon", "Polygon"]}
+                            }
+                        }
+                    }
+                }
+            },
+            validationLevel="strict",
+            validationAction="error"
+        )
+    
+        col = db["substations"]
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
+        col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+        col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+        col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+    # ===========================================================================
+    # COLLECTION: distribution_transformers
+    #
+    # Fonte: camada UN_TRA_D do GDB
+    # Geometry: Point — localização do transformador de distribuição.
+    # Pontos críticos da rede — falhas em transformadores causam
+    # interrupções em múltiplas UCs simultaneamente.
+    #
+    # Valores reais observados:
+    #   SIT_ATIV: ['SM']
+    #   TIP_UNID: ['51']
+    #   ARE_LOC:  ['1', '2']  (1=Urbana, 2=Rural)
+    #   CONF:     ['RA']
+    #   POS:      ['D']
+    # ===========================================================================
+    
+    if "distribution_transformers" not in collections_exist:
+        db.create_collection(
+            "distribution_transformers",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": ["code", "distributor_code", "geometry", "geodatabase_id"],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+    
+                        # --- Identification ---
+                        "code": {
+                            "bsonType": "string",
+                            "description": "Unique transformer identifier. Mapped from COD_ID."
+                        },
+                        "distributor_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor code. Mapped from DIST."
+                        },
+                        "description": {
+                            "bsonType": ["string", "null"],
+                            "description": "Transformer description. Mapped from DESCR."
+                        },
+                        "geodatabase_id": {
+                            "bsonType": "objectId",
+                            "description": "Reference to the geodatabases collection."
+                        },
+    
+                        # --- Classification ---
+                        "connection_phases": {
+                            "bsonType": ["string", "null"],
+                            "enum": ["A", "B", "C", "AB", "AC", "BC", "ABC", "ABCN", None],
+                            "description": "Connected phases. Mapped from FAS_CON."
+                        },
+                        "status": {
+                            "bsonType": ["string", "null"],
+                            "description": "Operational status. Mapped from SIT_ATIV."
+                        },
+                        "unit_type": {
+                            "bsonType": ["string", "null"],
+                            "description": "Unit type code. Mapped from TIP_UNID."
+                        },
+                        "position": {
+                            "bsonType": ["string", "null"],
+                            "description": "Position code. Mapped from POS."
+                        },
+                        "location_area": {
+                            "bsonType": ["string", "null"],
+                            "enum": ["1", "2", None],
+                            "description": "Location area: 1 = Urban, 2 = Rural. Mapped from ARE_LOC."
+                        },
+                        "configuration": {
+                            "bsonType": ["string", "null"],
+                            "description": "Transformer configuration code. Mapped from CONF."
+                        },
+                        "substation": {
+                            "bsonType": ["string", "null"],
+                            "description": "Associated substation (posto). Mapped from POSTO."
+                        },
+    
+                        # --- Technical properties ---
+                        "nominal_power_kva": {
+                            "bsonType": ["double", "null"],
+                            "description": "Nominal power in kVA. Mapped from POT_NOM."
+                        },
+                        "fuse_capacity": {
+                            "bsonType": ["double", "null"],
+                            "description": "Fuse capacity. Mapped from CAP_ELO."
+                        },
+                        "switch_capacity": {
+                            "bsonType": ["double", "null"],
+                            "description": "Switch capacity. Mapped from CAP_CHA."
+                        },
+                        "iron_losses_kw": {
+                            "bsonType": ["double", "null"],
+                            "description": "Iron (no-load) losses in kW. Mapped from PER_FER."
+                        },
+                        "copper_losses_kw": {
+                            "bsonType": ["double", "null"],
+                            "description": "Copper (load) losses in kW. Mapped from PER_COB."
+                        },
+                        "connection_date": {
+                            "bsonType": ["string", "null"],
+                            "description": "Connection date. Mapped from DAT_CON."
+                        },
+    
+                        # --- Geometry (GeoJSON Point) ---
+                        "geometry": {
+                            "bsonType": "object",
+                            "required": ["type", "coordinates"],
+                            "description": "Transformer location in GeoJSON Point format.",
+                            "properties": {
+                                "type": {"bsonType": "string", "enum": ["Point"]},
+                                "coordinates": {
+                                    "bsonType": "array",
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "items": {"bsonType": "double"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            validationLevel="moderate",
+            validationAction="error"
+        )
+    
+        col = db["distribution_transformers"]
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
+        col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+        col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+        col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+        col.create_index([("location_area", ASCENDING)], name="idx_location_area")
+        col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power")
+        
+    
+    # ===========================================================================
+    # COLLECTION: municipalities
+    #
+    # Fonte: camada MUN do GDB
+    # Geometry: MultiPolygon — polígono do município.
+    # Útil para agregação geográfica — permite agrupar segmentos,
+    # transformadores e UCs por município sem depender de coordenadas.
+    # ===========================================================================
+    
+    if "municipalities" not in collections_exist:
+        db.create_collection(
+            "municipalities",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": ["code", "ibge_code", "name", "geometry", "geodatabase_id"],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+                        "code": {
+                            "bsonType": "string",
+                            "description": "Internal GDB identifier. Mapped from COD_ID."
+                        },
+                        "ibge_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "IBGE municipality code. Mapped from IBGE_MUN."
+                        },
+                        "ibge_uf_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "IBGE state code. Mapped from IBGE_UF."
+                        },
+                        "name": {
+                            "bsonType": "string",
+                            "description": "Municipality name. Mapped from NOM."
+                        },
+                        "description": {
+                            "bsonType": ["string", "null"],
+                            "description": "Additional description. Mapped from DESCR."
+                        },
+                        "management_area": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor management area. Mapped from GERENCIA."
+                        },
+                        "distributor_code": {
+                            "bsonType": ["string", "null"],
+                            "description": "Distributor code. Mapped from DIST."
+                        },
+                        "shape_length": {
+                            "bsonType": ["double", "null"],
+                            "description": "Perimeter length. Mapped from Shape_Length."
+                        },
+                        "shape_area": {
+                            "bsonType": ["double", "null"],
+                            "description": "Area in map units. Mapped from Shape_Area."
+                        },
+                        "geodatabase_id": {
+                            "bsonType": "objectId",
+                            "description": "Reference to the geodatabases collection."
+                        },
+                        "geometry": {
+                            "bsonType": "object",
+                            "required": ["type", "coordinates"],
+                            "properties": {
+                                "type": {"bsonType": "string", "enum": ["MultiPolygon", "Polygon"]}
+                            }
+                        }
+                    }
+                }
+            },
+            validationLevel="strict",
+            validationAction="error"
+        )
+        
+        col = db["municipalities"]
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
+        col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+        col.create_index([("ibge_code", ASCENDING)], name="idx_ibge")
+        col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+
     return db
 
 if __name__ == "__main__":

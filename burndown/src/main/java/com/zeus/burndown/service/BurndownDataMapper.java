@@ -150,8 +150,9 @@ public class BurndownDataMapper {
         List<Double> realLine = new ArrayList<>();
      
         long dayIndex = 0;
- 
-        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+
+        LocalDate finalDate = end.isAfter(LocalDate.now()) ? LocalDate.now() : end;
+        for (LocalDate date = start; !date.isAfter(finalDate); date = date.plusDays(1)) {
 
             final LocalDate currentDate = date;
             dates.add(currentDate);

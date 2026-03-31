@@ -8,8 +8,10 @@ import {
   X,
   ChevronDown,
   Network,
+  Upload,
 } from "lucide-react";
 import { cn } from "../utils/utils";
+import { processUploadFile } from "../utils/fileReader";
 
 const menuItems = [
   {
@@ -29,6 +31,48 @@ export default function DashboardLayout() {
   const pathname = location.pathname;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const allowedExtensions = [".csv", ".xlsx", ".zip"];
+
+  const handleFileSelect = (file) => {
+    const fileExtension = "." + file.name.split(".").pop().toLowerCase();
+    if (allowedExtensions.includes(fileExtension)) {
+      setSelectedFile(file);
+      processUploadFile(file);
+    } else {
+      alert("Apenas arquivos .csv, .xlsx e .zip são permitidos");
+      setSelectedFile(null);
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileSelect(e.target.files[0]);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -114,40 +158,52 @@ export default function DashboardLayout() {
               </h1>
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-2">
               <button
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-foreground"
+                onClick={() => setUploadModalOpen(true)}
               >
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">AD</span>
-                </div>
-                <span className="hidden sm:block text-sm font-medium text-foreground">
-                  Admin
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:block text-sm font-medium">
+                  Upload de Arquivo
                 </span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
               </button>
 
-              {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1">
-                  <Link
-                    to="/dashboard/perfil"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    Meu Perfil
-                  </Link>
-                  <div className="border-t border-border my-1" />
-                  <Link
-                    to="/"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-muted"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sair
-                  </Link>
-                </div>
-              )}
+              <div className="relative">
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-sm font-medium text-primary">AD</span>
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium text-foreground">
+                    Admin
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1">
+                    <Link
+                      to="/dashboard/perfil"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Meu Perfil
+                    </Link>
+                    <div className="border-t border-border my-1" />
+                    <Link
+                      to="/"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-muted"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -157,6 +213,95 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Upload Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Upload de Arquivo
+              </h2>
+              <button
+                onClick={() => {
+                  setUploadModalOpen(false);
+                  setSelectedFile(null);
+                  setDragActive(false);
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <input
+              type="file"
+              id="fileInput"
+              accept=".csv,.xlsx,.zip"
+              onChange={handleInputChange}
+              className="hidden"
+            />
+            
+            <label
+              htmlFor="fileInput"
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              {selectedFile ? (
+                <>
+                  <Upload className="w-10 h-10 text-primary" />
+                  <p className="text-sm text-foreground font-medium">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Clique ou arraste para alterar
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 text-muted-foreground" />
+                  <p className="text-sm text-foreground font-medium">
+                    Clique para selecionar um arquivo
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ou arraste e solte aqui
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Formatos aceitos: .csv, .xlsx, .zip
+                  </p>
+                </>
+              )}
+            </label>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => {
+                  setUploadModalOpen(false);
+                  setSelectedFile(null);
+                  setDragActive(false);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!selectedFile}
+                className="flex-1 px-4 py-2 text-sm font-medium text-card-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

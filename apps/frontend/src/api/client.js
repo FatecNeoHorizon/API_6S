@@ -55,4 +55,25 @@ export const apiClient = {
       method: "DELETE",
       ...options,
     }),
+  // Send FormData (file uploads). Caller must provide a FormData instance as `body`.
+  postForm: async (path, formData, options = {}) => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      body: formData,
+      // Do not set Content-Type for FormData; browser will set the correct boundary
+      ...(options || {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro na API: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      return response.json();
+    }
+
+    return response.text();
+  },
 };

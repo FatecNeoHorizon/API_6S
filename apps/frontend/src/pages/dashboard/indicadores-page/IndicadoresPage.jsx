@@ -118,18 +118,6 @@ const barData = [
   { id: "dez", val: 85 },
 ];
 
-function getStatusClassName(status) {
-  if (status === "ok") return "bg-chart-1/10 text-chart-1";
-  if (status === "alerta") return "bg-chart-3/10 text-chart-3";
-  return "bg-destructive/10 text-destructive";
-}
-
-function getStatusLabel(status) {
-  if (status === "ok") return "Conforme";
-  if (status === "alerta") return "Alerta";
-  return "Critico";
-}
-
 export default function IndicadoresPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("30 dias");
   const [selectedTab, setSelectedTab] = useState("dec_fec");

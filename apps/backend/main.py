@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 
 from src.model import blogModel
 from src.control import blogProcedures
+from src.model import distributionIndicesModel
+from src.control import distributionIndicesProcedures
 
 from contextlib import asynccontextmanager
 from src.etl.database import setup
@@ -42,4 +43,21 @@ async def get_all_blogs():
 @app.get("/exemplo-mongodb")
 async def get_all_blogs():
     returnThing = blogProcedures.BlogProcedures().getAll()
+    return returnThing
+
+@app.get("/get-dec-fec")
+async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 
+                      indicator_type_code : str | None = None, year: int | None = None, period : int | None = None):
+    filterDict = {
+        "agent_acronym" : agent_acronym,
+        "cnpj_number" : cnpj_number,
+        "consumer_unit_set_id" : consumer_unit_set_id,
+        "indicator_type_code" : indicator_type_code,
+        "year" : year,
+        "period" : period
+    }
+
+    cleaned_dict = {key: value for key, value in filterDict.items() if value is not None}
+    
+    returnThing = distributionIndicesProcedures.DistributionIndicesProcedures().getAll(cleaned_dict)
     return returnThing

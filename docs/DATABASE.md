@@ -1,4 +1,4 @@
-# Relational Database Documentation
+# Database Documentation
 
 ## Overview
 

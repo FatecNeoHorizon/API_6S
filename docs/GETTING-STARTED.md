@@ -27,11 +27,18 @@ POSTGRES_DB=zeus
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_strong_password
 POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
+POSTGRES_PORT=
 
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=your_strong_password
+
+# Mongo Express
+MONGO_HOST=
+MONGO_PORT=
+MONGO_USER=
+MONGO_PASSWORD=
+MONGO_DB_NAME=
 
 # Flyway
 FLYWAY_URL=jdbc:postgresql://postgres:5432/zeus

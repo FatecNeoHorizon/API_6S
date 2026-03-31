@@ -196,14 +196,6 @@ The project's objective is to develop a platform that processes and analyzes dat
 
 This solution consists of a main application and a support module for tracking project evolution (Burndown).
 
-## 🛠️ Technologies Used <a id="technologies"></a>
-
-This solution consists of a main application and a support module for tracking project evolution (Burndown).
-
-## 🛠️ Technologies Used <a id="technologies"></a>
-
-This solution consists of a main application and a support module for tracking project evolution (Burndown).
-
 ### 🖥️ Frontend
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -240,6 +232,7 @@ This solution consists of a main application and a support module for tracking p
 | [General Documentation](docs/DOCUMENTATION.md) | Centralized index of all project standards |
 | [Commit and Branch Standards](docs/CONTRIBUTING.md) | Conventional Commits, branch naming and Git hooks |
 | [Issue Tracking](docs/ISSUE-TRACKING.md) | How to trace issues, branches and PRs |
+| [LGPD](docs/LGPD.md) | LGPD guidelines and data privacy compliance |
 
 ---
 
@@ -247,9 +240,12 @@ This solution consists of a main application and a support module for tracking p
 
 | Document | Description |
 |:---------|:------------|
-| [Prototyping](docs/UI-DESIGN.md) | User flow, screens and components (Figma) |
-| [How to Run the Project](docs/GETTING-STARTED.md) | Setup and local execution guide |
-| [Database](docs/DATABASE.md) | Data model and architecture decisions |
+| [Prototyping](docs/UI-DESIGN.md) | User flows, screens, and UI components (Figma) |
+| [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
+| [Relational database](docs/DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
+| [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
+| [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
+| [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |
 
 ---
 

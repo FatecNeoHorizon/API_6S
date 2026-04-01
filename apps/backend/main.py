@@ -62,18 +62,18 @@ async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None 
     returnThing = distributionIndicesProcedures.DistributionIndicesProcedures().getAll(cleaned_dict)
     return returnThing
 
-# @app.get("/get-energy-losses")
-# async def get_dec_fec(distributor: str | None = None, distributor_slug: str | None = None, state: str | None = None, 
-#                       uf : str | None = None, process_date: str | None = None):
-#     filterDict = {
-#         "distributor" : distributor,
-#         "distributor_slug" : distributor_slug,
-#         "state" : state,
-#         "uf" : uf,
-#         "process_date" : process_date,
-#     }
+@app.get("/get-energy-losses")
+async def get_dec_fec(distributor: str | None = None, distributor_slug: str | None = None, state: str | None = None, 
+                      uf : str | None = None, process_date: str | None = None):
+    filterDict = {
+        "distributor" : distributor,
+        "distributor_slug" : distributor_slug,
+        "state" : state,
+        "uf" : uf,
+        "process_date" : process_date,
+    }
 
-#     cleaned_dict = {key: value for key, value in filterDict.items() if value is not None}
+    cleaned_dict = {key: value for key, value in filterDict.items() if value is not None}
     
-#     returnThing = energyLossesTariffProcedures.EnergyLossesTariffProcedures().getAll(cleaned_dict)
-#     return returnThing
+    returnThing = energyLossesTariffProcedures.EnergyLossesTariffProcedures().getAll(cleaned_dict)
+    return returnThing

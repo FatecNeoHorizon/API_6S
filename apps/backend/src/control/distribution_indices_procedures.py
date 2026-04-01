@@ -1,11 +1,10 @@
 from pymongo import MongoClient
-from src.model import distributionIndicesModel
+from src.model import distribution_indices_model
 from src.config import parameters
 from typing import List
 from pydantic import TypeAdapter
-import json
 
-class DistributionIndicesProcedures():
+class Distribution_indices_procedures():
     connection : None
 
     def __init__(self):
@@ -18,6 +17,6 @@ class DistributionIndicesProcedures():
         db = self.connection.zeus
         cleaned_dict = {key: value for key, value in filter.items() if value is not None}
         cursor = db.distribution_indices.find(cleaned_dict)
-        distributionIndicesAdapter = TypeAdapter(List[distributionIndicesModel.DistributionIndices])
-        validated_list = distributionIndicesAdapter.validate_python(cursor)
+        distribution_indices_adapter = TypeAdapter(List[distribution_indices_model.DistributionIndices])
+        validated_list = distribution_indices_adapter.validate_python(cursor)
         return validated_list

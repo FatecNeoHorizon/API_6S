@@ -16,7 +16,8 @@ class DistributionIndicesProcedures():
 
     def getAll(self, filter):
         db = self.connection.zeus
-        cursor = db.distribution_indices.find(filter)
+        cleaned_dict = {key: value for key, value in filter.items() if value is not None}
+        cursor = db.distribution_indices.find(cleaned_dict)
         distributionIndicesAdapter = TypeAdapter(List[distributionIndicesModel.DistributionIndices])
         validated_list = distributionIndicesAdapter.validate_python(cursor)
         return validated_list

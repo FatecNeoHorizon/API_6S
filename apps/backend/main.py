@@ -56,10 +56,8 @@ async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None 
         "year" : year,
         "period" : period
     }
-
-    cleaned_dict = {key: value for key, value in filterDict.items() if value is not None}
     
-    returnThing = distributionIndicesProcedures.DistributionIndicesProcedures().getAll(cleaned_dict)
+    returnThing = distributionIndicesProcedures.DistributionIndicesProcedures().getAll(filterDict)
     return returnThing
 
 @app.get("/get-energy-losses")
@@ -72,8 +70,6 @@ async def get_dec_fec(distributor: str | None = None, distributor_slug: str | No
         "uf" : uf,
         "process_date" : process_date,
     }
-
-    cleaned_dict = {key: value for key, value in filterDict.items() if value is not None}
     
-    returnThing = energyLossesTariffProcedures.EnergyLossesTariffProcedures().getAll(cleaned_dict)
+    returnThing = energyLossesTariffProcedures.EnergyLossesTariffProcedures().getAll(filterDict)
     return returnThing

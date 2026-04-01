@@ -15,7 +15,8 @@ class EnergyLossesTariffProcedures():
 
     def getAll(self, filter):
         db = self.connection.zeus
-        cursor = db.energy_losses_tariff.find(filter)
+        cleaned_dict = {key: value for key, value in filter.items() if value is not None}
+        cursor = db.energy_losses_tariff.find(cleaned_dict)
         energyLossesAdapter = TypeAdapter(List[energyLossesTariffModel.EnergyLossesTariff])
         validated_list = energyLossesAdapter.validate_python(cursor)
         return validated_list

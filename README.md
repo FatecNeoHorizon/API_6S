@@ -251,6 +251,6 @@ This solution consists of a main application and a support module for tracking p
 
 ## 📈 Project Evolution (Burndown) <a id="burndown"></a>
 
-<img src="burndown/src/main/resources/static/burndown.png?v=19bb2ba20f0f299c1da02ccf15fde94052987d79">
+<img src="burndown/src/main/resources/static/burndown.png?v=598bd51efb34c483eac91839d78cf2120296551f">
 
 For the full guide on local usage, execution and CI, see: [Burndown Documentation](./burndown/README.md)

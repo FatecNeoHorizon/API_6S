@@ -1,3 +1,5 @@
+from src.etl.get_decfec_file import get_filepath
+from src.etl.load_decfec import load_decfec
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -43,3 +45,12 @@ async def get_all_blogs():
 async def get_all_blogs():
     returnThing = blogProcedures.BlogProcedures().getAll()
     return returnThing
+
+@app.get("/process-csv")
+def process_csv():
+    result = load_decfec()
+
+    if not result:
+        return {"message": "Nenhum registro inserido"}
+
+    return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}

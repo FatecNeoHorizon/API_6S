@@ -1,3 +1,5 @@
+from src.etl.get_decfec_file import get_filepath
+from src.etl.load_decfec import load_decfec
 from fastapi import FastAPI
 
 from src.control import distribution_indices_procedures
@@ -14,6 +16,43 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+@app.get("/")
+async def root():
+    return {"message": "Exemplo GET simples"}
+
+@app.get("/exemplo-parametro-path/{path_id}")
+async def read_item(path_id : int):
+    return {"path_id": path_id}
+
+@app.get("/exemplo-skip-limit/")
+async def read_item(skip: int = 0, limit: int = 10):
+    return fake_items_db[skip : skip + limit]
+
+@app.post("/exemplo-post-body-schema")
+async def create_import_test(item: blogModel.BlogModel):
+    return item
+
+@app.get("/exemplo-get-retorno-schema",response_model=blogModel.BlogModel)
+async def get_all_blogs():
+    idk = blogModel.BlogModel()
+    idk.content = 'IHHH DEU BAO'
+    return idk
+
+@app.get("/exemplo-mongodb")
+async def get_all_blogs():
+    returnThing = blogProcedures.BlogProcedures().getAll()
+    return returnThing
+
+@app.get("/process-csv")
+def process_csv():
+    result = load_decfec()
+
+    if not result:
+        return {"message": "Nenhum registro inserido"}
+
+    return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
 @app.get("/get-dec-fec")
 async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 
                       indicator_type_code : str | None = None, year: int | None = None, period : int | None = None):

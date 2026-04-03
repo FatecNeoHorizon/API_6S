@@ -5,3 +5,4 @@ python-dotenv==1.2.2
 auto_mix_prep==0.2.0
 uvicorn
 psycopg2-binary
+pandas

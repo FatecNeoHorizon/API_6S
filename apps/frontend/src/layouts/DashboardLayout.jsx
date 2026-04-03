@@ -10,6 +10,7 @@ import {
   Network,
   Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "../utils/utils";
 import { processUploadFile } from "../utils/fileReader";
 
@@ -23,7 +24,7 @@ const menuItems = [
     label: "Estrutura das Redes",
     href: "/dashboard/estrutura-redes",
     icon: Network,
-  }
+  },
 ];
 
 export default function DashboardLayout() {
@@ -34,6 +35,7 @@ export default function DashboardLayout() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const allowedExtensions = [".csv", ".xlsx", ".zip"];
 
@@ -43,7 +45,7 @@ export default function DashboardLayout() {
       setSelectedFile(file);
       processUploadFile(file);
     } else {
-      alert("Apenas arquivos .csv, .xlsx e .zip são permitidos");
+      toast.error("Apenas arquivos .csv, .xlsx e .zip são permitidos");
       setSelectedFile(null);
     }
   };
@@ -62,7 +64,7 @@ export default function DashboardLayout() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
@@ -71,6 +73,39 @@ export default function DashboardLayout() {
   const handleInputChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       handleFileSelect(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "X-File-Name": encodeURIComponent(selectedFile.name),
+        },
+        body: selectedFile,
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha no upload do arquivo");
+      }
+
+      const data = await response.json();
+      console.log("Upload concluído com sucesso. Salvo em:", data.path);
+      toast.success("Arquivo enviado com sucesso!");
+
+      // Resetar modal
+      setUploadModalOpen(false);
+      setSelectedFile(null);
+      setDragActive(false);
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      toast.error("Houve um erro ao enviar o arquivo.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -233,7 +268,7 @@ export default function DashboardLayout() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <input
               type="file"
               id="fileInput"
@@ -241,7 +276,7 @@ export default function DashboardLayout() {
               onChange={handleInputChange}
               className="hidden"
             />
-            
+
             <label
               htmlFor="fileInput"
               onDragEnter={handleDrag}
@@ -252,7 +287,7 @@ export default function DashboardLayout() {
                 "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors",
                 dragActive
                   ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50"
+                  : "border-border hover:border-primary/50",
               )}
             >
               {selectedFile ? (
@@ -293,10 +328,11 @@ export default function DashboardLayout() {
                 Cancelar
               </button>
               <button
-                disabled={!selectedFile}
+                onClick={handleFileUpload}
+                disabled={!selectedFile || isUploading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-card-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Enviar
+                {isUploading ? "Enviando..." : "Enviar"}
               </button>
             </div>
           </div>

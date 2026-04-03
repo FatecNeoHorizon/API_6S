@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
-  Calendar,
+  Calendar as CalendarIcon,
   Filter,
   BarChart3,
   Zap,
@@ -15,6 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   LineChart,
   Line,
@@ -121,9 +123,20 @@ const barData = [
 export default function IndicadoresPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("30 dias");
   const [selectedTab, setSelectedTab] = useState("dec_fec");
+  const [date, setDate] = useState({
+    from: undefined,
+    to: undefined,
+  });
+
+  const handleSelectDate = (newDate) => {
+    setDate(newDate);
+    if (newDate?.from) console.log("Data inicial:", newDate.from);
+    if (newDate?.to) console.log("Data final:", newDate.to);
+  };
+
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="flex gap-2">
@@ -168,145 +181,165 @@ export default function IndicadoresPage() {
               {period}
             </Button>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-border text-foreground hover:bg-muted"
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            Personalizado
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-border text-foreground hover:bg-muted"
+              >
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Personalizado
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={date}
+                onSelect={handleSelectDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
       {selectedTab === "dec_fec" ? (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  DEC Medio
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">12.4h</div>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingDown className="w-4 h-4 text-chart-1" />
-                  <span className="text-sm text-chart-1">-8%</span>
-                  <span className="text-sm text-muted-foreground">
-                    vs. periodo anterior
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  FEC Medio
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">7.2</div>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingDown className="w-4 h-4 text-chart-1" />
-                  <span className="text-sm text-chart-1">-5%</span>
-                  <span className="text-sm text-muted-foreground">
-                    vs. periodo anterior
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Main Layout - Cards/Chart on left, Table spanning full height on right */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
+            {/* Left Column - Cards and Chart stacked */}
+            <div className="flex flex-col gap-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="bg-card border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      DEC Medio
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-foreground">
+                      12.4h
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <TrendingDown className="w-4 h-4 text-chart-1" />
+                      <span className="text-sm text-chart-1">-8%</span>
+                      <span className="text-sm text-muted-foreground">
+                        vs. periodo anterior
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      FEC Medio
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-foreground">
+                      7.2
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <TrendingDown className="w-4 h-4 text-chart-1" />
+                      <span className="text-sm text-chart-1">-5%</span>
+                      <span className="text-sm text-muted-foreground">
+                        vs. periodo anterior
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-          {/* Chart Area */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground">
-                  Evolucao DEC/FEC
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Historico dos últimos 6 meses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={decFecData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="hsl(var(--border))"
-                      />
-                      <XAxis
-                        dataKey="mes"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
-                        domain={[0, 15]}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="dec"
-                        name="DEC (horas)"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: "#3b82f6" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="fec"
-                        name="FEC (interrupcoes)"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                        dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: "#22c55e" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center justify-center gap-6 mt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-chart-1" />
-                    <span className="text-sm text-muted-foreground">
-                      DEC (horas)
-                    </span>
+              {/* Chart */}
+              <Card className="bg-card border-border flex-1">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-foreground">
+                    Evolucao DEC/FEC
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Historico dos últimos 6 meses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="h-40 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={decFecData}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="hsl(var(--border))"
+                        />
+                        <XAxis
+                          dataKey="mes"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "hsl(var(--muted-foreground))",
+                            fontSize: 12,
+                          }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "hsl(var(--muted-foreground))",
+                            fontSize: 12,
+                          }}
+                          domain={[0, 15]}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="dec"
+                          name="DEC (horas)"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: "#3b82f6" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="fec"
+                          name="FEC (interrupcoes)"
+                          stroke="#22c55e"
+                          strokeWidth={2}
+                          dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: "#22c55e" }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-chart-2" />
-                    <span className="text-sm text-muted-foreground">
-                      FEC (interrupcoes)
-                    </span>
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-chart-1" />
+                      <span className="text-sm text-muted-foreground">
+                        DEC (horas)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-chart-2" />
+                      <span className="text-sm text-muted-foreground">
+                        FEC (interrupcoes)
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Distribuidoras Table */}
-            <Card className="bg-card border-border">
+            {/* Right Column - Distribuidoras Table spanning full height */}
+            <Card className="bg-card border-border h-fit lg:row-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>

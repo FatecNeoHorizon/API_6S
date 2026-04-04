@@ -76,6 +76,8 @@ services:
       - .env
     ports:
       - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
     networks:
       - db_network
       - app_network
@@ -97,6 +99,9 @@ services:
       - .env
     ports:
       - "5173:5173"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
     networks:
       - app_network
     depends_on:

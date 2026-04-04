@@ -851,7 +851,7 @@ def setup():
         )
 
         col = db["mt_network_segments"]
-        col.create_index([("geometry", GEOSPHERE)], name="idx_geo", unique=True)
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
         col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
         col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
         col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")

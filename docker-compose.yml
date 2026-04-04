@@ -81,6 +81,10 @@ services:
     networks:
       - db_network
       - app_network
+    volumes:
+      - ./data:/app/data
+    environment:
+      - CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
     depends_on:
       postgres:
         condition: service_started

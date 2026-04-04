@@ -7,6 +7,8 @@ from src.control import energy_losses_tariff_procedures
 from src.control import blogProcedures
 from src.model import blogModel
 
+from src.utils.clean_filter import clean_filter, remove_operators_fields
+
 from contextlib import asynccontextmanager
 from src.etl.database import setup
 
@@ -19,22 +21,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
-
-def clean_filter(d):
-    if not isinstance(d, dict):
-        return d
-    cleaned_filter = {
-        k: clean_filter(v) for k, v in d.items() 
-        if v is not None and (not isinstance(v, dict) or len(v) > 0)
-    }
-    try:
-        if  len(cleaned_filter["period"]) < 1:
-            cleaned_filter.pop("period")
-        if len(cleaned_filter["year"]) < 1:
-            cleaned_filter.pop("year")
-    except:
-        return cleaned_filter
-    return cleaned_filter
 
 @app.get("/")
 async def root():
@@ -88,9 +74,7 @@ async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None 
                   "$lte" : year_max}
     }
 
-    cleaned_dict = clean_filter(filterDict)
-    
-    returnThing = distribution_indices_procedures.Distribution_indices_procedures().getAll(cleaned_dict)
+    returnThing = distribution_indices_procedures.Distribution_indices_procedures().getAll(filterDict)
     return returnThing
 
 @app.get("/get-energy-losses")

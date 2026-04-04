@@ -13,7 +13,7 @@ function uploadMiddleware() {
           let filename = req.headers['x-file-name'] || 'uploaded_file';
           filename = decodeURIComponent(filename);
           
-          const uploadDir = path.resolve(__dirname, '../../uploads');
+          const uploadDir = path.resolve(__dirname, '../../data');
           if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
           }

@@ -13,8 +13,9 @@ from src.etl.database import setup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import os
     setup()
+    from src.model.seed import seed
+    seed()
     yield
 
 app = FastAPI(lifespan=lifespan)

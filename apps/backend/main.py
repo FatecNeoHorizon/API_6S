@@ -20,6 +20,22 @@ app = FastAPI(lifespan=lifespan)
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
+def clean_filter(d):
+    if not isinstance(d, dict):
+        return d
+    cleaned_filter = {
+        k: clean_filter(v) for k, v in d.items() 
+        if v is not None and (not isinstance(v, dict) or len(v) > 0)
+    }
+    try:
+        if  len(cleaned_filter["period"]) < 1:
+            cleaned_filter.pop("period")
+        if len(cleaned_filter["year"]) < 1:
+            cleaned_filter.pop("year")
+    except:
+        return cleaned_filter
+    return cleaned_filter
+
 @app.get("/")
 async def root():
     return {"message": "Exemplo GET simples"}
@@ -55,19 +71,26 @@ def process_csv():
         return {"message": "Nenhum registro inserido"}
 
     return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
+
 @app.get("/get-dec-fec")
 async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 
-                      indicator_type_code : str | None = None, year: int | None = None, period : int | None = None):
+                      indicator_type_code : str | None = None, year_min: int | None = None, period_min : int | None = None,
+                      year_max: int | None = None, period_max: int | None = None):
+    
     filterDict = {
         "agent_acronym" : agent_acronym,
         "cnpj_number" : cnpj_number,
         "consumer_unit_set_id" : consumer_unit_set_id,
         "indicator_type_code" : indicator_type_code,
-        "year" : year,
-        "period" : period
+        "period" : {"$gte" : period_min,
+                    "$lte" : period_max},
+        "year" : {"$gte" : year_min,
+                  "$lte" : year_max}
     }
+
+    cleaned_dict = clean_filter(filterDict)
     
-    returnThing = distribution_indices_procedures.Distribution_indices_procedures().getAll(filterDict)
+    returnThing = distribution_indices_procedures.Distribution_indices_procedures().getAll(cleaned_dict)
     return returnThing
 
 @app.get("/get-energy-losses")

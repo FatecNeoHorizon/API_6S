@@ -4,6 +4,8 @@ from fastapi import FastAPI
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
+from src.control import blogProcedures
+from src.model import blogModel
 
 from contextlib import asynccontextmanager
 from src.etl.database import setup

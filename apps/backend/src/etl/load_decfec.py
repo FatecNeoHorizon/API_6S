@@ -1,11 +1,12 @@
 import os
 
 from src.etl.get_decfec_file import get_filepath
+from src.etl.transform_decfec import transform_decfec
 from pymongo import MongoClient
 import pandas as pd
 
-def load_decfec():
 
+def load_decfec():
     FILE_PATH = get_filepath()
 
     port = os.getenv("MONGO_PORT", "27017")
@@ -20,6 +21,8 @@ def load_decfec():
         encoding='latin-1',
     )
 
+    df = transform_decfec(df)
+
     filtro = ['DEC', 'FEC']
 
     df_filtrado = df[df['SigIndicador'].isin(filtro)]
@@ -30,7 +33,6 @@ def load_decfec():
         .dropna(subset=['SigIndicador'])
         .reset_index(drop=True)
     )
-
 
     df_filtrado = df_filtrado.rename(columns={
         'SigAgente': 'agent_acronym',
@@ -48,7 +50,7 @@ def load_decfec():
     db = client[db_name]
     collection = db['distribution_indices']
 
-    df_filtrado['generation_date'] = pd.to_datetime(df_filtrado['generation_date'], errors='coerce')
+    df_filtrado['generation_date'] = df_filtrado['generation_date'].fillna('').astype(str)
     df_filtrado['year'] = df_filtrado['year'].fillna(0).astype(int)
     df_filtrado['period'] = df_filtrado['period'].fillna(0).astype(int)
     df_filtrado['value'] = pd.to_numeric(df_filtrado['value'], errors='coerce')
@@ -63,5 +65,7 @@ def load_decfec():
     resultado = collection.insert_many(registros)
 
     return resultado.inserted_ids
+
+
 if __name__ == "__main__":
     load_decfec()

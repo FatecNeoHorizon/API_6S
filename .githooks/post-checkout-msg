@@ -26,6 +26,12 @@ if [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "develop" ]]; then
   exit 0
 fi
 
+# Ignore commits from bots/automation
+AUTHOR=$(git log --format="%ae" -n 1 HEAD)
+if echo "$AUTHOR" | grep -qE "(github-actions|bot)\[bot\]|noreply\.github\.com"; then
+  exit 0
+fi
+
 # Validate branch name pattern
 if ! [[ "$BRANCH_NAME" =~ $BRANCH_PATTERN ]]; then
   echo ""

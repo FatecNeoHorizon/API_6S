@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -16,7 +16,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   LineChart,
   Line,
@@ -29,6 +33,44 @@ import {
 
 const periods = ["3 meses", "6 meses", "9 meses", "1 ano"];
 
+const periodMonths = {
+  "3 meses": 3,
+  "6 meses": 6,
+  "9 meses": 9,
+  "1 ano": 12,
+};
+
+const formatDate = (date) => date.toISOString().split("T")[0];
+
+const getPeriodRange = (periodLabel) => {
+  const today = new Date();
+  const months = periodMonths[periodLabel];
+  const past = new Date(today);
+  past.setMonth(past.getMonth() - months);
+  return { from: formatDate(past), to: formatDate(today) };
+};
+
+// Filter API records by generation_date within [from, to] and indicator type
+const filterByPeriodAndType = (data, from, to, type) => {
+  return data.filter((item) => {
+    const d = item.generation_date;
+    return item.indicator_type_code === type && d >= from && d <= to;
+  });
+};
+
+// Calculate average and log the formula to console
+const calcAverage = (records, type) => {
+  if (!records.length) return null;
+  const values = records.map((r) => r.value);
+  const sum = values.reduce((acc, v) => acc + v, 0);
+  const avg = sum / values.length;
+  const formula = values.join(" + ");
+  console.log(
+    `Média do ${type}: ${formula} = ${sum.toFixed(2)} / ${values.length} = ${avg.toFixed(2)}`,
+  );
+  return parseFloat(avg.toFixed(2));
+};
+
 const decFecData = [
   { mes: "Jan", dec: 12.5, fec: 7.2 },
   { mes: "Fev", dec: 11.8, fec: 6.9 },
@@ -39,46 +81,14 @@ const decFecData = [
 ];
 
 const distribuidoras = [
-  {
-    nome: "CPFL Paulista",
-    dec: 8.5,
-    fec: 4.2,
-  },
-  {
-    nome: "CEMIG-D",
-    dec: 12.3,
-    fec: 6.8,
-  },
-  {
-    nome: "Light",
-    dec: 15.2,
-    fec: 8.5,
-  },
-  {
-    nome: "COPEL-DIS",
-    dec: 9.1,
-    fec: 5.1,
-  },
-  {
-    nome: "CELESC-DIS",
-    dec: 10.5,
-    fec: 5.8,
-  },
-  {
-    nome: "ELEKTRO",
-    dec: 11.8,
-    fec: 6.5,
-  },
-  {
-    nome: "COELBA",
-    dec: 16.5,
-    fec: 9.2,
-  },
-  {
-    nome: "CELPE",
-    dec: 14.2,
-    fec: 7.9,
-  },
+  { nome: "CPFL Paulista", dec: 8.5, fec: 4.2 },
+  { nome: "CEMIG-D", dec: 12.3, fec: 6.8 },
+  { nome: "Light", dec: 15.2, fec: 8.5 },
+  { nome: "COPEL-DIS", dec: 9.1, fec: 5.1 },
+  { nome: "CELESC-DIS", dec: 10.5, fec: 5.8 },
+  { nome: "ELEKTRO", dec: 11.8, fec: 6.5 },
+  { nome: "COELBA", dec: 16.5, fec: 9.2 },
+  { nome: "CELPE", dec: 14.2, fec: 7.9 },
 ];
 
 const perdas = [
@@ -105,35 +115,59 @@ const perdas = [
   },
 ];
 
-const barData = [
-  { id: "jan", val: 65 },
-  { id: "fev", val: 70 },
-  { id: "mar", val: 68 },
-  { id: "abr", val: 72 },
-  { id: "mai", val: 75 },
-  { id: "jun", val: 73 },
-  { id: "jul", val: 78 },
-  { id: "ago", val: 76 },
-  { id: "set", val: 80 },
-  { id: "out", val: 78 },
-  { id: "nov", val: 82 },
-  { id: "dez", val: 85 },
-];
-
 export default function IndicadoresPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("30 dias");
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [selectedTab, setSelectedTab] = useState("dec_fec");
-  const [date, setDate] = useState({
-    from: undefined,
-    to: undefined,
-  });
+  const [date, setDate] = useState({ from: undefined, to: undefined });
+  const [apiData, setApiData] = useState([]);
+  const [decAvg, setDecAvg] = useState(null);
+  const [fecAvg, setFecAvg] = useState(null);
+
+  // Fetch DEC/FEC data on mount
+  useEffect(() => {
+    const fetchDecFec = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/get-dec-fec");
+        const data = await response.json();
+        console.log("[get-dec-fec] Response:", data);
+        setApiData(data);
+      } catch (error) {
+        console.error("[get-dec-fec] Erro ao buscar dados:", error);
+      }
+    };
+
+    fetchDecFec();
+  }, []);
+
+  const computeAverages = (period, data) => {
+    const { from, to } = getPeriodRange(period);
+
+    const decRecords = filterByPeriodAndType(data, from, to, "DEC");
+    const fecRecords = filterByPeriodAndType(data, from, to, "FEC");
+
+    console.log(`\n--- Dados filtrados para "${period}" (${from} → ${to}) ---`);
+    console.log("Registros DEC encontrados:", decRecords);
+    console.log("Registros FEC encontrados:", fecRecords);
+
+    const avgDec = calcAverage(decRecords, "DEC");
+    const avgFec = calcAverage(fecRecords, "FEC");
+
+    setDecAvg(avgDec);
+    setFecAvg(avgFec);
+  };
+
+  const handleSelectPeriod = (period) => {
+    setSelectedPeriod(period);
+    const { from, to } = getPeriodRange(period);
+    console.log(`Período selecionado: ${to} - ${from}`);
+    computeAverages(period, apiData);
+  };
 
   const handleSelectDate = (newDate) => {
     setDate(newDate);
-    if (newDate?.from) console.log("Data inicial:", newDate.from);
-    if (newDate?.to) console.log("Data final:", newDate.to);
+    if (newDate?.from) console.log("Data inicial:", formatDate(newDate.from));
+    if (newDate?.to) console.log("Data final:", formatDate(newDate.to));
   };
-
 
   return (
     <div className="flex flex-col gap-4">
@@ -171,7 +205,7 @@ export default function IndicadoresPage() {
               key={period}
               variant={selectedPeriod === period ? "secondary" : "ghost"}
               size="sm"
-              onClick={() => setSelectedPeriod(period)}
+              onClick={() => handleSelectPeriod(period)}
               className={
                 selectedPeriod === period
                   ? "bg-secondary text-secondary-foreground"
@@ -206,9 +240,8 @@ export default function IndicadoresPage() {
 
       {selectedTab === "dec_fec" ? (
         <>
-          {/* Main Layout - Cards/Chart on left, Table spanning full height on right */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
-            {/* Left Column - Cards and Chart stacked */}
+            {/* Left Column */}
             <div className="flex flex-col gap-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -220,13 +253,14 @@ export default function IndicadoresPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-foreground">
-                      12.4h
+                      {decAvg !== null ? `${decAvg}h` : "—"}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <TrendingDown className="w-4 h-4 text-chart-1" />
-                      <span className="text-sm text-chart-1">-8%</span>
                       <span className="text-sm text-muted-foreground">
-                        vs. periodo anterior
+                        {selectedPeriod
+                          ? `Média · ${selectedPeriod}`
+                          : "Selecione um período"}
                       </span>
                     </div>
                   </CardContent>
@@ -239,13 +273,14 @@ export default function IndicadoresPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-foreground">
-                      7.2
+                      {fecAvg !== null ? fecAvg : "—"}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <TrendingDown className="w-4 h-4 text-chart-1" />
-                      <span className="text-sm text-chart-1">-5%</span>
                       <span className="text-sm text-muted-foreground">
-                        vs. periodo anterior
+                        {selectedPeriod
+                          ? `Média · ${selectedPeriod}`
+                          : "Selecione um período"}
                       </span>
                     </div>
                   </CardContent>
@@ -338,7 +373,7 @@ export default function IndicadoresPage() {
               </Card>
             </div>
 
-            {/* Right Column - Distribuidoras Table spanning full height */}
+            {/* Right Column - Distribuidoras Table */}
             <Card className="bg-card border-border h-fit lg:row-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">

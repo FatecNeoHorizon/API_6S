@@ -78,11 +78,10 @@ services:
       - "8000:8000"
     volumes:
       - ./apps/backend:/app
+      - ./data:/app/data
     networks:
       - db_network
       - app_network
-    volumes:
-      - ./data:/app/data
     environment:
       - CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
     depends_on:

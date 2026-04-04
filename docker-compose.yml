@@ -102,6 +102,7 @@ services:
     volumes:
       - ./apps/frontend:/app
       - /app/node_modules
+      - ./data:/data
     networks:
       - app_network
     depends_on:

@@ -15,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +29,260 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+
+// ── Custom two-month range calendar ──────────────────────────────────────────
+const MONTH_NAMES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function isSameDay(a, b) {
+  return a && b && a.toDateString() === b.toDateString();
+}
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function MonthGrid({
+  year,
+  month,
+  rangeStart,
+  rangeEnd,
+  hovered,
+  onDayClick,
+  onDayHover,
+}) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+
+  const rangeEnd_ = rangeEnd || hovered;
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-xs text-muted-foreground py-1 font-medium"
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {cells.map((day, i) => {
+          if (!day) return <div key={`empty-${i}`} />;
+
+          const isStart = rangeStart && isSameDay(day, rangeStart);
+          const isEnd = rangeEnd_ && isSameDay(day, rangeEnd_);
+
+          let inRange = false;
+          if (rangeStart && rangeEnd_) {
+            const lo = startOfDay(
+              rangeStart < rangeEnd_ ? rangeStart : rangeEnd_,
+            );
+            const hi = startOfDay(
+              rangeStart < rangeEnd_ ? rangeEnd_ : rangeStart,
+            );
+            const cur = startOfDay(day);
+            inRange = cur > lo && cur < hi;
+          }
+
+          const isSelected = isStart || isEnd;
+
+          return (
+            <div
+              key={day.toISOString()}
+              className="relative flex items-center justify-center h-8"
+              style={{
+                background: inRange
+                  ? "hsl(var(--primary) / 0.12)"
+                  : "transparent",
+                borderRadius: isStart
+                  ? "9999px 0 0 9999px"
+                  : isEnd
+                    ? "0 9999px 9999px 0"
+                    : "0",
+              }}
+            >
+              <button
+                onClick={() => onDayClick(day)}
+                onMouseEnter={() => onDayHover(day)}
+                className="w-8 h-8 flex items-center justify-center text-sm rounded-full transition-colors z-10 relative"
+                style={{
+                  background: isSelected
+                    ? "hsl(var(--primary))"
+                    : "transparent",
+                  color: isSelected
+                    ? "hsl(var(--primary-foreground))"
+                    : "hsl(var(--foreground))",
+                  fontWeight: isSelected ? "700" : "400",
+                  cursor: "pointer",
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected)
+                    e.currentTarget.style.background = "transparent";
+                }}
+                onMouseOver={(e) => {
+                  if (!isSelected)
+                    e.currentTarget.style.background = "hsl(var(--muted))";
+                }}
+                onMouseOut={(e) => {
+                  if (!isSelected)
+                    e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {day.getDate()}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RangeCalendar({ value, onChange }) {
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [hovered, setHovered] = useState(null);
+  const [selecting, setSelecting] = useState(false); // false = picking start, true = picking end
+
+  const rangeStart = value?.from;
+  const rangeEnd = value?.to;
+
+  // Second month
+  let month2 = viewMonth + 1;
+  let year2 = viewYear;
+  if (month2 > 11) {
+    month2 = 0;
+    year2 += 1;
+  }
+
+  const prevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
+  };
+
+  const handleDayClick = (day) => {
+    if (!selecting || !rangeStart) {
+      // Start new range
+      onChange({ from: day, to: undefined });
+      setSelecting(true);
+      setHovered(null);
+    } else {
+      // Complete range
+      const from = rangeStart < day ? rangeStart : day;
+      const to = rangeStart < day ? day : rangeStart;
+      onChange({ from, to });
+      setSelecting(false);
+      setHovered(null);
+    }
+  };
+
+  return (
+    <div className="p-3 select-none" style={{ minWidth: 560 }}>
+      <div className="flex items-center justify-between mb-3 px-1">
+        <button
+          onClick={prevMonth}
+          className="p-1 rounded hover:bg-muted transition-colors text-foreground"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M10 12L6 8l4-4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <div className="flex gap-16 text-sm font-semibold text-foreground">
+          <span>
+            {MONTH_NAMES[viewMonth]} {viewYear}
+          </span>
+          <span>
+            {MONTH_NAMES[month2]} {year2}
+          </span>
+        </div>
+        <button
+          onClick={nextMonth}
+          className="p-1 rounded hover:bg-muted transition-colors text-foreground"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M6 12l4-4-4-4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <div className="flex gap-6">
+        <div className="flex-1">
+          <MonthGrid
+            year={viewYear}
+            month={viewMonth}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            hovered={selecting ? hovered : null}
+            onDayClick={handleDayClick}
+            onDayHover={setHovered}
+          />
+        </div>
+        <div className="w-px bg-border" />
+        <div className="flex-1">
+          <MonthGrid
+            year={year2}
+            month={month2}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            hovered={selecting ? hovered : null}
+            onDayClick={handleDayClick}
+            onDayHover={setHovered}
+          />
+        </div>
+      </div>
+      {rangeStart && (
+        <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground text-center">
+          {rangeStart && !rangeEnd
+            ? `Início: ${formatDate(rangeStart)} — clique para escolher o fim`
+            : rangeEnd
+              ? `${formatDate(rangeStart)} → ${formatDate(rangeEnd)}`
+              : ""}
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const periods = ["3 meses", "6 meses", "9 meses", "1 ano"];
 
@@ -69,6 +322,67 @@ const calcAverage = (records, type) => {
     `Média do ${type}: ${formula} = ${sum.toFixed(2)} / ${values.length} = ${avg.toFixed(2)}`,
   );
   return parseFloat(avg.toFixed(2));
+};
+
+// Build ranking: pair DEC+FEC records that share agent_acronym AND generation_date,
+// then average by agent across the period, sorted by DEC ascending
+const buildRanking = (data, from, to) => {
+  const inRange = data.filter((item) => {
+    const d = item.generation_date;
+    return d >= from && d <= to;
+  });
+
+  // Group by agent_acronym + generation_date key, then collect DEC/FEC
+  const pairMap = {};
+  inRange.forEach((item) => {
+    const key = `${item.agent_acronym}__${item.generation_date}`;
+    if (!pairMap[key]) {
+      pairMap[key] = {
+        agent: item.agent_acronym,
+        generation_date: item.generation_date,
+        dec: null,
+        fec: null,
+      };
+    }
+    if (item.indicator_type_code === "DEC") pairMap[key].dec = item.value;
+    if (item.indicator_type_code === "FEC") pairMap[key].fec = item.value;
+  });
+
+  // Keep only pairs that have both DEC and FEC
+  const pairs = Object.values(pairMap).filter(
+    (p) => p.dec !== null && p.fec !== null,
+  );
+
+  // Average per agent across all dates in the period
+  const agentMap = {};
+  pairs.forEach(({ agent, dec, fec }) => {
+    if (!agentMap[agent])
+      agentMap[agent] = { nome: agent, decValues: [], fecValues: [] };
+    agentMap[agent].decValues.push(dec);
+    agentMap[agent].fecValues.push(fec);
+  });
+
+  const ranking = Object.values(agentMap).map(
+    ({ nome, decValues, fecValues }) => {
+      const avgDec = parseFloat(
+        (decValues.reduce((a, v) => a + v, 0) / decValues.length).toFixed(2),
+      );
+      const avgFec = parseFloat(
+        (fecValues.reduce((a, v) => a + v, 0) / fecValues.length).toFixed(2),
+      );
+      return { nome, dec: avgDec, fec: avgFec };
+    },
+  );
+
+  // Sort by DEC ascending (lowest = best)
+  ranking.sort((a, b) => a.dec - b.dec);
+
+  console.log("\n--- Ranking de Distribuidoras ---");
+  ranking.forEach((r, i) =>
+    console.log(`${i + 1}. ${r.nome} → DEC: ${r.dec} | FEC: ${r.fec}`),
+  );
+
+  return ranking;
 };
 
 const decFecData = [
@@ -122,6 +436,7 @@ export default function IndicadoresPage() {
   const [apiData, setApiData] = useState([]);
   const [decAvg, setDecAvg] = useState(null);
   const [fecAvg, setFecAvg] = useState(null);
+  const [rankingData, setRankingData] = useState([]);
 
   // Fetch DEC/FEC data on mount
   useEffect(() => {
@@ -154,6 +469,9 @@ export default function IndicadoresPage() {
 
     setDecAvg(avgDec);
     setFecAvg(avgFec);
+
+    const ranking = buildRanking(data, from, to);
+    setRankingData(ranking);
   };
 
   const handleSelectPeriod = (period) => {
@@ -165,8 +483,25 @@ export default function IndicadoresPage() {
 
   const handleSelectDate = (newDate) => {
     setDate(newDate);
-    if (newDate?.from) console.log("Data inicial:", formatDate(newDate.from));
-    if (newDate?.to) console.log("Data final:", formatDate(newDate.to));
+    if (newDate?.from && newDate?.to) {
+      const from = formatDate(newDate.from);
+      const to = formatDate(newDate.to);
+      console.log(`\nPeríodo personalizado selecionado: ${from} → ${to}`);
+      // Filter and log data for the custom range
+      const decRecords = filterByPeriodAndType(apiData, from, to, "DEC");
+      const fecRecords = filterByPeriodAndType(apiData, from, to, "FEC");
+      console.log("Registros DEC encontrados:", decRecords);
+      console.log("Registros FEC encontrados:", fecRecords);
+      const avgDec = calcAverage(decRecords, "DEC");
+      const avgFec = calcAverage(fecRecords, "FEC");
+      setDecAvg(avgDec);
+      setFecAvg(avgFec);
+      setSelectedPeriod(null);
+      const ranking = buildRanking(apiData, from, to);
+      setRankingData(ranking);
+    } else if (newDate?.from) {
+      console.log("Data inicial selecionada:", formatDate(newDate.from));
+    }
   };
 
   return (
@@ -227,12 +562,7 @@ export default function IndicadoresPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={date}
-                onSelect={handleSelectDate}
-                initialFocus
-              />
+              <RangeCalendar value={date} onChange={handleSelectDate} />
             </PopoverContent>
           </Popover>
         </div>
@@ -412,22 +742,33 @@ export default function IndicadoresPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {distribuidoras.map((dist) => (
-                        <tr
-                          key={dist.nome}
-                          className="border-b border-border/50 hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="py-3 px-2 text-sm text-foreground font-medium">
-                            {dist.nome}
-                          </td>
-                          <td className="py-3 px-2 text-sm text-foreground text-center">
-                            {dist.dec}
-                          </td>
-                          <td className="py-3 px-2 text-sm text-foreground text-center">
-                            {dist.fec}
+                      {rankingData.length > 0 ? (
+                        rankingData.map((dist) => (
+                          <tr
+                            key={dist.nome}
+                            className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                          >
+                            <td className="py-3 px-2 text-sm text-foreground font-medium">
+                              {dist.nome}
+                            </td>
+                            <td className="py-3 px-2 text-sm text-foreground text-center">
+                              {dist.dec}
+                            </td>
+                            <td className="py-3 px-2 text-sm text-foreground text-center">
+                              {dist.fec}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Selecione um período para ver o ranking
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>

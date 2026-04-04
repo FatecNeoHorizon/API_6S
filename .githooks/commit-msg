@@ -29,6 +29,17 @@ if echo "$COMMIT_MSG" | grep -q "^#"; then
   exit 0
 fi
 
+# Ignore merge/revert-of-merge commits
+if echo "$COMMIT_MSG" | grep -qE "^Merge|^Reapply|^Revert \"Merge"; then
+  exit 0
+fi
+
+# Ignore commits from bots/automation
+AUTHOR=$(git log --format="%ae" -n 1 HEAD)
+if echo "$AUTHOR" | grep -qE "(github-actions|bot)\[bot\]|noreply\.github\.com"; then
+  exit 0
+fi
+
 # Validate commit type pattern
 if ! echo "$COMMIT_MSG" | grep -qE "$TYPE_PATTERN"; then
   echo ""

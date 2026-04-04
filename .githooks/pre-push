@@ -57,8 +57,14 @@ while read local_ref local_sha remote_ref remote_sha; do
   for COMMIT in $COMMITS; do
     MSG=$(git log --format="%B" -n 1 "$COMMIT")
 
-    # Ignore merge commits
-    if echo "$MSG" | grep -q "^Merge"; then
+    # Ignore merge/revert-of-merge commits
+    if echo "$MSG" | grep -qE "^Merge|^Reapply|^Revert \"Merge"; then
+      continue
+    fi
+
+    # Ignore commits from bots/automation
+    AUTHOR=$(git log --format="%ae" -n 1 "$COMMIT")
+    if echo "$AUTHOR" | grep -qE "(github-actions|bot)\[bot\]|noreply\.github\.com"; then
       continue
     fi
 

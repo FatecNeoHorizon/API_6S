@@ -109,8 +109,7 @@ def setup():
                         "indicator_type_code",
                         "year",
                         "period",
-                        "value",
-                        "generation_date"
+                        "value"
                     ],
                     "properties": {
                         "_id":{
@@ -149,10 +148,6 @@ def setup():
                         "value": {
                             "bsonType": ["double", "null"],
                             "description": "Value of the index sent by the distributor. Null if invalid. Mapped from VlrIndiceEnviado."
-                        },
-                        "generation_date": {
-                            "bsonType": "string",
-                            "description": "Data set generation date by ANEEL (YYYY-MM-DD). Mapped from DatGeracaoConjuntoDados."
                         }
                     }
                 }

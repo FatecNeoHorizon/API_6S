@@ -1,6 +1,5 @@
 from src.etl.get_decfec_file import get_filepath
 from src.etl.load_decfec import load_decfec
-from src.etl.load_ucbt import load_ucbt_tab
 from fastapi import FastAPI, HTTPException
 
 from src.control import distribution_indices_procedures
@@ -21,25 +20,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/process-csv")
-def process_csv():
-    result = load_decfec()
-
-    if not result:
-        return {"message": "Nenhum registro inserido"}
-
-    return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
-
-
-@app.get("/process-ucbt")
-def process_ucbt(file_path: str | None = None, chunk_size: int = 100000):
+@app.get("/process-decfec")
+def process_decfec():
     try:
-        result = load_ucbt_tab(file_path=file_path, chunk_size=chunk_size)
+        result = load_decfec()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
     return {
-        "message": "UCBT processado com sucesso",
+        "message": "DECFEC processado com sucesso",
         **result,
     }
 

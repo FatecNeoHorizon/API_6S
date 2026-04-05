@@ -12,10 +12,10 @@ services:
     networks:
       - db_network
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   flyway:
     image: flyway/flyway:9-alpine
@@ -30,7 +30,6 @@ services:
       postgres:
         condition: service_healthy
 
-        
   mongo:
     image: mongo:6.0
     container_name: mongo_db
@@ -45,10 +44,20 @@ services:
     networks:
       - app_network
     healthcheck:
-        test: ["CMD", "mongosh", "--username", "${MONGO_INITDB_ROOT_USERNAME}", "--password", "${MONGO_INITDB_ROOT_PASSWORD}", "--eval", "db.adminCommand('ping')"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--username",
+          "${MONGO_INITDB_ROOT_USERNAME}",
+          "--password",
+          "${MONGO_INITDB_ROOT_PASSWORD}",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongo-express:
     image: mongo-express:latest
@@ -66,9 +75,9 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-        
+
   backend:
-    build: 
+    build:
       context: ./apps/backend
     container_name: fastapi_backend
     restart: always
@@ -94,7 +103,7 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    build: 
+    build:
       context: ./apps/frontend
     container_name: react_frontend
     restart: always
@@ -114,7 +123,7 @@ services:
 volumes:
   postgres_data:
   mongo_data:
-  
+
 networks:
   db_network:
   app_network:

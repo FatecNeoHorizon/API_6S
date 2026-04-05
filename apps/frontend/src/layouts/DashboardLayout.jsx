@@ -9,6 +9,8 @@ import {
   ChevronDown,
   Network,
   Upload,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -27,6 +29,15 @@ const menuItems = [
   },
 ];
 
+// idle | uploading | processing | done | error
+const STATUS_LABEL = {
+  idle: null,
+  uploading: "Enviando arquivo...",
+  processing: "Processando CSV...",
+  done: "Concluído!",
+  error: "Ocorreu um erro.",
+};
+
 export default function DashboardLayout() {
   const location = useLocation();
   const pathname = location.pathname;
@@ -36,8 +47,16 @@ export default function DashboardLayout() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("idle");
 
   const allowedExtensions = [".csv", ".xlsx", ".zip"];
+
+  const resetModal = () => {
+    setUploadModalOpen(false);
+    setSelectedFile(null);
+    setDragActive(false);
+    setUploadStatus("idle");
+  };
 
   const handleFileSelect = (file) => {
     const fileExtension = "." + file.name.split(".").pop().toLowerCase();
@@ -64,7 +83,6 @@ export default function DashboardLayout() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
@@ -79,9 +97,11 @@ export default function DashboardLayout() {
   const handleFileUpload = async () => {
     if (!selectedFile) return;
     setIsUploading(true);
+    setUploadStatus("uploading");
 
     try {
-      const response = await fetch("/api/upload", {
+      // 1. Faz o upload do arquivo
+      const uploadResponse = await fetch("/api/upload", {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent(selectedFile.name),
@@ -89,25 +109,58 @@ export default function DashboardLayout() {
         body: selectedFile,
       });
 
-      if (!response.ok) {
+      if (!uploadResponse.ok) {
         throw new Error("Falha no upload do arquivo");
       }
 
-      const data = await response.json();
-      console.log("Upload concluído com sucesso. Salvo em:", data.path);
-      toast.success("Arquivo enviado com sucesso!");
+      const uploadData = await uploadResponse.json();
+      console.log("Upload concluído. Salvo em:", uploadData.path);
 
-      // Resetar modal
-      setUploadModalOpen(false);
-      setSelectedFile(null);
-      setDragActive(false);
+      // 2. Processa o CSV
+      setUploadStatus("processing");
+      const processResponse = await fetch("/process-csv");
+
+      const contentType = processResponse.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await processResponse.text();
+        console.error("Resposta inesperada do servidor:", text);
+        throw new Error(
+          `Endpoint /process-csv retornou status ${processResponse.status}. Verifique se o servidor está rodando corretamente.`,
+        );
+      }
+
+      if (!processResponse.ok) {
+        const errData = await processResponse.json();
+        throw new Error(
+          errData?.detail || errData?.message || "Falha ao processar o CSV",
+        );
+      }
+
+      const processData = await processResponse.json();
+      console.log("Processamento concluído:", processData);
+
+      setUploadStatus("done");
+
+      const successMsg =
+        processData.inserted_lines != null
+          ? `CSV processado! ${processData.inserted_lines} linhas inseridas.`
+          : processData.message || "Arquivo processado com sucesso!";
+
+      toast.success(successMsg);
+
+      // Fecha o modal após breve pausa para o usuário ver o "Concluído"
+      setTimeout(resetModal, 1500);
     } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-      toast.error("Houve um erro ao enviar o arquivo.");
+      console.error("Erro:", error);
+      setUploadStatus("error");
+      toast.error(error.message || "Houve um erro ao enviar o arquivo.");
     } finally {
       setIsUploading(false);
     }
   };
+
+  const isProcessing =
+    uploadStatus === "uploading" || uploadStatus === "processing";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -258,12 +311,9 @@ export default function DashboardLayout() {
                 Upload de Arquivo
               </h2>
               <button
-                onClick={() => {
-                  setUploadModalOpen(false);
-                  setSelectedFile(null);
-                  setDragActive(false);
-                }}
-                className="text-muted-foreground hover:text-foreground"
+                onClick={resetModal}
+                disabled={isProcessing}
+                className="text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -275,6 +325,7 @@ export default function DashboardLayout() {
               accept=".csv,.xlsx,.zip"
               onChange={handleInputChange}
               className="hidden"
+              disabled={isProcessing}
             />
 
             <label
@@ -284,8 +335,11 @@ export default function DashboardLayout() {
               onDragOver={handleDrag}
               onDrop={handleDrop}
               className={cn(
-                "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors",
-                dragActive
+                "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 transition-colors",
+                isProcessing
+                  ? "border-border opacity-50 cursor-not-allowed"
+                  : "cursor-pointer",
+                !isProcessing && dragActive
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/50",
               )}
@@ -316,23 +370,54 @@ export default function DashboardLayout() {
               )}
             </label>
 
+            {/* Status de progresso */}
+            {uploadStatus !== "idle" && (
+              <div
+                className={cn(
+                  "mt-4 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium",
+                  uploadStatus === "done"
+                    ? "bg-green-500/10 text-green-600"
+                    : uploadStatus === "error"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-primary/10 text-primary",
+                )}
+              >
+                {isProcessing && (
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                )}
+                {uploadStatus === "done" && (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                )}
+                <span>{STATUS_LABEL[uploadStatus]}</span>
+
+                {/* Barra de progresso animada nas etapas de envio/processamento */}
+                {isProcessing && (
+                  <div className="ml-auto w-24 h-1.5 rounded-full bg-primary/20 overflow-hidden">
+                    <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="mt-4 flex gap-2">
               <button
-                onClick={() => {
-                  setUploadModalOpen(false);
-                  setSelectedFile(null);
-                  setDragActive(false);
-                }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+                onClick={resetModal}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleFileUpload}
-                disabled={!selectedFile || isUploading}
-                className="flex-1 px-4 py-2 text-sm font-medium text-card-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!selectedFile || isProcessing}
+                className="flex-1 px-4 py-2 text-sm font-medium text-card-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isUploading ? "Enviando..." : "Enviar"}
+                {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+                {uploadStatus === "uploading"
+                  ? "Enviando..."
+                  : uploadStatus === "processing"
+                    ? "Processando..."
+                    : "Enviar"}
               </button>
             </div>
           </div>

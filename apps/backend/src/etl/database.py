@@ -1262,6 +1262,168 @@ def setup():
         col.create_index([("ibge_code", ASCENDING)], name="idx_ibge")
         col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
 
+    # ===========================================================================
+    # COLLECTION: ucbt_tab
+    #
+    # Raw ingest target for UCBT_tab (low-voltage consumer units).
+    # Designed for chunked upsert using natural key (COD_ID, DIST).
+    # ===========================================================================
+    if "ucbt_tab" not in collections_exist:
+        db.create_collection(
+            "ucbt_tab",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": [
+                        "COD_ID",
+                        "DIST",
+                    ],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+                        "COD_ID": {
+                            "bsonType": ["string", "int", "long"],
+                            "description": "Natural key part 1. Consumer unit identifier."
+                        },
+                        "DIST": {
+                            "bsonType": ["string", "int", "long"],
+                            "description": "Natural key part 2. Distributor code."
+                        },
+                        "MUN": {
+                            "bsonType": ["string", "int", "long", "null"],
+                            "description": "Municipality code used for analytics."
+                        },
+                        "CONJ": {
+                            "bsonType": ["string", "int", "long", "null"],
+                            "description": "Electrical set identifier used for aggregation."
+                        },
+                        "batch_version": {
+                            "bsonType": ["string", "null"],
+                            "description": "Batch version identifier for traceability."
+                        },
+                        "loaded_at": {
+                            "bsonType": ["date", "null"],
+                            "description": "Timestamp of the latest successful load for the document."
+                        },
+                        "source_file": {
+                            "bsonType": ["string", "null"],
+                            "description": "Source file used during ingestion."
+                        },
+                        "load_id": {
+                            "bsonType": ["string", "null"],
+                            "description": "Execution identifier of the ingestion run."
+                        }
+                    }
+                }
+            },
+            validationLevel="moderate",
+            validationAction="error"
+        )
+
+        col = db["ucbt_tab"]
+        col.create_index(
+            [("COD_ID", ASCENDING), ("DIST", ASCENDING)],
+            unique=True,
+            name="idx_unique_cod_id_dist"
+        )
+        col.create_index(
+            [("DIST", ASCENDING), ("MUN", ASCENDING), ("CONJ", ASCENDING)],
+            name="idx_dist_mun_conj"
+        )
+        col.create_index(
+            [("batch_version", ASCENDING)],
+            name="idx_batch_version"
+        )
+
+    # ===========================================================================
+    # COLLECTION: load_history
+    #
+    # ETL control collection to track each execution and per-collection outcomes.
+    # ===========================================================================
+    if "load_history" not in collections_exist:
+        db.create_collection(
+            "load_history",
+            validator={
+                "$jsonSchema": {
+                    "bsonType": "object",
+                    "required": [
+                        "load_id",
+                        "collection_name",
+                        "batch_version",
+                        "started_at",
+                        "status",
+                    ],
+                    "properties": {
+                        "_id": {"bsonType": "objectId"},
+                        "load_id": {
+                            "bsonType": "string",
+                            "description": "Unique identifier for one ingestion execution."
+                        },
+                        "collection_name": {
+                            "bsonType": "string",
+                            "description": "Target collection loaded in this execution."
+                        },
+                        "batch_version": {
+                            "bsonType": "string",
+                            "description": "Version label of the processed batch."
+                        },
+                        "source_file": {
+                            "bsonType": ["string", "null"],
+                            "description": "Source file path used in the load."
+                        },
+                        "started_at": {
+                            "bsonType": "date",
+                            "description": "Execution start timestamp."
+                        },
+                        "finished_at": {
+                            "bsonType": ["date", "null"],
+                            "description": "Execution finish timestamp."
+                        },
+                        "status": {
+                            "bsonType": "string",
+                            "enum": ["STARTED", "SUCCESS", "PARTIAL", "ERROR"],
+                            "description": "Execution status."
+                        },
+                        "total_processed": {
+                            "bsonType": ["int", "long", "null"],
+                            "description": "Total records processed in the execution."
+                        },
+                        "total_inserted": {
+                            "bsonType": ["int", "long", "null"],
+                            "description": "Total records inserted in the execution."
+                        },
+                        "total_updated": {
+                            "bsonType": ["int", "long", "null"],
+                            "description": "Total records updated in the execution."
+                        },
+                        "total_rejected": {
+                            "bsonType": ["int", "long", "null"],
+                            "description": "Total records rejected in the execution."
+                        },
+                        "chunks_total": {
+                            "bsonType": ["int", "null"],
+                            "description": "Expected number of chunks for this run."
+                        },
+                        "chunks_completed": {
+                            "bsonType": ["int", "null"],
+                            "description": "Number of chunks completed."
+                        },
+                        "error_message": {
+                            "bsonType": ["string", "null"],
+                            "description": "Error details when status is ERROR or PARTIAL."
+                        }
+                    }
+                }
+            },
+            validationLevel="strict",
+            validationAction="error"
+        )
+
+        col = db["load_history"]
+        col.create_index([("load_id", ASCENDING)], unique=True, name="idx_unique_load_id")
+        col.create_index([("collection_name", ASCENDING), ("batch_version", ASCENDING)], name="idx_collection_batch")
+        col.create_index([("started_at", ASCENDING)], name="idx_started_at")
+        col.create_index([("status", ASCENDING)], name="idx_status")
+
     return db
 
 if __name__ == "__main__":

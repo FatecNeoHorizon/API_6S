@@ -31,7 +31,7 @@ services:
         condition: service_healthy
 
   mongo:
-    image: mongo:6.0
+    image: mongo:8.0
     container_name: mongo_db
     restart: always
     environment:

@@ -1,5 +1,5 @@
 from src.etl.load_decfec import load_decfec
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.control import distribution_indices_procedures
@@ -21,20 +21,24 @@ app = FastAPI(lifespan=lifespan)
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todas as origens em desenvolvimento
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos (GET, POST, etc)
-    allow_headers=["*"],  # Permite todos os headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-@app.get("/process-csv")
-def process_csv():
-    result = load_decfec()
+@app.get("/process-decfec")
+def process_decfec():
+    try:
+        result = load_decfec()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if not result:
-        return {"message": "Nenhum registro inserido"}
+    return {
+        "message": "DECFEC processado com sucesso",
+        **result,
+    }
 
-    return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
 
 @app.get("/get-dec-fec")
 async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 

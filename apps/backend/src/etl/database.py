@@ -1,21 +1,12 @@
 from pymongo import MongoClient, ASCENDING, GEOSPHERE
-
-import os 
-from dotenv import load_dotenv
-
-load_dotenv()
+from src.config.parameters import get_mongo_settings, get_mongo_uri
 
 def get_client():
-    host = os.getenv("MONGO_HOST", "localhost")
-    port = os.getenv("MONGO_PORT", "27017")
-    user = os.getenv("MONGO_USER")
-    password = os.getenv("MONGO_PASSWORD")
-    db_name = os.getenv("MONGO_DB_NAME")
-    mongo_uri = f"mongodb://{user}:{password}@mongo_db:{port}/{db_name}?authSource=admin"
+    mongo_uri = get_mongo_uri()
     return MongoClient(mongo_uri)
 
 def setup():
-    mongo_db = os.getenv("MONGO_DB_NAME")
+    _, _, _, _, mongo_db = get_mongo_settings()
     client = get_client()
     db = client[mongo_db]
 

@@ -30,7 +30,7 @@ import {
   Tooltip,
 } from "recharts";
 
-// ── Custom two-month range calendar ──────────────────────────────────────────
+// Calendário personalizado com intervalo de dois meses
 const MONTH_NAMES = [
   "Janeiro",
   "Fevereiro",
@@ -163,7 +163,7 @@ function RangeCalendar({ value, onChange }) {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [hovered, setHovered] = useState(null);
-  const [selecting, setSelecting] = useState(false); // false = picking start, true = picking end
+  const [selecting, setSelecting] = useState(false); // false = início da seleção, true = fim da seleção
 
   const rangeStart = value?.from;
   const rangeEnd = value?.to;
@@ -191,12 +191,10 @@ function RangeCalendar({ value, onChange }) {
 
   const handleDayClick = (day) => {
     if (!selecting || !rangeStart) {
-      // Start new range
       onChange({ from: day, to: undefined });
       setSelecting(true);
       setHovered(null);
     } else {
-      // Complete range
       const from = rangeStart < day ? rangeStart : day;
       const to = rangeStart < day ? day : rangeStart;
       onChange({ from, to });
@@ -291,6 +289,7 @@ const periodMonths = {
   "6 meses": 6,
   "9 meses": 9,
   "1 ano": 12,
+  "2 anos": 24,
 };
 
 const formatDate = (date) => date.toISOString().split("T")[0];
@@ -303,7 +302,7 @@ const getPeriodRange = (periodLabel) => {
   return { from: formatDate(past), to: formatDate(today) };
 };
 
-// Filter API records by generation_date within [from, to] and indicator type
+// Filtrar registros da API por data de geração dentro de [from, to] e tipo de indicador
 const filterByPeriodAndType = (data, from, to, type) => {
   return data.filter((item) => {
     const d = item.generation_date;
@@ -311,7 +310,7 @@ const filterByPeriodAndType = (data, from, to, type) => {
   });
 };
 
-// Calculate average and log the formula to console
+// Calcular a média e registrar a fórmula no console
 const calcAverage = (records, type) => {
   if (!records.length) return null;
   const values = records.map((r) => r.value);
@@ -324,15 +323,15 @@ const calcAverage = (records, type) => {
   return parseFloat(avg.toFixed(2));
 };
 
-// Build ranking: pair DEC+FEC records that share agent_acronym AND generation_date,
-// then average by agent across the period, sorted by DEC ascending
+// Construir classificação: emparelhar registros DEC+FEC que compartilham agente e data de geração,
+// em seguida, calcular a média por agente ao longo do período, classificada por DEC em ordem crescente.
 const buildRanking = (data, from, to) => {
   const inRange = data.filter((item) => {
     const d = item.generation_date;
     return d >= from && d <= to;
   });
 
-  // Group by agent_acronym + generation_date key, then collect DEC/FEC
+  // Agrupe por acrônimo do agente + chave de data de geração e, em seguida, colete DEC/FEC
   const pairMap = {};
   inRange.forEach((item) => {
     const key = `${item.agent_acronym}__${item.generation_date}`;
@@ -348,12 +347,12 @@ const buildRanking = (data, from, to) => {
     if (item.indicator_type_code === "FEC") pairMap[key].fec = item.value;
   });
 
-  // Keep only pairs that have both DEC and FEC
+  // Mantenha apenas os pares que possuem DEC e FEC
   const pairs = Object.values(pairMap).filter(
     (p) => p.dec !== null && p.fec !== null,
   );
 
-  // Average per agent across all dates in the period
+  // Média por agente em todas as datas do período
   const agentMap = {};
   pairs.forEach(({ agent, dec, fec }) => {
     if (!agentMap[agent])
@@ -374,7 +373,7 @@ const buildRanking = (data, from, to) => {
     },
   );
 
-  // Sort by DEC ascending (lowest = best)
+  // Ordenar por DEC crescente (menor = melhor)
   ranking.sort((a, b) => a.dec - b.dec);
 
   console.log("\n--- Ranking de Distribuidoras ---");
@@ -385,25 +384,65 @@ const buildRanking = (data, from, to) => {
   return ranking;
 };
 
-const decFecData = [
-  { mes: "Jan", dec: 12.5, fec: 7.2 },
-  { mes: "Fev", dec: 11.8, fec: 6.9 },
-  { mes: "Mar", dec: 13.2, fec: 7.8 },
-  { mes: "Abr", dec: 12.1, fec: 7 },
-  { mes: "Mai", dec: 11.5, fec: 6.5 },
-  { mes: "Jun", dec: 10.8, fec: 6.2 },
+// Criar dados para o gráfico: agrupar registros por ano e mês, média de DEC e FEC por mês, ordenar cronologicamente
+const MONTH_LABELS = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
 ];
 
-const distribuidoras = [
-  { nome: "CPFL Paulista", dec: 8.5, fec: 4.2 },
-  { nome: "CEMIG-D", dec: 12.3, fec: 6.8 },
-  { nome: "Light", dec: 15.2, fec: 8.5 },
-  { nome: "COPEL-DIS", dec: 9.1, fec: 5.1 },
-  { nome: "CELESC-DIS", dec: 10.5, fec: 5.8 },
-  { nome: "ELEKTRO", dec: 11.8, fec: 6.5 },
-  { nome: "COELBA", dec: 16.5, fec: 9.2 },
-  { nome: "CELPE", dec: 14.2, fec: 7.9 },
-];
+const buildChartData = (data, from, to) => {
+  const inRange = data.filter((item) => {
+    const d = item.generation_date;
+    return d >= from && d <= to;
+  });
+
+  // Agrupar por "YYYY-MM"
+  const map = {};
+  inRange.forEach((item) => {
+    const [year, month] = item.generation_date.split("-");
+    const key = `${year}-${month}`;
+    if (!map[key])
+      map[key] = {
+        key,
+        year: +year,
+        month: +month,
+        decValues: [],
+        fecValues: [],
+      };
+    if (item.indicator_type_code === "DEC") map[key].decValues.push(item.value);
+    if (item.indicator_type_code === "FEC") map[key].fecValues.push(item.value);
+  });
+
+  const sorted = Object.values(map).sort((a, b) =>
+    a.year !== b.year ? a.year - b.year : a.month - b.month,
+  );
+
+  return sorted.map(({ month, year, decValues, fecValues }) => {
+    const avgDec = decValues.length
+      ? parseFloat(
+          (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(2),
+        )
+      : null;
+    const avgFec = fecValues.length
+      ? parseFloat(
+          (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(2),
+        )
+      : null;
+    // Exibir "Jan/24" se o intervalo abranger vários anos, caso contrário, apenas "Jan"
+    const label = MONTH_LABELS[month - 1];
+    return { mes: label, year, dec: avgDec, fec: avgFec };
+  });
+};
 
 const perdas = [
   {
@@ -437,8 +476,9 @@ export default function IndicadoresPage() {
   const [decAvg, setDecAvg] = useState(null);
   const [fecAvg, setFecAvg] = useState(null);
   const [rankingData, setRankingData] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
-  // Fetch DEC/FEC data on mount
+  // Obter dados DEC/FEC na montagem
   useEffect(() => {
     const fetchDecFec = async () => {
       try {
@@ -472,6 +512,10 @@ export default function IndicadoresPage() {
 
     const ranking = buildRanking(data, from, to);
     setRankingData(ranking);
+
+    const chart = buildChartData(data, from, to);
+    console.log("Dados do gráfico por mês:", chart);
+    setChartData(chart.length > 0 ? chart : decFecData);
   };
 
   const handleSelectPeriod = (period) => {
@@ -487,7 +531,6 @@ export default function IndicadoresPage() {
       const from = formatDate(newDate.from);
       const to = formatDate(newDate.to);
       console.log(`\nPeríodo personalizado selecionado: ${from} → ${to}`);
-      // Filter and log data for the custom range
       const decRecords = filterByPeriodAndType(apiData, from, to, "DEC");
       const fecRecords = filterByPeriodAndType(apiData, from, to, "FEC");
       console.log("Registros DEC encontrados:", decRecords);
@@ -499,6 +542,9 @@ export default function IndicadoresPage() {
       setSelectedPeriod(null);
       const ranking = buildRanking(apiData, from, to);
       setRankingData(ranking);
+      const chart = buildChartData(apiData, from, to);
+      console.log("Dados do gráfico por mês:", chart);
+      setChartData(chart.length > 0 ? chart : decFecData);
     } else if (newDate?.from) {
       console.log("Data inicial selecionada:", formatDate(newDate.from));
     }
@@ -624,14 +670,18 @@ export default function IndicadoresPage() {
                     Evolucao DEC/FEC
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Historico dos últimos 6 meses
+                    {selectedPeriod
+                      ? `Histórico · ${selectedPeriod}`
+                      : date?.from && date?.to
+                        ? `${formatDate(date.from)} → ${formatDate(date.to)}`
+                        : "Selecione um período"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4">
                   <div className="h-40 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
-                        data={decFecData}
+                        data={chartData}
                         margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                       >
                         <CartesianGrid
@@ -646,6 +696,17 @@ export default function IndicadoresPage() {
                             fill: "hsl(var(--muted-foreground))",
                             fontSize: 12,
                           }}
+                          tickFormatter={(label, index) => {
+                            // Se o intervalo abranger vários anos, acrescente os dois últimos dígitos do ano.
+                            const item = chartData[index];
+                            if (!item) return label;
+                            const years = [
+                              ...new Set(chartData.map((d) => d.year)),
+                            ];
+                            return years.length > 1
+                              ? `${label}/${String(item.year).slice(2)}`
+                              : label;
+                          }}
                         />
                         <YAxis
                           axisLine={false}
@@ -654,7 +715,11 @@ export default function IndicadoresPage() {
                             fill: "hsl(var(--muted-foreground))",
                             fontSize: 12,
                           }}
-                          domain={[0, 15]}
+                          domain={([dataMin, dataMax]) => {
+                            const lo = Math.max(0, Math.floor(dataMin - 2));
+                            const hi = Math.ceil(dataMax + 2);
+                            return [lo, hi];
+                          }}
                         />
                         <Tooltip
                           contentStyle={{
@@ -663,6 +728,19 @@ export default function IndicadoresPage() {
                             borderRadius: "8px",
                           }}
                           labelStyle={{ color: "hsl(var(--foreground))" }}
+                          formatter={(value, name) => [value, name]}
+                          labelFormatter={(label, payload) => {
+                            if (payload && payload[0]) {
+                              const item = payload[0].payload;
+                              const years = [
+                                ...new Set(chartData.map((d) => d.year)),
+                              ];
+                              return years.length > 1
+                                ? `${label}/${item.year}`
+                                : label;
+                            }
+                            return label;
+                          }}
                         />
                         <Line
                           type="monotone"
@@ -672,6 +750,7 @@ export default function IndicadoresPage() {
                           strokeWidth={2}
                           dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
                           activeDot={{ r: 6, fill: "#3b82f6" }}
+                          connectNulls
                         />
                         <Line
                           type="monotone"
@@ -681,6 +760,7 @@ export default function IndicadoresPage() {
                           strokeWidth={2}
                           dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
                           activeDot={{ r: 6, fill: "#22c55e" }}
+                          connectNulls
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -704,8 +784,11 @@ export default function IndicadoresPage() {
             </div>
 
             {/* Right Column - Distribuidoras Table */}
-            <Card className="bg-card border-border h-fit lg:row-span-2">
-              <CardHeader>
+            <Card
+              className="bg-card border-border lg:row-span-2 flex flex-col"
+              style={{ maxHeight: 520 }}
+            >
+              <CardHeader className="flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-foreground">
@@ -725,18 +808,18 @@ export default function IndicadoresPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <div className="overflow-auto h-full">
                   <table className="w-full">
-                    <thead>
+                    <thead className="sticky top-0 z-10 bg-card">
                       <tr className="border-b border-border">
-                        <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                           Distribuidora
                         </th>
-                        <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
                           DEC
                         </th>
-                        <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
                           FEC
                         </th>
                       </tr>
@@ -748,13 +831,13 @@ export default function IndicadoresPage() {
                             key={dist.nome}
                             className="border-b border-border/50 hover:bg-muted/50 transition-colors"
                           >
-                            <td className="py-3 px-2 text-sm text-foreground font-medium">
+                            <td className="py-3 px-4 text-sm text-foreground font-medium">
                               {dist.nome}
                             </td>
-                            <td className="py-3 px-2 text-sm text-foreground text-center">
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
                               {dist.dec}
                             </td>
-                            <td className="py-3 px-2 text-sm text-foreground text-center">
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
                               {dist.fec}
                             </td>
                           </tr>

@@ -842,7 +842,7 @@ def setup():
         )
 
         col = db["mt_network_segments"]
-        col.create_index([("geometry", GEOSPHERE)], name="idx_geo", unique=True)
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
         col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
         col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
         col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
@@ -982,14 +982,14 @@ def setup():
             validationLevel="moderate",
             validationAction="error"
     )
- 
-    col = db["at_network_segments"]
-    col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
-    col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
-    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
-    col.create_index([("voltage_level_code", ASCENDING)], name="idx_voltage_level")
+    
+        col = db["at_network_segments"]
+        col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
+        col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
+        col.create_index([("feeder_code", ASCENDING)], name="idx_feeder")
+        col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+        col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+        col.create_index([("voltage_level_code", ASCENDING)], name="idx_voltage_level")
 
     # ===========================================================================
     # COLLECTION: substations
@@ -1073,7 +1073,7 @@ def setup():
             validator={
                 "$jsonSchema": {
                     "bsonType": "object",
-                    "required": ["code", "distributor_code", "geometry", "geodatabase_id"],
+                    "required": ["code", "distributor_code", "geometry"],
                     "properties": {
                         "_id": {"bsonType": "objectId"},
     

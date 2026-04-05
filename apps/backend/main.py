@@ -1,12 +1,9 @@
-from src.etl.get_decfec_file import get_filepath
 from src.etl.load_decfec import load_decfec
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
-from src.control import blogProcedures
-from src.model import blogModel
 from src.control import network_structure_procedures
 
 from contextlib import asynccontextmanager

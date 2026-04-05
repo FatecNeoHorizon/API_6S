@@ -1,6 +1,7 @@
 from src.etl.get_decfec_file import get_filepath
 from src.etl.load_decfec import load_decfec
-from fastapi import FastAPI
+from src.etl.load_ucbt import load_ucbt_tab
+from fastapi import FastAPI, HTTPException
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
@@ -55,6 +56,21 @@ def process_csv():
         return {"message": "Nenhum registro inserido"}
 
     return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
+
+
+@app.get("/process-ucbt")
+def process_ucbt(file_path: str | None = None, chunk_size: int = 100000):
+    try:
+        result = load_ucbt_tab(file_path=file_path, chunk_size=chunk_size)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {
+        "message": "UCBT processado com sucesso",
+        **result,
+    }
+
+
 @app.get("/get-dec-fec")
 async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 
                       indicator_type_code : str | None = None, year: int | None = None, period : int | None = None):

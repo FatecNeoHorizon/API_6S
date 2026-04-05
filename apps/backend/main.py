@@ -4,14 +4,18 @@ from fastapi import FastAPI
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
+from src.control import blogProcedures
+from src.model import blogModel
+from src.control import network_structure_procedures
 
 from contextlib import asynccontextmanager
 from src.etl.database import setup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import os
     setup()
+    from src.model.seed import seed
+    seed()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -58,3 +62,19 @@ async def get_energy_losses(distributor: str | None = None, distributor_slug: st
     
     returnThing = energy_losses_tariff_procedures.Energy_losses_tariff_procedures().getAll(filterDict)
     return returnThing
+
+@app.get("/network-structure/summary")
+async def get_summary():
+    return network_structure_procedures.NetworkStructureProcedures().get_summary()
+
+@app.get("/network-structure/assets")
+async def get_assets(region: str | None = None, type: str | None = None, status: str | None = None):
+    return network_structure_procedures.NetworkStructureProcedures().get_assets(region, type, status)
+
+@app.get("/network-structure/transformer/{transformer_id}")
+async def get_transformer_detail(transformer_id: str):
+    return network_structure_procedures.NetworkStructureProcedures().get_transformer_detail(transformer_id)
+
+@app.get("/network-structure/substation/{substation_id}")
+async def get_substation_detail(substation_id: str):
+    return network_structure_procedures.NetworkStructureProcedures().get_substation_detail(substation_id)

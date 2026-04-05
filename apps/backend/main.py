@@ -1,6 +1,7 @@
 from src.etl.get_decfec_file import get_filepath
 from src.etl.load_decfec import load_decfec
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
@@ -19,6 +20,15 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/process-csv")
 def process_csv():

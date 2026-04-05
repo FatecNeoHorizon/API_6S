@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from src.model import distribution_indices_model
 from src.config import parameters
+from src.utils.clean_filter import clean_filter, remove_operators_fields
 from typing import List
 from pydantic import TypeAdapter
 
@@ -15,8 +16,14 @@ class Distribution_indices_procedures():
 
     def getAll(self, filter):
         db = self.connection.zeus
-        cleaned_dict = {key: value for key, value in filter.items() if value is not None}
+
+        operators_field = ["period", "year"]
+        cleaned_dict = clean_filter(filter_dict=filter)
+        cleaned_dict = remove_operators_fields(filter_dict=cleaned_dict, fields_array=operators_field)
+
         cursor = db.distribution_indices.find(cleaned_dict)
         distribution_indices_adapter = TypeAdapter(List[distribution_indices_model.DistributionIndices])
         validated_list = distribution_indices_adapter.validate_python(cursor)
+
+        self.connection.close()
         return validated_list

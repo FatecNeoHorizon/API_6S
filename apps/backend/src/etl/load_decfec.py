@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from src.etl.get_decfec_file import get_filepath
 from uuid import uuid4
 import json
 import time
@@ -7,24 +8,36 @@ import pandas as pd
 from pymongo import MongoClient, UpdateOne
 
 from src.config.parameters import get_mongo_settings, get_mongo_uri
-from src.etl.get_ucbt_file import get_ucbt_filepath
+from src.etl.extract_decfec import extract_decfec
 
 
-MANDATORY_FIELDS = ["COD_ID", "DIST"]
+MANDATORY_FIELDS = [
+    "SigAgente", "NumCNPJ", "IdeConjUndConsumidoras",
+    "DscConjUndConsumidoras", "SigIndicador", "AnoIndice",
+    "NumPeriodoIndice", "VlrIndiceEnviado",
+]
 MAX_REJECTION_LOGS_PER_CHUNK = 5
 
 
-def _normalize_value(value):
-    if pd.isna(value):
-        return None
-    return value
+def _to_str(value) -> str | None:
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip() or None
 
 
-def _normalize_key(value):
-    normalized = _normalize_value(value)
-    if normalized is None:
+def _to_float(value) -> float | None:
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    try:
+        return float(value)
+    except (ValueError, TypeError):
         return None
-    return str(normalized).strip()
 
 
 def _history_totals(totals):
@@ -46,18 +59,10 @@ def _log_event(event, **payload):
     print(json.dumps(log_line, default=str, ensure_ascii=True))
 
 
-def load_ucbt_tab(
-    file_path: str | None = None,
-    chunk_size: int = 100_000,
+def load_decfec(
     batch_version: str | None = None,
     load_id: str | None = None,
 ):
-    source_file = file_path or get_ucbt_filepath()
-    if not source_file:
-        raise ValueError("UCBT file path is missing. Set UCBT_CSV_FILE_PATH or pass file_path.")
-
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be greater than zero.")
 
     batch_version = batch_version or datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
     load_id = load_id or str(uuid4())
@@ -65,13 +70,18 @@ def load_ucbt_tab(
     mongo_uri = get_mongo_uri()
     _, _, _, _, db_name = get_mongo_settings()
 
-    client = MongoClient(mongo_uri)
+    client = MongoClient(
+        mongo_uri,
+        serverSelectionTimeoutMS=120000,
+        socketTimeoutMS=120000,
+    )
     db = client[db_name]
-    collection = db["ucbt_tab"]
+    collection = db["distribution_indices"]
     load_history = db["load_history"]
 
     started_at = datetime.now(timezone.utc)
     start_perf = time.perf_counter()
+
     totals = {
         "chunks_processed": 0,
         "rows_processed": 0,
@@ -82,44 +92,32 @@ def load_ucbt_tab(
         "matched": 0,
     }
 
-    load_history.insert_one(
-        {
-            "load_id": load_id,
-            "collection_name": "ucbt_tab",
-            "batch_version": batch_version,
-            "source_file": source_file,
-            "started_at": started_at,
-            "finished_at": None,
-            "status": "STARTED",
-            "chunks_total": None,
-            **_history_totals(totals),
-            "error_message": None,
-        }
-    )
+    source_file = get_filepath()
+
+
+    load_history.insert_one({
+        "load_id": load_id,
+        "collection_name": "distribution_indices",
+        "batch_version": batch_version,
+        "source_file": source_file,
+        "started_at": started_at,
+        "finished_at": None,
+        "status": "STARTED",
+        "chunks_total": None,
+        **_history_totals(totals),
+        "error_message": None,
+    })
 
     _log_event(
-        "ucbt_load_started",
+        "decfec_load_started",
         load_id=load_id,
         batch_version=batch_version,
         source_file=source_file,
-        chunk_size=chunk_size,
     )
 
     try:
-        chunk_iter = pd.read_csv(
-            source_file,
-            sep=";",
-            encoding="latin-1",
-            chunksize=chunk_size,
-            low_memory=True,
-        )
-
-        for chunk_index, chunk_df in enumerate(chunk_iter, start=1):
+        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
             chunk_start_perf = time.perf_counter()
-            missing_columns = [field for field in MANDATORY_FIELDS if field not in chunk_df.columns]
-            if missing_columns:
-                raise ValueError(f"Missing mandatory columns in UCBT file: {missing_columns}")
-
             chunk_rows = len(chunk_df)
             totals["rows_processed"] += chunk_rows
 
@@ -128,63 +126,72 @@ def load_ucbt_tab(
             rejected_samples = []
 
             for row_in_chunk, record in enumerate(chunk_df.to_dict(orient="records"), start=1):
-                cod_id = _normalize_key(record.get("COD_ID"))
-                dist = _normalize_key(record.get("DIST"))
-                if not cod_id or not dist:
+                agent_acronym        = _to_str(record.get("SigAgente"))
+                consumer_unit_set_id = _to_str(record.get("IdeConjUndConsumidoras"))
+                indicator_type_code  = _to_str(record.get("SigIndicador"))
+                year                 = record.get("AnoIndice")
+                period               = record.get("NumPeriodoIndice")
+
+                missing = []
+                if not agent_acronym:        missing.append("agent_acronym")
+                if not consumer_unit_set_id: missing.append("consumer_unit_set_id")
+                if not indicator_type_code:  missing.append("indicator_type_code")
+                if not year:                 missing.append("year")
+                if not period:               missing.append("period")
+
+                if missing:
                     totals["rows_rejected"] += 1
                     if len(rejected_samples) < MAX_REJECTION_LOGS_PER_CHUNK:
-                        if not cod_id and not dist:
-                            reason = "missing_cod_id_and_dist"
-                        elif not cod_id:
-                            reason = "missing_cod_id"
-                        else:
-                            reason = "missing_dist"
-                        rejected_samples.append(
-                            {
-                                "row_in_chunk": row_in_chunk,
-                                "reason": reason,
-                            }
-                        )
+                        rejected_samples.append({
+                            "row_in_chunk": row_in_chunk,
+                            "reason": f"missing_{'_'.join(missing)}",
+                        })
                     continue
 
-                normalized_doc = {key: _normalize_value(value) for key, value in record.items()}
-                normalized_doc["COD_ID"] = cod_id
-                normalized_doc["DIST"] = dist
-                normalized_doc["batch_version"] = batch_version
-                normalized_doc["loaded_at"] = now
-                normalized_doc["source_file"] = source_file
-                normalized_doc["load_id"] = load_id
+                doc = {
+                    "agent_acronym":                agent_acronym,
+                    "cnpj_number":                  _to_str(record.get("NumCNPJ")),
+                    "consumer_unit_set_id":          consumer_unit_set_id,
+                    "consumer_unit_set_description": _to_str(record.get("DscConjUndConsumidoras")),
+                    "indicator_type_code":           indicator_type_code,
+                    "year":                          int(year),
+                    "period":                        int(period),
+                    "value":                         _to_float(record.get("VlrIndiceEnviado")),
+                    "generation_date":               _to_str(record.get("DatGeracaoConjuntoDados")),
+                    "batch_version":                 batch_version,
+                    "loaded_at":                     now,
+                    "source_file":                   source_file,
+                    "load_id":                       load_id,
+                }
 
-                operations.append(
-                    UpdateOne(
-                        {"COD_ID": cod_id, "DIST": dist},
-                        {"$set": normalized_doc},
-                        upsert=True,
-                    )
-                )
+                filter_key = {
+                    "agent_acronym":        agent_acronym,
+                    "consumer_unit_set_id": consumer_unit_set_id,
+                    "indicator_type_code":  indicator_type_code,
+                    "year":                 int(year),
+                    "period":               int(period),
+                }
+
+                operations.append(UpdateOne(filter_key, {"$set": doc}, upsert=True))
 
             totals["rows_valid"] += len(operations)
 
             if operations:
                 result = collection.bulk_write(operations, ordered=False)
                 totals["inserted"] += result.upserted_count
-                totals["updated"] += result.modified_count
-                totals["matched"] += result.matched_count
+                totals["updated"]  += result.modified_count
+                totals["matched"]  += result.matched_count
 
             totals["chunks_processed"] += 1
+
             load_history.update_one(
                 {"load_id": load_id},
-                {
-                    "$set": {
-                        "status": "STARTED",
-                        **_history_totals(totals),
-                        "error_message": None,
-                    }
-                },
+                {"$set": {"status": "STARTED", **_history_totals(totals), "error_message": None}},
             )
+
             chunk_duration_ms = round((time.perf_counter() - chunk_start_perf) * 1000, 2)
             _log_event(
-                "ucbt_chunk_summary",
+                "decfec_chunk_summary",
                 load_id=load_id,
                 batch_version=batch_version,
                 chunk_index=chunk_index,
@@ -195,9 +202,10 @@ def load_ucbt_tab(
                 updated=totals["updated"],
                 duration_ms=chunk_duration_ms,
             )
+
             if rejected_samples:
                 _log_event(
-                    "ucbt_chunk_rejections",
+                    "decfec_chunk_rejections",
                     load_id=load_id,
                     batch_version=batch_version,
                     chunk_index=chunk_index,
@@ -207,72 +215,54 @@ def load_ucbt_tab(
 
         finished_at = datetime.now(timezone.utc)
         final_status = "PARTIAL" if totals["rows_rejected"] > 0 else "SUCCESS"
+
         load_history.update_one(
             {"load_id": load_id},
-            {
-                "$set": {
-                    "status": final_status,
-                    "finished_at": finished_at,
-                    **_history_totals(totals),
-                    "error_message": None,
-                }
-            },
+            {"$set": {
+                "status": final_status,
+                "finished_at": finished_at,
+                **_history_totals(totals),
+                "error_message": None,
+            }},
         )
         _log_event(
-            "ucbt_load_finished",
+            "decfec_load_finished",
             load_id=load_id,
             batch_version=batch_version,
             status=final_status,
             duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
-            totals={
-                "rows_processed": totals["rows_processed"],
-                "rows_valid": totals["rows_valid"],
-                "rows_rejected": totals["rows_rejected"],
-                "inserted": totals["inserted"],
-                "updated": totals["updated"],
-                "matched": totals["matched"],
-                "chunks_processed": totals["chunks_processed"],
-            },
+            totals=totals,
         )
+
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
         load_history.update_one(
             {"load_id": load_id},
-            {
-                "$set": {
-                    "status": "ERROR",
-                    "finished_at": finished_at,
-                    **_history_totals(totals),
-                    "error_message": str(exc),
-                }
-            },
+            {"$set": {
+                "status": "ERROR",
+                "finished_at": finished_at,
+                **_history_totals(totals),
+                "error_message": str(exc),
+            }},
         )
         _log_event(
-            "ucbt_load_failed",
+            "decfec_load_failed",
             load_id=load_id,
             batch_version=batch_version,
             error=str(exc),
             duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
-            totals={
-                "rows_processed": totals["rows_processed"],
-                "rows_valid": totals["rows_valid"],
-                "rows_rejected": totals["rows_rejected"],
-                "inserted": totals["inserted"],
-                "updated": totals["updated"],
-                "matched": totals["matched"],
-                "chunks_processed": totals["chunks_processed"],
-            },
+            totals=totals,
         )
         raise
+
     finally:
         client.close()
 
     return {
-        "collection": "ucbt_tab",
+        "collection": "distribution_indices",
         "batch_version": batch_version,
         "load_id": load_id,
         "source_file": source_file,
-        "chunk_size": chunk_size,
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         **totals,
@@ -280,4 +270,4 @@ def load_ucbt_tab(
 
 
 if __name__ == "__main__":
-    load_ucbt_tab()
+    load_decfec()

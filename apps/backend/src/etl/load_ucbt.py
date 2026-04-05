@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
+import json
+import time
 
 import pandas as pd
 from pymongo import MongoClient, UpdateOne
@@ -9,6 +11,7 @@ from src.etl.get_ucbt_file import get_ucbt_filepath
 
 
 MANDATORY_FIELDS = ["COD_ID", "DIST"]
+MAX_REJECTION_LOGS_PER_CHUNK = 5
 
 
 def _normalize_value(value):
@@ -32,6 +35,15 @@ def _history_totals(totals):
         "total_rejected": totals["rows_rejected"],
         "chunks_completed": totals["chunks_processed"],
     }
+
+
+def _log_event(event, **payload):
+    log_line = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        **payload,
+    }
+    print(json.dumps(log_line, default=str, ensure_ascii=True))
 
 
 def load_ucbt_tab(
@@ -59,6 +71,7 @@ def load_ucbt_tab(
     load_history = db["load_history"]
 
     started_at = datetime.now(timezone.utc)
+    start_perf = time.perf_counter()
     totals = {
         "chunks_processed": 0,
         "rows_processed": 0,
@@ -84,6 +97,14 @@ def load_ucbt_tab(
         }
     )
 
+    _log_event(
+        "ucbt_load_started",
+        load_id=load_id,
+        batch_version=batch_version,
+        source_file=source_file,
+        chunk_size=chunk_size,
+    )
+
     try:
         chunk_iter = pd.read_csv(
             source_file,
@@ -94,6 +115,7 @@ def load_ucbt_tab(
         )
 
         for chunk_index, chunk_df in enumerate(chunk_iter, start=1):
+            chunk_start_perf = time.perf_counter()
             missing_columns = [field for field in MANDATORY_FIELDS if field not in chunk_df.columns]
             if missing_columns:
                 raise ValueError(f"Missing mandatory columns in UCBT file: {missing_columns}")
@@ -103,12 +125,26 @@ def load_ucbt_tab(
 
             operations = []
             now = datetime.now(timezone.utc)
+            rejected_samples = []
 
-            for record in chunk_df.to_dict(orient="records"):
+            for row_in_chunk, record in enumerate(chunk_df.to_dict(orient="records"), start=1):
                 cod_id = _normalize_key(record.get("COD_ID"))
                 dist = _normalize_key(record.get("DIST"))
                 if not cod_id or not dist:
                     totals["rows_rejected"] += 1
+                    if len(rejected_samples) < MAX_REJECTION_LOGS_PER_CHUNK:
+                        if not cod_id and not dist:
+                            reason = "missing_cod_id_and_dist"
+                        elif not cod_id:
+                            reason = "missing_cod_id"
+                        else:
+                            reason = "missing_dist"
+                        rejected_samples.append(
+                            {
+                                "row_in_chunk": row_in_chunk,
+                                "reason": reason,
+                            }
+                        )
                     continue
 
                 normalized_doc = {key: _normalize_value(value) for key, value in record.items()}
@@ -146,11 +182,28 @@ def load_ucbt_tab(
                     }
                 },
             )
-            print(
-                "[UCBT] chunk="
-                f"{chunk_index} processed={chunk_rows} valid={len(operations)} "
-                f"rejected={chunk_rows - len(operations)}"
+            chunk_duration_ms = round((time.perf_counter() - chunk_start_perf) * 1000, 2)
+            _log_event(
+                "ucbt_chunk_summary",
+                load_id=load_id,
+                batch_version=batch_version,
+                chunk_index=chunk_index,
+                rows_processed=chunk_rows,
+                rows_valid=len(operations),
+                rows_rejected=chunk_rows - len(operations),
+                inserted=totals["inserted"],
+                updated=totals["updated"],
+                duration_ms=chunk_duration_ms,
             )
+            if rejected_samples:
+                _log_event(
+                    "ucbt_chunk_rejections",
+                    load_id=load_id,
+                    batch_version=batch_version,
+                    chunk_index=chunk_index,
+                    sample_size=len(rejected_samples),
+                    samples=rejected_samples,
+                )
 
         finished_at = datetime.now(timezone.utc)
         final_status = "PARTIAL" if totals["rows_rejected"] > 0 else "SUCCESS"
@@ -165,6 +218,22 @@ def load_ucbt_tab(
                 }
             },
         )
+        _log_event(
+            "ucbt_load_finished",
+            load_id=load_id,
+            batch_version=batch_version,
+            status=final_status,
+            duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
+            totals={
+                "rows_processed": totals["rows_processed"],
+                "rows_valid": totals["rows_valid"],
+                "rows_rejected": totals["rows_rejected"],
+                "inserted": totals["inserted"],
+                "updated": totals["updated"],
+                "matched": totals["matched"],
+                "chunks_processed": totals["chunks_processed"],
+            },
+        )
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
         load_history.update_one(
@@ -176,6 +245,22 @@ def load_ucbt_tab(
                     **_history_totals(totals),
                     "error_message": str(exc),
                 }
+            },
+        )
+        _log_event(
+            "ucbt_load_failed",
+            load_id=load_id,
+            batch_version=batch_version,
+            error=str(exc),
+            duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
+            totals={
+                "rows_processed": totals["rows_processed"],
+                "rows_valid": totals["rows_valid"],
+                "rows_rejected": totals["rows_rejected"],
+                "inserted": totals["inserted"],
+                "updated": totals["updated"],
+                "matched": totals["matched"],
+                "chunks_processed": totals["chunks_processed"],
             },
         )
         raise

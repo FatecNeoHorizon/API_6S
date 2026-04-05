@@ -1,6 +1,6 @@
 from src.etl.get_decfec_file import get_filepath
 from src.etl.load_decfec import load_decfec
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.control import distribution_indices_procedures
@@ -30,14 +30,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/process-csv")
-def process_csv():
-    result = load_decfec()
+@app.get("/process-decfec")
+def process_decfec():
+    try:
+        result = load_decfec()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if not result:
-        return {"message": "Nenhum registro inserido"}
+    return {
+        "message": "DECFEC processado com sucesso",
+        **result,
+    }
 
-    return {"message": "CSV processado com sucesso", "inserted_lines": len(result)}
 
 @app.get("/get-dec-fec")
 async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 

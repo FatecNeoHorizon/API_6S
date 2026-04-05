@@ -1,19 +1,14 @@
-import os
-
 from src.etl.get_decfec_file import get_filepath
 from src.etl.transform_decfec import transform_decfec
+from src.config.parameters import get_mongo_settings, get_mongo_uri
 from pymongo import MongoClient
 import pandas as pd
-
 
 def load_decfec():
     FILE_PATH = get_filepath()
 
-    port = os.getenv("MONGO_PORT", "27017")
-    user = os.getenv("MONGO_USER")
-    password = os.getenv("MONGO_PASSWORD")
-    db_name = os.getenv("MONGO_DB_NAME")
-    mongo_uri = f"mongodb://{user}:{password}@mongo_db:{port}/{db_name}?authSource=admin"
+    _, _, _, _, db_name = get_mongo_settings()
+    mongo_uri = get_mongo_uri()
 
     df = pd.read_csv(
         FILE_PATH,
@@ -22,8 +17,45 @@ def load_decfec():
     )
 
     df = transform_decfec(df)
-
-    filtro = ['DEC', 'FEC']
+    
+    filtro = [
+        'DEC', 
+        'DEC1i', 
+        'DEC1x', 
+        'DECINC', 
+        'DECIND', 
+        'DECINE', 
+        'DECINO', 
+        'DECIP', 
+        'DECIPC', 
+        'DECXN', 
+        'DECXNC', 
+        'DECXP', 
+        'DECXPC', 
+        'DECi', 
+        'DECx', 
+        'Dec1', 
+        'Dec1r', 
+        'Decr', 
+        'FEC', 
+        'FEC1i', 
+        'FEC1x', 
+        'FECINC', 
+        'FECIND', 
+        'FECINE', 
+        'FECINO', 
+        'FECIP', 
+        'FECIPC', 
+        'FECXN', 
+        'FECXNC', 
+        'FECXP', 
+        'FECXPC', 
+        'FECi', 
+        'FECx', 
+        'Fec1', 
+        'Fec1r', 
+        'Fecr'
+    ]
 
     df_filtrado = df[df['SigIndicador'].isin(filtro)]
 

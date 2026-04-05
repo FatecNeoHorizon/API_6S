@@ -8,6 +8,7 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  Info,
 } from "lucide-react";
 import {
   Card,
@@ -1000,12 +1001,70 @@ export default function IndicadoresPage() {
             style={{ maxHeight: 340 }}
           >
             <CardHeader className="flex-shrink-0">
-              <CardTitle className="text-foreground">Distribuidoras</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                {perdasPeriodLabel
-                  ? `Dados do período · ${perdasPeriodLabel}`
-                  : "Selecione um período para ver os dados"}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-foreground">
+                    Distribuidoras
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    {perdasPeriodLabel
+                      ? `Dados do período · ${perdasPeriodLabel}`
+                      : "Selecione um período para ver os dados"}
+                  </CardDescription>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="p-1.5 rounded-full hover:bg-muted transition-colors">
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 text-foreground">
+                          Unidades de Energia
+                        </h4>
+                        <div className="space-y-1.5 text-xs text-muted-foreground">
+                          <div>
+                            <span className="font-medium">MWh</span>{" "}
+                            (Megawatt-hora) = 1.000 kWh
+                          </div>
+                          <div>
+                            <span className="font-medium">GWh</span>{" "}
+                            (Gigawatt-hora) = 1.000 MWh
+                          </div>
+                          <div>
+                            <span className="font-medium">TWh</span>{" "}
+                            (Terawatt-hora) = 1.000 GWh
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-3">
+                        <h4 className="font-semibold text-sm mb-2 text-foreground">
+                          Tipos de Perdas
+                        </h4>
+                        <div className="space-y-2 text-xs text-muted-foreground">
+                          <div>
+                            <span className="font-medium text-chart-1">
+                              Perdas Técnicas:
+                            </span>{" "}
+                            Energia perdida naturalmente na transmissão e
+                            distribuição devido à resistência dos condutores e
+                            transformadores.
+                          </div>
+                          <div>
+                            <span className="font-medium text-destructive">
+                              Perdas Não Técnicas:
+                            </span>{" "}
+                            Perdas causadas por furtos de energia, erros de
+                            medição, fraudes e irregularidades.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
               <div className="overflow-auto h-full">

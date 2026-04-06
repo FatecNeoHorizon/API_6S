@@ -240,9 +240,11 @@ This solution consists of a main application and a support module for tracking p
 
 | Document | Description |
 |:---------|:------------|
+| [Installation Manual](docs/INSTALLATION_MANUAL.md) | Complete setup guide for deploying the Z application via Docker Compose |
+| [User Manual](docs/USER_MANUAL.MD) | Operating guide with focus on interface navigation, APIs, and ETL execution |
 | [Prototyping](docs/UI-DESIGN.md) | User flows, screens, and UI components (Figma) |
 | [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
-| [Relational database](docs/DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
+| [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
 | [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |

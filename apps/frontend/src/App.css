@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

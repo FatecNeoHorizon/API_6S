@@ -92,7 +92,7 @@ The user can switch between:
 - 1 year
 - Custom period (dedicated button)
 
-> **⚠️ Important:** The data currently displayed in the frontend of this version is mostly **mocked** (illustrative) in React components. The page demonstrates the navigation structure and visual presentation, but does not necessarily reflect a dynamic real-time query to the backend in all blocks.
+> **⚠️ Important:** The data currently displayed in the frontend of this version is mostly **mocked** (illustrative) data inserted manually on the database, rather than extracted data. The page demonstrates the navigation structure and visual presentation, but does not necessarily reflect the entire workflow from when importing data from ANEEL.
 
 ---
 
@@ -125,7 +125,6 @@ The FastAPI offers simple example endpoints, an endpoint to process the CSV of i
 | `/process-decfec` | GET | Processes CSV file and loads DEC/FEC into MongoDB |
 | `/get-dec-fec` | GET | Queries `distribution_indices` collection with filters |
 | `/get-energy-losses` | GET | Queries `energy_losses_tariff` collection with filters |
-| `/exemplo-post-body-schema` | POST | Example of body submission with Pydantic schema |
 
 ### 6.2 Processing CSV Indicators
 
@@ -151,12 +150,14 @@ After processing, use the `/get-dec-fec` endpoint. The filters accepted in the c
 - `cnpj_number`
 - `consumer_unit_set_id`
 - `indicator_type_code`
-- `year`
-- `period`
+- `year_min`
+- `year_max`
+- `period_min`
+- `period_min`
 
 **Example:**
 ```
-/get-dec-fec?indicator_type_code=DEC&year=2024&period=1
+/get-dec-fec?indicator_type_code=DEC&year_min=2024&period_min=1
 ```
 
 ### 6.4 Querying Energy Losses
@@ -166,7 +167,8 @@ The `/get-energy-losses` route accepts filters such as:
 - `distributor_slug`
 - `state`
 - `uf`
-- `process_date`
+- `process_date_min`
+- `process_date_max`
 
 > **Important:** This query depends on the `energy_losses_tariff` collection already existing and containing valid data in MongoDB.
 
@@ -228,8 +230,7 @@ Relational tables include:
 
 ## 10. Limitations Observed in This ZIP Version
 
-- Much of the frontend uses **demonstration data** loaded directly in React components
-- Not all endpoints mentioned by the frontend exist in a functional form in the current backend
+- Much of the frontend uses **demonstration data** loaded directly in the database
 - Energy loss processing depends on a specific collection already populated
 - The `data` folder came empty in the ZIP, so the user needs to provide the CSV to test the ETL
 

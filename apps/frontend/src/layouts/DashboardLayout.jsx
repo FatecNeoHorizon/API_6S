@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import {
-  Zap,
   BarChart3,
   LogOut,
   Menu,
@@ -118,14 +117,14 @@ export default function DashboardLayout() {
 
       // 2. Processa o CSV
       setUploadStatus("processing");
-      const processResponse = await fetch("/process-csv");
+      const processResponse = await fetch("/process-decfec");
 
       const contentType = processResponse.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         const text = await processResponse.text();
         console.error("Resposta inesperada do servidor:", text);
         throw new Error(
-          `Endpoint /process-csv retornou status ${processResponse.status}. Verifique se o servidor está rodando corretamente.`,
+          `Endpoint /process-decfec retornou status ${processResponse.status}. Verifique se o servidor está rodando corretamente.`,
         );
       }
 
@@ -184,9 +183,11 @@ export default function DashboardLayout() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border">
-            <div className="p-1.5 bg-primary/10 rounded-lg">
-              <Zap className="w-6 h-6 text-primary" />
-            </div>
+            <img 
+              src="/zeus-logo.png" 
+              alt="Zeus Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-lg font-bold text-sidebar-foreground">
               Zeus
             </span>

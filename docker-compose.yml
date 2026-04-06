@@ -20,6 +20,10 @@ services:
   flyway:
     image: flyway/flyway:9-alpine
     command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
     env_file:
       - .env
     volumes:

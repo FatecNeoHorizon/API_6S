@@ -20,16 +20,16 @@ What the team commits to delivering by the end of the sprint.
 
 | # | Feature | Status |
 |:--|:--------|:------:|
-| 1 | Functional ETL pipeline with the priority BDGD layers | ⬜ |
-| 2 | DEC, FEC and loss indicators aggregated by region | ⬜ |
+| 1 | Functional ETL pipeline with the priority BDGD layers | ✅ |
+| 2 | DEC, FEC and loss indicators aggregated by region | ✅ |
 
 ### 🔵 Additional Deliverables
 What will be delivered beyond the minimum, if time and context allow.
 
 | # | Feature | Status |
 |:--|:--------|:------:|
-| 1 | Interactive dashboard with filters by region and network type | ⬜ |
-| 2 | Responsive interface compatible with modern browsers | ⬜ |
+| 1 | Interactive dashboard with filters by region and network type | ✅ |
+| 2 | Responsive interface compatible with modern browsers | ✅ |
 
 ---
 
@@ -77,29 +77,63 @@ for indicators and network structure are ingested:
 - `UNTRMT` — MV transformers with geometry and losses
 - `SSDAT` — HV network segments with geometry
 - `CTMT` — MV circuits with monthly loss indicators
-- `UCBT_tab` — LV consumers with monthly DIC/FIC
 - `UCMT_tab` — MV consumers with monthly DIC/FIC
 - `UCAT_tab` — HV consumers with monthly DIC/FIC
 - `CONJ` — geographic sets — aggregation level for the heatmap
 
-**Special attention:**
-`UCBT_tab` has 3M records (1.4GB in memory). Ingestion must be done
-in chunks of 100,000 rows. A composite index `{DIST, MUN, CONJ}` must be
-created before any analytical query.
+**Note:** Only high and medium voltage consumer data (`UCMT_tab` and `UCAT_tab`) will be ingested in this sprint.
+Low voltage consumers (`UCBT_tab`) are excluded from the initial scope.
+
+### MongoDB Collections Created in Sprint 1
+
+The following collections were created and populated in MongoDB during the ETL process:
+
+| Collection | Description |
+|:-----------|:------------|
+| `substations` | HV substations with geographic data and operational details |
+| `distribution_transformers` | MV and HV transformers with losses and energy metrics |
+| `at_network_segments` | HV network segments (distribution lines) with geometry |
+| `mt_network_segments` | MV network segments/circuits with monthly loss indicators |
+| `consumer_units_pj` | High and Medium voltage consumers (PJ) with monthly DIC/FIC indicators |
+| `municipalities` | Geographic aggregation level for indicators (CONJ - electrical sets by municipality) |
+| `distribution_indices` | DEC/FEC continuity indicators aggregated by region and period |
+| `energy_losses_tariff` | Energy loss metrics by circuit, transformer, and voltage level |
+| `domain_indicators` | Domain-level indicators for system analysis |
+| `load_history` | Historical load data for consumers and network elements |
 
 ### DEC and FEC indicator calculation
 
-DEC and FEC are calculated from the fields `DIC_01..DIC_12` and `FIC_01..FIC_12`
-present in the consumer tables (`UCBT_tab`, `UCMT_tab`, `UCAT_tab`).
-The ETL aggregates these values by `MUN` (municipality) and `CONJ` (electrical set)
-— never exposing individual data by consumer unit.
+All indicator data originates from a single CSV source file (`indicadores-continuidade-coletivos-2020-2029.csv`) 
+with 5 million historical records containing DEC/FEC continuity indicators from 2020–2029.
+
+The CSV structure includes:
+- `DatGeracaoConjuntoDados` — data generation timestamp
+- `SigAgente` — utility agent code
+- `NumCNPJ` — CNPJ identifier
+- `IdeConjUndConsumidoras` — consumer unit set ID
+- `DscConjUndConsumidoras` — consumer unit set description (e.g., municipality)
+- `SigIndicador` — indicator code (DEC or FEC)
+- `AnoIndice` — indicator year
+- `NumPeriodoIndice` — indicator period
+- `VlrIndiceEnviado` — indicator value
+
+In Sprint 1, the ETL pipeline extracts all records where `SigIndicador` contains "DEC" or "FEC", then processes them by:
+1. Filtering for DEC and FEC indicators across all periods and years
+2. Aggregating data by municipality (`IdeConjUndConsumidoras`) and selected period
+3. Computing average values for the chosen time range
+4. Storing the aggregated results in the `distribution_indices` MongoDB collection
+
+Data is never exposed at the individual consumer unit level, maintaining privacy and data governance standards.
 
 ### Energy losses
 
-Three granularities available in BDGD:
-- **By MV circuit:** `CTMT.PERD_MED` — average percentage loss per circuit. Main feature for ranking.
-- **By MV transformer:** `EQTRMT.PER_TOT` — total loss per transformer.
-- **By HV transformer:** difference between `UNTRAT.ENES_XX` (secondary energy) and `UNTRAT.ENET_XX` (tertiary energy).
+Energy loss data is persisted in the `energy_losses_tariff` collection with three granularities:
+
+- **By MV circuit:** `mt_network_segments.PERD_MED` — average percentage loss per circuit. Main feature for ranking.
+- **By MV transformer:** `distribution_transformers.PER_TOT` — total loss per transformer (MV level).
+- **By HV transformer:** `distribution_transformers` — energy difference between input and output at HV level.
+
+Historical load data is stored separately in the `load_history` collection for trend analysis.
 
 ### API structure with FastAPI
 
@@ -123,4 +157,4 @@ present in several layers, is preserved to feed the SAM operational filter in Sp
 
 ---
 
-*Last updated: 03/16/2026*
+*Last updated: 04/05/2026*

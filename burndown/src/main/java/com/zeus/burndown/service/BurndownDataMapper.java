@@ -120,17 +120,20 @@ public class BurndownDataMapper {
                                     List<ProjectItemNode> allIssues) {
 
         LocalDate today = LocalDate.now();
-        LocalDate effectiveEnd;
+        LocalDate plotEnd;
         if (today.isBefore(start)) {
-            effectiveEnd = end;
+            plotEnd = start;
+        } else if (today.isAfter(end)) {
+            plotEnd = end;
         } else {
-            effectiveEnd = end.isAfter(today) ? today : end;
+            plotEnd = today;
         }
+
  
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
                 LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isAfter(effectiveEnd);
+                return !created.isBefore(start) && !created.isAfter(end);
             })
             .collect(Collectors.toList());
  
@@ -150,8 +153,8 @@ public class BurndownDataMapper {
         List<Double> realLine = new ArrayList<>();
      
         long dayIndex = 0;
- 
-        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+
+        for (LocalDate date = start; !date.isAfter(plotEnd); date = date.plusDays(1)) {
 
             final LocalDate currentDate = date;
             dates.add(currentDate);

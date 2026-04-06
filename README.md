@@ -105,6 +105,20 @@ The project's objective is to develop a platform that processes and analyzes dat
 ### Sprint 1
 [View Sprint 1 documentation](docs/SPRINT-1.md)
 
+
+
+### 📹 Vídeo demonstrativo:
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=w10nwgCj9kc">
+    <img src="https://img.youtube.com/vi/w10nwgCj9kc/maxresdefault.jpg" alt="Vídeo demonstrativo - Clique para assistir" width="600">
+  </a>
+</div>
+
+
+### 📈 Sprint 1 Evolution (Burndown) 
+<img src="burndown/src/main/resources/static/sprint-1.png">
+
 ### Sprint 2
 [View Sprint 2 documentation](docs/SPRINT-2.md)
 
@@ -166,7 +180,7 @@ The project's objective is to develop a platform that processes and analyzes dat
 |:---:|:---|:---:|:---:|:---:|
 | --- | KickOff                   | 03/02 | 03/06 | Ok |
 | --- | Planning                  | 03/09 | 03/13 | Ok |
-|  1  | Sprint 1                  | 03/16 | 04/05 |    |
+|  1  | Sprint 1                  | 03/16 | 04/05 | Ok |
 |  2  | Sprint review / Planning  | 04/06 | 04/10 |    |
 |  3  | Sprint 2                  | 04/13 | 05/03 |    |
 |  4  | Sprint review / Planning  | 05/04 | 05/08 |    |
@@ -240,9 +254,11 @@ This solution consists of a main application and a support module for tracking p
 
 | Document | Description |
 |:---------|:------------|
+| [Installation Manual](docs/INSTALLATION_MANUAL.md) | Complete setup guide for deploying the Z application via Docker Compose |
+| [User Manual](docs/USER_MANUAL.MD) | Operating guide with focus on interface navigation, APIs, and ETL execution |
 | [Prototyping](docs/UI-DESIGN.md) | User flows, screens, and UI components (Figma) |
 | [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
-| [Relational database](docs/DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
+| [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
 | [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |

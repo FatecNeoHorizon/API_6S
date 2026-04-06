@@ -382,7 +382,7 @@ const buildRanking = (data) => {
         (fecValues.reduce((a, v) => a + v, 0) / fecValues.length).toFixed(2),
       ),
     }))
-    .sort((a, b) => a.dec - b.dec);
+    .sort((a, b) => b.dec - a.dec || b.fec - a.fec);
 };
 
 const buildChartData = (data) => {
@@ -828,8 +828,8 @@ export default function IndicadoresPage() {
                           fontSize: 12,
                         }}
                         domain={([dataMin, dataMax]) => [
-                          Math.max(0, Math.floor(dataMin - 2)),
-                          Math.ceil(dataMax + 2),
+                          0,
+                          Math.ceil(dataMax * 1.2),
                         ]}
                       />
                       <Tooltip

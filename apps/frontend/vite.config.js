@@ -54,7 +54,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     proxy: {
-      "/process-csv": "http://backend:8000",
+      "/process-decfec": "http://backend:8000",
     },
   },
 });

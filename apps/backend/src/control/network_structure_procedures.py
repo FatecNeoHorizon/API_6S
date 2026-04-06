@@ -19,6 +19,20 @@ class NetworkStructureProcedures():
         self.connection = get_client()
         self.db = self.connection[os.getenv("MONGO_DB_NAME")]
 
+    def _define_transformer_status(self,transformer: dict):
+        if transformer.get("status") == "SM":
+            iron_losses = 0
+            copper_losses = 0
+            if transformer["iron_losses_kw"] is not None:
+                iron_losses = transformer.get("iron_losses_kw")
+            if transformer["copper_losses_kw"] is not None:
+                copper_losses = transformer.get("copper_losses_kw")
+            losses_sum = iron_losses + copper_losses
+            if losses_sum >= ALERT_THRESHOLD_KW:
+                return "Alert"
+            return "Operational"
+        return "Inactive"
+
     def get_summary(self) -> NetworkSummary:
         qtd_substations = self.db["substations"].count_documents({})
         qtd_transformers = self.db["distribution_transformers"].count_documents({})
@@ -37,6 +51,9 @@ class NetworkStructureProcedures():
                 ]
             }
         })
+
+        qtd_operational = qtd_operational - qtd_alert
+
         return NetworkSummary(
             substations=qtd_substations,
             transformers=qtd_transformers,
@@ -76,7 +93,7 @@ class NetworkStructureProcedures():
                     description=t.get("description"),
                     region="Urbana" if t.get("location_area") == "1" else "Rural",
                     tension=t.get("nominal_power_kva"),
-                    status="Operational" if t.get("status") == "SM" else "Inactive",
+                    status=self._define_transformer_status(t),
                     load_kw=(t.get("iron_losses_kw") or 0) + (t.get("copper_losses_kw") or 0),
                     coordinates=t.get("geometry", {}).get("coordinates")
                 ))

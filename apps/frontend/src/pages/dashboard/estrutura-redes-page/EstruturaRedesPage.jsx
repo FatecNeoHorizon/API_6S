@@ -273,19 +273,16 @@ export default function EstruturaRedesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground w-[30%]">
+                  <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground w-[45%]">
                     Equipamento
                   </th>
-                  <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground hidden sm:table-cell w-[15%]">
+                  <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground hidden sm:table-cell w-[20%]">
                     Tipo
                   </th>
                   <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground hidden sm:table-cell w-[20%]">
                     Regiao
                   </th>
-                  <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground hidden md:table-cell w-[15%]">
-                    Tensao
-                  </th>
-                  <th className="text-center py-3 px-3 text-sm font-medium text-muted-foreground w-[20%]">
+                  <th className="text-center py-3 px-3 text-sm font-medium text-muted-foreground w-[15%]">
                     Status
                   </th>
                 </tr>
@@ -329,9 +326,6 @@ export default function EstruturaRedesPage() {
                       ) : (
                         "-"
                       )}
-                    </td>
-                    <td className="py-3 px-3 text-sm text-muted-foreground hidden md:table-cell">
-                      {asset.tension ?? "-"}
                     </td>
                     <td className="py-3 px-3 text-center">
                       {getStatusBadge(asset.status)}

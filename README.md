@@ -88,8 +88,8 @@ The project's objective is to develop a platform that processes and analyzes dat
 | US07 | 04 | High | As an administrator, I want to register and manage users with distinct profiles, to control access to features according to each user's role. | 02 | [RF07](#RF07) |
 | US08 | 05 | High | As a data analyst, I want ML models to predict market behavior based on validated metrics, further helping in identifying future critical areas and support commercial decisions. | 02 | [RNF04](#RNF04) |
 | US09 | 01 | Medium | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical indicators. | 03 | [RF08](#RF08) |
-| US10 | 02 | High | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | 03 | [RF09](#RF09) |
-| US11 | 03 | High | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | 03 | [RF07](#RF07), [RF10](#RF10) |
+| US10 | 02 | Medium | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | 03 | [RF09](#RF09) |
+| US11 | 03 | Medium | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | 03 | [RF07](#RF07), [RF10](#RF10) |
 | US12 | 04 | Medium | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | 03 | [RNF05](#RNF05) |
 
 </details>
@@ -119,10 +119,10 @@ The project's objective is to develop a platform that processes and analyzes dat
 <img src="burndown/src/main/resources/static/sprint-1.png">
 
 ### Sprint 2
-[View Sprint 2 documentation](docs/SPRINT-2.md)
+[View Sprint 2 documentation](../API_6S/docs/SPRINT2.md)
 
 ### Sprint 3
-[View Sprint 3 documentation](docs/SPRINT-3.md)
+[View Sprint 3 documentation](../API_6S/docs/SPRINT3.md)
 
 </details>
 

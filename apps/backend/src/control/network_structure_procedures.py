@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from src.etl.database import get_client
+from apps.backend.src.database.collections.database import get_client
 from src.model.network_structure_model import (
     NetworkSummary,
     NetworkAsset,

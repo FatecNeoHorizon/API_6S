@@ -12,7 +12,7 @@ services:
     networks:
       - db_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,9 +49,9 @@ services:
           "CMD",
           "mongosh",
           "--username",
-          "${MONGO_INITDB_ROOT_USERNAME}",
+          "$${MONGO_INITDB_ROOT_USERNAME}",
           "--password",
-          "${MONGO_INITDB_ROOT_PASSWORD}",
+          "$${MONGO_INITDB_ROOT_PASSWORD}",
           "--eval",
           "db.adminCommand('ping')",
         ]

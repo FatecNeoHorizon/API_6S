@@ -81,7 +81,7 @@ public class BurndownDataMapper {
         return result;
     }
  
-    private SprintPeriod findActiveSprint(LocalDate ) {
+    private SprintPeriod findActiveSprint(LocalDate today) {
         for (SprintPeriod sprint : SPRINTS) {
             if (!today.isBefore(sprint.start) && !today.isAfter(sprint.end)) {
                 return sprint;

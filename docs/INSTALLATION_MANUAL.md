@@ -61,7 +61,7 @@ The backend is located in `apps/backend` and the frontend in `apps/frontend`.
 
 ### 3.1 Data Folder
 
-The backend service mounts the local folder `./data` to `/app/data` inside the container. In `docker-compose.yml`, the `CSV_FILE_PATH` variable points to `/app/data/indicadores-continuidade-coletivos-2020-2029.csv`.
+The backend service mounts the local folder `./data` to `/app/data` inside the container. The `CSV_FILE_PATH` value must be set in `envs/.env.backend.{dev|prod}`.
 
 **Important:** Place the CSV file with this name inside the `data` folder at the project root before running the ETL.
 
@@ -119,6 +119,9 @@ In `envs/.env.backend.dev`:
 BACKEND_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:5173
 CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
+MONGO_MAX_POOL_SIZE=10
+MONGO_SERVER_SELECTION_TIMEOUT_MS=120000
+MONGO_CONNECT_TIMEOUT_MS=10000
 
 In `envs/.env.frontend.dev`:
 

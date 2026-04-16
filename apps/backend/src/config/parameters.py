@@ -29,5 +29,3 @@ def get_mongo_settings():
 def get_mongo_uri():
 	host, port, user, password, db_name = get_mongo_settings()
 	return f"mongodb://{user}:{password}@{host}:{port}/{db_name}?authSource=admin"
-
-mongoDBConnection = get_mongo_uri()

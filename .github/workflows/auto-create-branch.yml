@@ -24,8 +24,12 @@ jobs:
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_LABELS="${{ join(github.event.issue.labels.*.name) }}"
           
-          # Remove [TYPE] prefixes from title
-          CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed 's/^\[.*\] - *//')
+          # Remove [TYPE] prefix, emojis, and version numbers (ex: 10.1.3)
+          CLEAN_TITLE=$(echo "$ISSUE_TITLE" | \
+            sed 's/^\[.*\] *//' | \
+            sed 's/[0-9]\+\.[0-9]\+\.[0-9]\+ *- *//' | \
+            sed 's/[^\x00-\x7F]//g' | \
+            sed 's/^ *//; s/ *$//')
           
           # Convert to kebab-case using sed (simple and robust)
           SLUG=$(echo "$CLEAN_TITLE" | \
@@ -40,9 +44,11 @@ jobs:
 
           # Determine type based on labels
           TYPE="feature"
-          
-          # Check type:xxx labels
-          if [[ "$ISSUE_LABELS" =~ type:bug ]]; then
+
+          # type:story → branch pai, usa package/
+          if [[ "$ISSUE_LABELS" =~ type:story ]]; then
+            TYPE="package"
+          elif [[ "$ISSUE_LABELS" =~ type:bug ]]; then
             TYPE="bugfix"
           elif [[ "$ISSUE_LABELS" =~ type:hotfix ]] || [[ "$ISSUE_LABELS" == *"urgent"* ]]; then
             TYPE="hotfix"
@@ -52,12 +58,10 @@ jobs:
             TYPE="research"
           elif [[ "$ISSUE_LABELS" =~ type:feature ]]; then
             TYPE="feature"
-          elif [[ "$ISSUE_LABELS" =~ type:story ]]; then
-            TYPE="feature"
-          # Fallback labels for compatibility
-          elif [[ "$ISSUE_LABELS" == *"bugfix"* ]] || [[ "$ISSUE_LABELS" == *"type:bug"* ]]; then
+          # Fallback labels para compatibilidade
+          elif [[ "$ISSUE_LABELS" == *"bugfix"* ]]; then
             TYPE="bugfix"
-          elif [[ "$ISSUE_LABELS" == *"docs"* ]] || [[ "$ISSUE_LABELS" == *"type:documentation"* ]]; then
+          elif [[ "$ISSUE_LABELS" == *"docs"* ]]; then
             TYPE="docs"
           elif [[ "$ISSUE_LABELS" == *"research"* ]]; then
             TYPE="research"
@@ -70,7 +74,7 @@ jobs:
           elif [[ "$ISSUE_LABELS" == *"chore"* ]]; then
             TYPE="chore"
           fi
-          
+                    
           FULL_BRANCH_NAME="${TYPE}/${BRANCH_NAME}"
           
           echo "type=$TYPE" >> $GITHUB_OUTPUT
@@ -109,17 +113,18 @@ jobs:
             const branchName = '${{ steps.branch_info.outputs.branch }}';
             const issueNum = ${{ steps.branch_info.outputs.issue_num }};
             const branchType = '${{ steps.branch_info.outputs.type }}';
-            
+                        
             const typeEmojis = {
-              'feature': '✨',
-              'bugfix': '🐛',
-              'hotfix': '🚨',
-              'docs': '📚',
+              'package':  '📦',
+              'feature':  '✨',
+              'bugfix':   '🐛',
+              'hotfix':   '🚨',
+              'docs':     '📚',
               'research': '🔬',
               'refactor': '♻️',
-              'perf': '⚡',
-              'test': '🧪',
-              'chore': '🔧'
+              'perf':     '⚡',
+              'test':     '🧪',
+              'chore':    '🔧'
             };
             
             const emoji = typeEmojis[branchType] || '🌳';

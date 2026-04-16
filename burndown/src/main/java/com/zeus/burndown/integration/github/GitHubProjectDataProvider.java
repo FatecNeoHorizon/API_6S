@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.zeus.burndown.dto.response.GraphQLResponse;
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
+import com.zeus.burndown.integration.github.model.ProjectItemNode;
 import com.zeus.burndown.service.ProjectDataProvider;
 
 @Service
@@ -69,8 +70,7 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
         String after = null;
         boolean hasNextPage = true;
 
-        // Acumula os nodes de todas as páginas
-        List<Object> allNodes = new ArrayList<>();
+        List<ProjectItemNode> allNodes = new ArrayList<>();
         GitHubProjectQueryData finalData = null;
 
         do {
@@ -97,7 +97,7 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
 
             var items = pageData
                     .getOrganization()
-                    .getProjectV2()
+                    .getProject()
                     .getItems();
 
             allNodes.addAll(items.getNodes());
@@ -109,7 +109,7 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
 
         finalData
             .getOrganization()
-            .getProjectV2()
+            .getProject()
             .getItems()
             .setNodes(allNodes);
 

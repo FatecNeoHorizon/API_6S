@@ -2,6 +2,10 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres_db
+    profiles:
+      - backend
+      - frontend
+      - full
     restart: always
     env_file:
       - envs/.env.postgres.${APP_ENV:-dev}
@@ -19,6 +23,10 @@ services:
 
   flyway:
     image: flyway/flyway:9-alpine
+    profiles:
+      - backend
+      - frontend
+      - full
     command: migrate
     env_file:
       - envs/.env.postgres.${APP_ENV:-dev}
@@ -34,6 +42,11 @@ services:
   mongo:
     image: mongo:8.0
     container_name: mongo_db
+    profiles:
+      - backend
+      - frontend
+      - full
+      - tools
     restart: always
     env_file:
       - envs/.env.mongo.${APP_ENV:-dev}
@@ -62,6 +75,8 @@ services:
   mongo-express:
     image: mongo-express:latest
     container_name: mongo_express
+    profiles:
+      - tools
     restart: always
     ports:
       - "8081:8081"
@@ -77,6 +92,10 @@ services:
     build:
       context: ./apps/backend
     container_name: fastapi_backend
+    profiles:
+      - backend
+      - frontend
+      - full
     restart: always
     env_file:
       - envs/.env.backend.${APP_ENV:-dev}
@@ -90,17 +109,20 @@ services:
       - app_network
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       flyway:
         condition: service_completed_successfully
       mongo:
-        condition: service_started
+        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: ./apps/frontend
     container_name: react_frontend
+    profiles:
+      - frontend
+      - full
     restart: always
     env_file:
       - envs/.env.frontend.${APP_ENV:-dev}

@@ -24,16 +24,15 @@ jobs:
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_LABELS="${{ join(github.event.issue.labels.*.name) }}"
           
-          # Remove [TYPE] prefix, emojis, and version numbers (ex: 10.1.3)
           CLEAN_TITLE=$(echo "$ISSUE_TITLE" | \
             sed 's/^\[.*\] *//' | \
             sed 's/[0-9]\+\.[0-9]\+\.[0-9]\+ *- *//' | \
-            sed 's/[^\x00-\x7F]//g' | \
             sed 's/^ *//; s/ *$//')
           
-          # Convert to kebab-case using sed (simple and robust)
+          # Convert to kebab-case: first transliterate accents, then strip remaining non-ASCII
           SLUG=$(echo "$CLEAN_TITLE" | \
             sed 's/[àáâãä]/a/g; s/[èéêë]/e/g; s/[ìíîï]/i/g; s/[òóôõö]/o/g; s/[ùúûü]/u/g; s/[ç]/c/g; s/[ñ]/n/g' | \
+            sed 's/[^\x00-\x7F]//g' | \
             tr '[:upper:]' '[:lower:]' | \
             sed 's/[^a-z0-9]/-/g' | \
             sed 's/-\+/-/g' | \

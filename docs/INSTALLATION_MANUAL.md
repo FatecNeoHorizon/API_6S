@@ -36,6 +36,15 @@ The main installation method is via the `docker-compose.yml` file in the project
 | **backend** | FastAPI and ETL trigger | 8000 |
 | **frontend** | React/Vite application | 5173 |
 
+### 1.2 Compose Profiles
+
+| Profile | Services started | Use case |
+|---------|------------------|----------|
+| **backend** | `postgres`, `flyway`, `mongo`, `backend` | Backend and ETL development |
+| **frontend** | `postgres`, `flyway`, `mongo`, `backend`, `frontend` | UI development with complete backend stack |
+| **full** | All services | Full integration environment |
+| **tools** | `mongo`, `mongo-express` | MongoDB administration interface |
+
 ---
 
 ## 2. Prerequisites
@@ -122,20 +131,33 @@ This is the main installation flow identified in the project. Execute all comman
 3. Ensure the `data` folder exists and, if necessary, place the CSV indicators file in it
 4. Execute:
    ```bash
-   docker compose up --build
+   docker compose --profile full up --build
    ```
 5. Wait for image creation, PostgreSQL and MongoDB startup, and Flyway migration execution
 6. After completion, validate the services at the URLs mentioned in the next section
 
 ### 5.1 What Happens During Startup
 
-Compose executes the following sequence:
+Compose executes the following sequence (profile `full`):
 
 1. Starts PostgreSQL and waits for the healthcheck
 2. Executes SQL migrations via Flyway
-3. Starts MongoDB and Mongo Express
-4. Creates the backend container with FastAPI/Uvicorn
+3. Starts MongoDB
+4. Creates the backend container with FastAPI/Uvicorn only after PostgreSQL and MongoDB are healthy, and Flyway has completed successfully
 5. Starts the Vite frontend
+
+To run only part of the stack:
+
+```bash
+# Backend focused flow
+docker compose --profile backend up --build
+
+# Frontend focused flow
+docker compose --profile frontend up --build
+
+# Mongo Express only
+docker compose --profile tools up
+```
 
 The backend mounts the data folder and is ready to process the CSV via endpoint.
 
@@ -151,7 +173,7 @@ Once the containers are active, use the table below to verify that the installat
 | Backend | `http://localhost:8000` | Simple JSON response from root route |
 | Swagger | `http://localhost:8000/docs` | FastAPI automatic documentation |
 | Mongo Express | `http://localhost:8081` | MongoDB web panel |
-| Containers | `docker compose ps` | All services with `running`/`healthy` status |
+| Containers | `docker compose --profile full ps` | Services with `running`/`healthy` status for the selected profile |
 
 ### 6.1 ETL Indicators Execution
 
@@ -190,8 +212,8 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 
 ## 9. Final Installation Checklist
 
-- [ ] The `.env` file has been created and filled
-- [ ] The `docker compose up --build` command completed without critical errors
+- [ ] Service-specific files (`.env.*.dev` or `.env.*.prod`) have been created and filled
+- [ ] A profile-based command (for example `docker compose --profile full up --build`) completed without critical errors
 - [ ] Ports 5173, 8000, 8081, 5432, and 27017 are accessible
 - [ ] Backend Swagger opens correctly
 - [ ] The `/process-decfec` endpoint works when the CSV file is present

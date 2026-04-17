@@ -3,22 +3,20 @@
 [Back to main README](../README.md#sprint-backlog)
 
 > **Period:** March 16, 2026 to April 05, 2026  
-> **Status:** 🔄 In progress
+> **Status:** In progress
 
 ---
 
 ## Sprint 1: Planning and Execution
 
 - **Estimated Team Capacity:** `TBD`
-- **Sprint Goal:** Deliver user stories `US01: Structural Reports of Distribution Networks` and `US02: Quality Data Exposure`, establishing the initial ETL pipeline and the first analytical indicators for the platform.
-- **Sprint Forecast (Stretch goals — non-committed items):** User stories `US03: Application Performance` and `US04: Browser Access and Visual Experience` can be advanced after the sprint goal is completed.
+- **Sprint Goal:** Deliver user stories `US01: Network Structure Reports` and `US02: Quality Indicators Dashboard`, establishing the initial ETL pipeline and the first analytical indicators for the platform.
+- **Sprint Forecast (Stretch goals - non-committed items):** No stretch goals defined for this sprint.
 
-| Id | Prioridade | User Story | Estimativa | Sprint |
-| -- | ---------- | ---------- | ---------- | ------ |
-| US01 | Highest | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | TBD | 1 |
-| US02 | Highest | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | TBD | 1 |
-| US03 | High | As a user, I want the system to respond quickly to my queries, without freezing during use. | TBD | 1 |
-| US04 | Medium | As a user, I want to access the system from any modern browser with a good visual experience. | TBD | 1 |
+| Id | Prioridade | Titulo | Wiki | User Story | Estimativa | Sprint |
+| -- | ---------- | ------ | ---- | ---------- | ---------- | ------ |
+| US01 | Highest | Network Structure Reports | [Link](https://github.com/FatecNeoHorizon/API_6S/wiki/US01-%E2%80%94-Network-Structure-Reports-TO-DO) | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | TBD | 1 |
+| US02 | Highest | Quality Indicators Dashboard | [Link](https://github.com/FatecNeoHorizon/API_6S/wiki/US02-%E2%80%94-Quality-Indicators-Dashboard-TO-DO) | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | TBD | 1 |
 
 ### Demonstration Video
 

@@ -3,22 +3,22 @@
 [Back to main README](../README.md#sprint-backlog)
 
 > **Period:** May 11, 2026 to May 31, 2026  
-> **Status:** ⏳ Waiting
+> **Status:** Waiting
 
 ---
 
 ## Sprint 3: Execution and Planning
 
 - **Estimated Team Capacity:** `TBD`
-- **Sprint Goal:** Deliver user stories `US10: SAM Indicator`, `US11: Geographic Heatmap`, and `US12: LGPD Compliance`, consolidating the strategic and compliance layer of the product.
-- **Sprint Forecast (Stretch goals — non-committed items):** User story `US13: Automatic Recalculation of Indicators` can be started after the sprint goal is completed.
+- **Sprint Goal:** Deliver user stories `US10: SAM Indicator`, `US11: Geographic Heatmap`, `US12: LGPD Transparency and Control`, and `US13: Automatic Recalculation`, consolidating the strategic, compliance and post-processing layer of the product.
+- **Sprint Forecast (Stretch goals - non-committed items):** No stretch goals defined for this sprint.
 
-| Id | Prioridade | User Story | Estimativa | Sprint |
-| -- | ---------- | ---------- | ---------- | ------ |
-| US10 | Highest | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical and regulatory criteria. | TBD | 3 |
-| US11 | Highest | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | TBD | 3 |
-| US12 | High | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | TBD | 3 |
-| US13 | Medium | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | TBD | 3 |
+| Id | Prioridade | Titulo | Wiki | User Story | Estimativa | Sprint |
+| -- | ---------- | ------ | ---- | ---------- | ---------- | ------ |
+| US10 | Medium | SAM Indicator | - | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical and regulatory criteria. | TBD | 3 |
+| US11 | Medium | Geographic Heatmap | - | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | TBD | 3 |
+| US12 | Medium | LGPD Transparency and Control | - | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | TBD | 3 |
+| US13 | Medium | Automatic Recalculation | - | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | TBD | 3 |
 
 ### Definition of Done (DoD)
 For a User Story to be considered **complete**, the following criteria must be met:

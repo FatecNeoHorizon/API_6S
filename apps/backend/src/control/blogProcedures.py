@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 from src.model import blogModel
 from src.config.settings import Settings
 from src.etl.database import get_client
@@ -33,8 +32,7 @@ class BlogProcedures():
         pass
 
     def getAll(self):
-        db = self.connection.test
-        cursor = db.blog.find()
+        cursor = self.db.blog.find()
         blogListAdapter = TypeAdapter(List[blogModel.BlogModel])
         validated_list = blogListAdapter.validate_python(cursor)
         return validated_list

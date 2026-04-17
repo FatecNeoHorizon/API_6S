@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 from src.etl.database import get_client
 from src.config.settings import Settings
 from src.model.network_structure_model import (

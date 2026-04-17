@@ -1,9 +1,26 @@
+import os
 from pymongo import MongoClient, ASCENDING, GEOSPHERE
 from src.config.parameters import get_mongo_settings, get_mongo_uri
 
+
+def _get_int_env(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 def get_client():
     mongo_uri = get_mongo_uri()
-    return MongoClient(mongo_uri)
+    return MongoClient(
+        mongo_uri,
+        maxPoolSize=_get_int_env("MONGO_MAX_POOL_SIZE", 10),
+        serverSelectionTimeoutMS=_get_int_env("MONGO_SERVER_SELECTION_TIMEOUT_MS", 120000),
+        connectTimeoutMS=_get_int_env("MONGO_CONNECT_TIMEOUT_MS", 10000),
+    )
 
 def setup():
     _, _, _, _, mongo_db = get_mongo_settings()
@@ -146,40 +163,38 @@ def setup():
             validationLevel="strict",
             validationAction="error"
         )
-        
-        col = db["distribution_indices"]
 
-        # Índice composto principal — cobre a maioria das queries analíticas
-        col.create_index([("indicator_type_code", ASCENDING),
-                          ("year", ASCENDING),
-                          ("agent_acronym", ASCENDING)],
-                         name="idx_indicator_year_agent"
-                        )
+    col = db["distribution_indices"]
 
-        # Índice por conjunto — join com unidades_consumidoras_pj via conj
-        col.create_index(
-            [("consumer_unit_set_id", ASCENDING),
-             ("indicator_type_code", ASCENDING),
-             ("year", ASCENDING)],
-            name="idx_set_indicator_year"
-        )
+    # Garante índices mesmo quando a collection já existia.
+    # Sem eles, o upsert do ETL pode degradar para full scan por documento.
+    col.create_index([("indicator_type_code", ASCENDING),
+                      ("year", ASCENDING),
+                      ("agent_acronym", ASCENDING)],
+                     name="idx_indicator_year_agent"
+                    )
 
-        # Índice por CNPJ — lookup por distribuidora
-        col.create_index(
-            [("cnpj_number", ASCENDING)],
-            name="idx_cnpj"
-        )
+    col.create_index(
+        [("consumer_unit_set_id", ASCENDING),
+         ("indicator_type_code", ASCENDING),
+         ("year", ASCENDING)],
+        name="idx_set_indicator_year"
+    )
 
-        # Índice de unicidade — idempotência no ETL via upsert
-        col.create_index(
-            [("agent_acronym", ASCENDING),
-             ("consumer_unit_set_id", ASCENDING),
-             ("indicator_type_code", ASCENDING),
-             ("year", ASCENDING),
-             ("period", ASCENDING)],
-            name="idx_unique_measurement",
-            unique=True
-        )
+    col.create_index(
+        [("cnpj_number", ASCENDING)],
+        name="idx_cnpj"
+    )
+
+    col.create_index(
+        [("agent_acronym", ASCENDING),
+         ("consumer_unit_set_id", ASCENDING),
+         ("indicator_type_code", ASCENDING),
+         ("year", ASCENDING),
+         ("period", ASCENDING)],
+        name="idx_unique_measurement",
+        unique=True
+    )
 
     # ===========================================================================
     # COLLECTION: energy_losses_tariff

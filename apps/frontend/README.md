@@ -1,5 +1,15 @@
 # React + Vite
 
+## Run with Docker Compose profiles
+
+From the project root (`API_6S`), use the frontend profile:
+
+```bash
+docker compose --profile frontend up --build
+```
+
+This starts `frontend` with its required backend services.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

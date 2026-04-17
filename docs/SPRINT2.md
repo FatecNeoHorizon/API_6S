@@ -46,6 +46,49 @@ What will be delivered beyond the minimum, if time and context allow.
 
 ---
 
+## ✅ Definition of Ready / Definition of Done
+
+### Definition of Ready (DoR)
+
+*An issue is ready to enter the sprint when:*
+
+- Has a title in the format `[TYPE] - Clear description`
+- Has a type label defined (`type:feature`, `type:bug`, `type:hotfix`, etc.)
+- Is linked to at least one User Story (US01–US13)
+- Is linked to the related requirements (RF/RNF)
+- Has clear and measurable acceptance criteria
+- Has been estimated by the team
+- Has no unresolved blocking dependencies
+- Has been given a preview date of when the issue might be ready for PR
+- Developer responsible for the task has a clear view of the expected result
+
+### Definition of Done (DoD)
+
+*An issue is done when:*
+
+**Development**
+- Code implemented and functional
+- Branch follows the pattern `type/number-description` (e.g. `feature/42-implement-jwt`)
+- All commits follow Conventional Commits with `#number` required in the footer
+- No commits rejected by the hook pending correction
+
+**Review**
+- Pull Request opened with `Closes #number` in the description
+- Code review approved by at least 1 team member
+- PR merged into `main` or `develop`
+- Issue closed automatically by the merge
+
+**Documentation**
+- Technical documentation updated if necessary
+- Documentation needed for the task to be validated by another member
+
+**LGPD (when applicable)**
+- Sensitive data stored exclusively in PostgreSQL
+- Public data (BDGD) stored in MongoDB
+- No personal data exposed in logs or reports
+
+---
+
 ## 🏗️ Architecture and Technical Decisions
 
 ### Features for the ML model
@@ -102,4 +145,4 @@ integrated with FastAPI. Credentials stored in PostgreSQL with bcrypt-hashed pas
 
 ---
 
-*Last updated: 03/16/2026*
+*Last updated: 04/12/2026*

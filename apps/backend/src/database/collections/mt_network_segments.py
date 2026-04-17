@@ -1,7 +1,7 @@
-from pymong import ASCENDING, GEOSPHERE
+from pymongo import ASCENDING, GEOSPHERE
 
-def setup_load_history(db, collections_exist):
-    if "load_history" not in collections_exist:
+def setup_mt_network_segments(db, collections_exist):
+    if "mt_network_segments" not in collections_exist:
         db.create_collection(
             "mt_network_segments",
             validator={

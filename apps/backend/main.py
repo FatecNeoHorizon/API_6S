@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from src.database.setup import setup
-from src.core.middleware import setup_middleware
-from src.routes import decfec, energy_losses, network_structure
+from src.config.middleware import setup_middleware
+from src.api.routes import decfec
+from src.api.routes import energy_losses
+from src.api.routes import network_structure
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

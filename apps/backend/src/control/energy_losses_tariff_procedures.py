@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 from src.model import energy_losses_tariff_model
 from src.config.settings import Settings
 from src.etl.database import get_client
@@ -34,13 +33,11 @@ class Energy_losses_tariff_procedures():
         pass
 
     def getAll(self, filter):
-        db = self.connection.zeus
-
         operators_field = ["process_date"]
         cleaned_dict = clean_filter(filter_dict=filter)
         cleaned_dict = remove_operators_fields(filter_dict=cleaned_dict, fields_array=operators_field)
 
-        cursor = db.energy_losses_tariff.find(cleaned_dict)
+        cursor = self.db.energy_losses_tariff.find(cleaned_dict)
         energy_losses_adapter = TypeAdapter(List[energy_losses_tariff_model.EnergyLossesTariff])
         validated_list = energy_losses_adapter.validate_python(cursor)
 

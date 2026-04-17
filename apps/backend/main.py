@@ -1,4 +1,4 @@
-from src.etl.load_decfec import load_decfec
+from apps.backend.src.etl.load.load_decfec import load_decfec
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 

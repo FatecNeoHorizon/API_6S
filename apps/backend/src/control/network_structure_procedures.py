@@ -1,23 +1,40 @@
 from pymongo import MongoClient
 from src.etl.database import get_client
+from src.config.settings import Settings
 from src.model.network_structure_model import (
     NetworkSummary,
     NetworkAsset,
     NetworkTransformerDetail,
     SubstationDetail
 )
-from typing import List
+from typing import List, Optional
 from pydantic import TypeAdapter
-import os
+import pymongo
 
 ALERT_THRESHOLD_KW = 100
 
-class NetworkStructureProcedures():
-    connection : None
+# Get settings for database name
+_settings = Settings()
 
-    def __init__(self):
-        self.connection = get_client()
-        self.db = self.connection[os.getenv("MONGO_DB_NAME")]
+class NetworkStructureProcedures():
+    connection: Optional[pymongo.MongoClient]
+    db: Optional[pymongo.database.Database]
+
+    def __init__(self, connection: Optional[pymongo.MongoClient] = None):
+        """
+        Initialize procedures with optional MongoDB connection.
+        
+        Args:
+            connection: MongoDB client instance. If not provided, a new connection is created.
+                       Prefer to pass the shared connection from app.mongodb to reuse the pool.
+        """
+        if connection is not None:
+            self.connection = connection
+        else:
+            # Fallback: create new connection (for backward compatibility)
+            self.connection = get_client()
+        
+        self.db = self.connection[_settings.mongo_db_name]
 
     def _define_transformer_status(self,transformer: dict):
         if transformer.get("status") == "SM":

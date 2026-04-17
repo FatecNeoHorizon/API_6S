@@ -1,4 +1,4 @@
-from pymong import ASCENDING
+from pymongo import ASCENDING
 
 def setup_load_history(db, collections_exist):
     if "load_history" not in collections_exist:

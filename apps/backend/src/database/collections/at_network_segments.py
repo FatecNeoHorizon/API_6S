@@ -1,4 +1,4 @@
-from pymong import ASCENDING, GEOSPHERE
+from pymongo import ASCENDING, GEOSPHERE
 
 def setup_at_network_segments(db, collections_exist):
     if "at_network_segments" not in collections_exist:

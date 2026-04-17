@@ -1,4 +1,4 @@
-from pymong import ASCENDING, GEOSPHERE
+from pymongo import ASCENDING, GEOSPHERE
 
 def setup_consumer_units_pj(db, collections_exist):
     if "consumer_units_pj" not in collections_exist:

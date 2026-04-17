@@ -70,18 +70,10 @@ The project's objective is to develop a platform that processes and analyzes dat
 
 ## 📦 Product Backlog <a id="product-backlog"></a>
 
-<details>
-<summary>Show Product Backlog</summary>
-
-<br>
-
 | ID | Priority | User Story | Estimate | Sprint | Related Requirements |
 |:---|:---|:---|:---:|:---|:---|
 | US01 | Highest | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | TBD | 01 | [RF01](#RF01), [RF02](#RF02) |
 | US02 | Highest | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | TBD | 01 | [RF01](#RF01), [RF03](#RF03) |
-| US03 | Highest | As a user, I want the system to respond quickly to my queries, without freezing during use. | TBD | 01 | [RNF01](#RNF01), [RNF02](#RNF02) |
-| US04 | Highest | As a user, I want to access the system from any modern browser with a good visual experience. | TBD | 01 | [RNF03](#RNF03) |
-| US05 | High | As a data analyst, I want to group regions by criticality level, so the commercial team can prioritize approaches in areas with the highest product application potential. | TBD | 02 | [RF05](#RF05) |
 | US06 | High | As a commercial analyst, I want to calculate the physical TAM for sensor installation, to size the maximum universe of monitorable points in Brazil. | TBD | 02 | [RF04](#RF04) |
 | US07 | High | As a data analyst, I want a ranking of regions by energy losses, to identify the most critical areas and support technical and commercial decisions. | TBD | 02 | [RF06](#RF06) |
 | US08 | High | As an administrator, I want to register and manage users with distinct profiles, to control access to features according to each user's role. | TBD | 02 | [RF07](#RF07) |
@@ -90,8 +82,6 @@ The project's objective is to develop a platform that processes and analyzes dat
 | US11 | Medium | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | TBD | 03 | [RF09](#RF09) |
 | US12 | Medium | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | TBD | 03 | [RF07](#RF07), [RF10](#RF10) |
 | US13 | Medium | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | TBD | 03 | [RNF05](#RNF05) |
-
-</details>
 
 ---
 

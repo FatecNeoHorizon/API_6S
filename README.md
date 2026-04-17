@@ -15,8 +15,7 @@
   <a href="#team-members">👥 Team Members</a> •
   <a href="#technologies">🛠️ Technologies</a> •
   <a href="#process-standards">📁 Process Standards</a> •
-  <a href="#technical-documentation">📖 Technical Documentation</a> •
-  <a href="#burndown">📈 Burndown</a>
+  <a href="#technical-documentation">📖 Technical Documentation</a>
 </p>
 
 ---
@@ -102,29 +101,12 @@ The project's objective is to develop a platform that processes and analyzes dat
 <summary><b>Sprint 1</b></summary>
 
 [View Sprint 1 documentation](docs/SPRINT1.md)
-
-### 📹 Vídeo demonstrativo:
-
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=w10nwgCj9kc">
-    <img src="https://img.youtube.com/vi/w10nwgCj9kc/maxresdefault.jpg" alt="Vídeo demonstrativo - Clique para assistir" width="600">
-  </a>
-</div>
-
-### 📈 Sprint 1 Evolution (Burndown) 
-<img src="burndown/src/main/resources/static/sprint-1.png">
 </details>
 
 <details>
 <summary><b>Sprint 2</b></summary>
 
 [View Sprint 2 documentation](docs/SPRINT2.md)
-
-### 📈 Sprint 2 Evolution (Burndown) <a id="burndown"></a>
-
-<img src="burndown/src/main/resources/static/burndown.png?v=e528788f8f984fb8ab09a89f6f61fc1c2a432a9f">
-
-For the full guide on local usage, execution and CI, see: [Burndown Documentation](./burndown/README.md)
 </details>
 
 <details>
@@ -138,7 +120,7 @@ For the full guide on local usage, execution and CI, see: [Burndown Documentatio
 ## 📅 Schedule <a id="schedule"></a>
 
 | Sprint | Name | Start Date | End Date | Status |
-|:---:|:---|:---:|:---:|:---:|
+|:---:|:---:|:---:|:---:|:---:|
 | --- | KickOff                   | Mar 02 | Mar 06 | Ok |
 | --- | Planning                  | Mar 09 | Mar 13 | Ok |
 |  1  | Sprint 1                  | Mar 16 | Apr 05 | Ok |

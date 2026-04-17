@@ -8,7 +8,7 @@ services:
       - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "5432:5432"
     volumes:
@@ -16,7 +16,7 @@ services:
     networks:
       - db_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,12 +28,9 @@ services:
       - frontend
       - full
     command: migrate
-    environment:
-      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      FLYWAY_USER: ${POSTGRES_USER}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
     env_file:
-      - .env
+      - envs/.env.postgres.${APP_ENV:-dev}
+      - envs/.env.flyway.${APP_ENV:-dev}
     volumes:
       - ./database/migrations:/flyway/sql
     networks:
@@ -51,9 +48,8 @@ services:
       - full
       - tools
     restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    env_file:
+      - envs/.env.mongo.${APP_ENV:-dev}
     ports:
       - "27017:27017"
     volumes:
@@ -66,9 +62,9 @@ services:
           "CMD",
           "mongosh",
           "--username",
-          "${MONGO_INITDB_ROOT_USERNAME}",
+          "$${MONGO_INITDB_ROOT_USERNAME}",
           "--password",
-          "${MONGO_INITDB_ROOT_PASSWORD}",
+          "$${MONGO_INITDB_ROOT_PASSWORD}",
           "--eval",
           "db.adminCommand('ping')",
         ]
@@ -84,11 +80,8 @@ services:
     restart: always
     ports:
       - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo_db:27017/
-      ME_CONFIG_BASICAUTH: false
+    env_file:
+      - envs/.env.mongo.${APP_ENV:-dev}
     networks:
       - app_network
     depends_on:
@@ -105,7 +98,7 @@ services:
       - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.backend.${APP_ENV:-dev}
     ports:
       - "8000:8000"
     volumes:
@@ -114,8 +107,6 @@ services:
     networks:
       - db_network
       - app_network
-    environment:
-      - CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,7 +125,7 @@ services:
       - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.frontend.${APP_ENV:-dev}
     ports:
       - "5173:5173"
     volumes:

@@ -1,14 +1,14 @@
-from src.etl.database.connection import get_db
-from src.etl.database.collections.at_network_segments import setup_at_network_segments
-from src.etl.database.collections.consumer_units import setup_consumer_units
-from src.etl.database.collections.distribution_indices import setup_distribution_indices
-from src.etl.database.collections.distribution_transformers import setup_distribution_transformers
-from src.etl.database.collections.domain_indicators import setup_domain_indicators
-from src.etl.database.collections.energy_losses_tariff import setup_energy_losses_tariff
-from src.etl.database.collections.load_history import setup_load_history
-from src.etl.database.collections.mt_network_segments import setup_mt_network_segments
-from src.etl.database.collections.municipalities import setup_municipalities
-from src.etl.database.collections.substations import setup_substations
+from src.database.connection import get_db
+from src.database.collections.at_network_segments import setup_at_network_segments
+from src.database.collections.consumer_units import setup_consumer_units
+from src.database.collections.distribution_indices import setup_distribution_indices
+from src.database.collections.distribution_transformers import setup_distribution_transformers
+from src.database.collections.domain_indicators import setup_domain_indicators
+from src.database.collections.energy_losses_tariff import setup_energy_losses_tariff
+from src.database.collections.load_history import setup_load_history
+from src.database.collections.mt_network_segments import setup_mt_network_segments
+from src.database.collections.municipalities import setup_municipalities
+from src.database.collections.substations import setup_substations
 
 COLLECTION_SETUPS = [
     ("at_network_segments",    setup_at_network_segments),

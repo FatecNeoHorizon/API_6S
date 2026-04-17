@@ -97,6 +97,7 @@ services:
       - app_network
     environment:
       - CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
+       - MONGO_DOCKER_HOST=mongo 
     depends_on:
       postgres:
         condition: service_started

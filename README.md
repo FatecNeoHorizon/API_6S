@@ -217,11 +217,3 @@ This solution consists of a main application and a support module for tracking p
 | [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |
-
----
-
-## 📈 Project Evolution (Burndown) <a id="burndown"></a>
-
-<img src="burndown/src/main/resources/static/burndown.png?v=e528788f8f984fb8ab09a89f6f61fc1c2a432a9f">
-
-For the full guide on local usage, execution and CI, see: [Burndown Documentation](./burndown/README.md)

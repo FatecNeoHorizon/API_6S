@@ -121,6 +121,12 @@ The project's objective is to develop a platform that processes and analyzes dat
 ### Sprint 2
 [View Sprint 2 documentation](docs/SPRINT2.md)
 
+### 📈 Sprint 2 Evolution (Burndown) <a id="burndown"></a>
+
+<img src="burndown/src/main/resources/static/burndown.png?v=e528788f8f984fb8ab09a89f6f61fc1c2a432a9f">
+
+For the full guide on local usage, execution and CI, see: [Burndown Documentation](./burndown/README.md)
+
 ### Sprint 3
 [View Sprint 3 documentation](docs/SPRINT3.md)
 

@@ -11,7 +11,6 @@
   <a href="#requirements">📋 Requirements</a> •
   <a href="#product-backlog">📦 Product Backlog</a> •
   <a href="#sprint-backlog">🗓️ Sprint Backlog</a> •
-  <a href="#dor-dod">✅ DoR / DoD</a> •
   <a href="#schedule">📅 Schedule</a> •
   <a href="#team-members">👥 Team Members</a> •
   <a href="#technologies">🛠️ Technologies</a> •
@@ -103,7 +102,7 @@ The project's objective is to develop a platform that processes and analyzes dat
 <summary>Show Sprint Backlog</summary>
 
 ### Sprint 1
-[View Sprint 1 documentation](docs/SPRINT-1.md)
+[View Sprint 1 documentation](docs/SPRINT1.md)
 
 
 
@@ -120,55 +119,10 @@ The project's objective is to develop a platform that processes and analyzes dat
 <img src="burndown/src/main/resources/static/sprint-1.png">
 
 ### Sprint 2
-[View Sprint 2 documentation](docs/SPRINT-2.md)
+[View Sprint 2 documentation](docs/SPRINT2.md)
 
 ### Sprint 3
-[View Sprint 3 documentation](docs/SPRINT-3.md)
-
-</details>
-
----
-
-## ✅ Definition of Ready / Definition of Done <a id="dor-dod"></a>
-
-<details>
-<summary>Show DoR / DoD</summary>
-
-### Definition of Ready (DoR)
-
-*An issue is ready to enter the sprint when:*
-
-- Has a title in the format `[TYPE] - Clear description`
-- Has a type label defined (`type:feature`, `type:bug`, `type:hotfix`, etc.)
-- Is linked to at least one User Story (US01–US13)
-- Is linked to the related requirements (RF/RNF)
-- Has clear and measurable acceptance criteria
-- Has been estimated by the team
-- Has no unresolved blocking dependencies
-
-### Definition of Done (DoD)
-
-*An issue is done when:*
-
-**Development**
-- Code implemented and functional
-- Branch follows the pattern `type/number-description` (e.g. `feature/42-implement-jwt`)
-- All commits follow Conventional Commits with `#number` required in the footer
-- No commits rejected by the hook pending correction
-
-**Review**
-- Pull Request opened with `Closes #number` in the description
-- Code review approved by at least 1 team member
-- PR merged into `main` or `develop`
-- Issue closed automatically by the merge
-
-**Documentation**
-- Technical documentation updated if necessary
-
-**LGPD (when applicable)**
-- Sensitive data stored exclusively in PostgreSQL
-- Public data (BDGD) stored in MongoDB
-- No personal data exposed in logs or reports
+[View Sprint 3 documentation](docs/SPRINT3.md)
 
 </details>
 
@@ -178,16 +132,16 @@ The project's objective is to develop a platform that processes and analyzes dat
 
 | Sprint | Name | Start Date | End Date | Status |
 |:---:|:---|:---:|:---:|:---:|
-| --- | KickOff                   | 03/02 | 03/06 | Ok |
-| --- | Planning                  | 03/09 | 03/13 | Ok |
-|  1  | Sprint 1                  | 03/16 | 04/05 | Ok |
-|  2  | Sprint review / Planning  | 04/06 | 04/10 |    |
-|  3  | Sprint 2                  | 04/13 | 05/03 |    |
-|  4  | Sprint review / Planning  | 05/04 | 05/08 |    |
-|  5  | Sprint 3                  | 05/11 | 05/31 |    |
-|  6  | Sprint review             | 06/01 | 06/05 |    |
-|  7  | Solutions Fair            | 06/11 |       |    |
-|  8  | TG Presentations          | 06/15 | 06/19 |    |
+| --- | KickOff                   | Mar 02 | Mar 06 | Ok |
+| --- | Planning                  | Mar 09 | Mar 13 | Ok |
+|  1  | Sprint 1                  | Mar 16 | Apr 05 | Ok |
+|  2  | Sprint review / Planning  | Apr 06 | Apr 10 | Ok |
+|  3  | Sprint 2                  | Apr 13 | May 03 |    |
+|  4  | Sprint review / Planning  | May 04 | May 08 |    |
+|  5  | Sprint 3                  | May 11 | May 31 |    |
+|  6  | Sprint review             | Jun 01 | Jun 05 |    |
+|  7  | Solutions Fair            | Jun 11 |       |    |
+|  8  | TG Presentations          | Jun 15 | Jun 19 |    |
 
 ---
 
@@ -195,13 +149,14 @@ The project's objective is to develop a platform that processes and analyzes dat
 
 | *Name*                   | *Function*            | *LinkedIn*                                                  |
 |:------------------:|:-----------------:|:---------------------------------------:|
-| Vinicius Monteiro | Product Owner     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/viniciusvasm/ ) |
+| Ruth da Silva Mira | Product Owner     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/ruth-mira/) |
 | Cesar Pelogia | Scrum Master  | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/cesar-augusto-anselmo-pelogia-truyts-94a08a268/ ) |
 | Alexandre Jonas | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/alexandre-jonas-de-souza-fonseca-989920181/) |
 | Eliézer Lopes     | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/eli%C3%A9zer-lopes/) |
-| Lucas Henrique | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/lucashenriqueco/) |
 | Gabriel Souza | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/gabriel-alves-de-souza-5b7747267/) |
 | Gustavo Robert     | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/gustavo-robert/) |
+| Lucas Henrique | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/lucashenriqueco/) |
+| Vinicius Monteiro | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/viniciusvasm/ ) |
 | Vitor Morais       | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/vitor-faria-morais-330b19204/) |
 
 ---

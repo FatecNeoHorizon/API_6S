@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from apps.backend.src.etl.load.load_decfec import load_decfec
+from src.etl.load import load_decfec
 from src.control import distribution_indices_procedures
 
 router = APIRouter()

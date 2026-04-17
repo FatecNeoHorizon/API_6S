@@ -99,12 +99,9 @@ The project's objective is to develop a platform that processes and analyzes dat
 ## 🗓️ Sprint Backlog <a id="sprint-backlog"></a>
 
 <details>
-<summary>Show Sprint Backlog</summary>
+<summary><b>Sprint 1</b></summary>
 
-### Sprint 1
 [View Sprint 1 documentation](docs/SPRINT1.md)
-
-
 
 ### 📹 Vídeo demonstrativo:
 
@@ -114,11 +111,13 @@ The project's objective is to develop a platform that processes and analyzes dat
   </a>
 </div>
 
-
 ### 📈 Sprint 1 Evolution (Burndown) 
 <img src="burndown/src/main/resources/static/sprint-1.png">
+</details>
 
-### Sprint 2
+<details>
+<summary><b>Sprint 2</b></summary>
+
 [View Sprint 2 documentation](docs/SPRINT2.md)
 
 ### 📈 Sprint 2 Evolution (Burndown) <a id="burndown"></a>
@@ -126,10 +125,12 @@ The project's objective is to develop a platform that processes and analyzes dat
 <img src="burndown/src/main/resources/static/burndown.png?v=e528788f8f984fb8ab09a89f6f61fc1c2a432a9f">
 
 For the full guide on local usage, execution and CI, see: [Burndown Documentation](./burndown/README.md)
+</details>
 
-### Sprint 3
+<details>
+<summary><b>Sprint 3</b></summary>
+
 [View Sprint 3 documentation](docs/SPRINT3.md)
-
 </details>
 
 ---

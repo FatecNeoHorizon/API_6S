@@ -1,7 +1,7 @@
 from pymongo import ASCENDING, GEOSPHERE
 
-def setup_distribution_indices(db, collection):
-    if "distribution_indices"not in collections_exist:
+def setup_substations(db, collections_exist):
+    if "substations" not in collections_exist:
         db.create_collection(
             "substations",
             validator={

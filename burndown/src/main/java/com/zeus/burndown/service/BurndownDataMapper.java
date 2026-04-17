@@ -119,17 +119,7 @@ public class BurndownDataMapper {
                                     LocalDate end,
                                     List<ProjectItemNode> allIssues) {
 
-        LocalDate today = LocalDate.now();
-        LocalDate plotEnd;
-        if (today.isBefore(start)) {
-            plotEnd = start;
-        } else if (today.isAfter(end)) {
-            plotEnd = end;
-        } else {
-            plotEnd = today;
-        }
 
- 
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
                 LocalDate created = toLocalDate(node.getContent().getCreatedAt());
@@ -154,7 +144,7 @@ public class BurndownDataMapper {
      
         long dayIndex = 0;
 
-        for (LocalDate date = start; !date.isAfter(plotEnd); date = date.plusDays(1)) {
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
 
             final LocalDate currentDate = date;
             dates.add(currentDate);

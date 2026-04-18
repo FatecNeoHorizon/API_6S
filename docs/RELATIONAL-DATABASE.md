@@ -24,6 +24,8 @@ Flyway executes migrations in sequential order. The following order must be resp
 | `V006__synthetic_seed.sql` | Inserts fictional data for dev environment only |
 | `V007__rls_policies.sql` | Creates Row Level Security policies |
 
+| `V009__create_tb_password_reset.sql` | Creates `TB_PASSWORD_RESET` for single-use password reset tokens |
+
 ## Table Descriptions
 
 ### `TB_PROFILE`
@@ -73,6 +75,20 @@ Tracks active user sessions individually. Allows forced logout, active device li
 | `CREATED_AT` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() |
 | `UPDATED_AT` | TIMESTAMPTZ | NOT NULL, updated by trigger |
 | `DELETED_AT` | TIMESTAMPTZ | nullable |
+
+---
+
+### `TB_PASSWORD_RESET`
+Stores password reset requests using single-use tokens, with expiration control and traceability. The raw reset token is never stored in the database — only `TOKEN_HASH`, which contains the SHA-256 hash of the token.
+
+| Column | Type | Rules |
+|---|---|---|
+| `RESET_UUID` | UUID | PK, auto-generated |
+| `USER_UUID` | UUID | FK → TB_USER, NOT NULL |
+| `TOKEN_HASH` | VARCHAR(64) | NOT NULL, UNIQUE — stores the SHA-256 hash of the reset token, never the token itself |
+| `EXPIRES_AT` | TIMESTAMPTZ | NOT NULL |
+| `USED_AT` | TIMESTAMPTZ | nullable — filled when the token is consumed |
+| `CREATED_AT` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() |
 
 ---
 
@@ -177,7 +193,7 @@ ORDER BY CLAUSE_ID, CREATED_AT DESC;
 ### Roles
 | Role | Permissions |
 |---|---|
-| `app_role` | SELECT, INSERT, UPDATE on operational tables. INSERT only on log tables |
+| `app_role` | SELECT, INSERT, UPDATE on operational tables, including `TB_PASSWORD_RESET`. INSERT only on log tables |
 | `log_role` | INSERT only on `TB_LOG` and `TB_CONSENT_LOG` |
 | `dba_role` | ALL PRIVILEGES — for administration only, never used by the application |
 

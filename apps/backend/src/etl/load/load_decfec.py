@@ -5,7 +5,7 @@ import json
 import time
 
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 
 from src.config.parameters import get_mongo_settings, get_mongo_uri
 from src.etl.extract.extract_decfec import extract_decfec
@@ -67,14 +67,9 @@ def load_decfec(
     batch_version = batch_version or datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
     load_id = load_id or str(uuid4())
 
-    mongo_uri = get_mongo_uri()
     _, _, _, _, db_name = get_mongo_settings()
 
-    client = MongoClient(
-        mongo_uri,
-        serverSelectionTimeoutMS=120000,
-        socketTimeoutMS=120000,
-    )
+    client = get_client()
     db = client[db_name]
     collection = db["distribution_indices"]
     load_history = db["load_history"]

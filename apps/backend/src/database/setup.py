@@ -29,9 +29,6 @@ def setup():
 
     for collection_name, setup_fn in COLLECTION_SETUPS:
         if collection_name not in collections_exist:
-            setup_fn(db, collections_exist)
+            setup_fn(db)
 
     return db
-
-if __name__ == "__main__":
-    setup()

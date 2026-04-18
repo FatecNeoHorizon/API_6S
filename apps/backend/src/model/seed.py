@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from bson import ObjectId
 import os
-from src.etl.database import get_client
+from src.database import get_client
 
 def seed():
     client = get_client()

@@ -8,7 +8,7 @@ import pandas as pd
 from pymongo import MongoClient, UpdateOne
 
 from src.config.parameters import get_mongo_settings, get_mongo_uri
-from src.etl.extract_decfec import extract_decfec
+from src.etl.extract.extract_decfec import extract_decfec
 
 
 MANDATORY_FIELDS = [

@@ -1,6 +1,6 @@
 from src.model import distribution_indices_model
 from src.config.settings import Settings
-from src.etl.database import get_client
+from src.database.connection import get_client
 from src.utils.clean_filter import clean_filter, remove_operators_fields
 from typing import List, Optional
 from pydantic import TypeAdapter
@@ -30,7 +30,7 @@ class Distribution_indices_procedures():
         
         self.db = self.connection[_settings.mongo_db_name]
 
-    def insertOne():
+    def insertOne(self):
         pass
 
     def getAll(self, filter):

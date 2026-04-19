@@ -7,9 +7,9 @@ import time
 import pandas as pd
 from pymongo import UpdateOne
 
-from src.config.parameters import get_mongo_settings
-from src.etl.database import get_client
-from src.etl.extract_decfec import extract_decfec
+from src.config.settings import Settings
+from src.database.connection import get_client
+from src.etl.extract.extract_decfec import extract_decfec
 
 
 MANDATORY_FIELDS = [
@@ -19,6 +19,7 @@ MANDATORY_FIELDS = [
 ]
 MAX_REJECTION_LOGS_PER_CHUNK = 5
 
+settings = Settings()
 
 def _to_str(value) -> str | None:
     try:
@@ -68,7 +69,7 @@ def load_decfec(
     batch_version = batch_version or datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
     load_id = load_id or str(uuid4())
 
-    _, _, _, _, db_name = get_mongo_settings()
+    db_name = settings.mongo_db_name
 
     client = get_client()
     db = client[db_name]

@@ -29,10 +29,15 @@ ALLOWED_FILES = {
     },
     "gbd": {
         "extensions": [".zip"],
-        "mime_types": ["application/zip", "application/x-zip-compressed"],
+        "mime_types": ["application/zip", "application/x-zip-compressed","application/octet-stream"],
         "required": False,
     },
     "indicadores_continuidade": {
+        "extensions": [".csv"],
+        "mime_types": ["text/csv", "text/plain", "application/csv"],
+        "required": False,
+    },
+    "indicadores_continuidade_limite": {
         "extensions": [".csv"],
         "mime_types": ["text/csv", "text/plain", "application/csv"],
         "required": False,
@@ -109,7 +114,7 @@ async def validate_and_read(
         return None, error
     
     if file_key == "gbd":
-        if error := validate_gbd_content(await upload_file.read()):
+        if error := validate_gbd_content(file_bytes):  # ← usa file_bytes, não read() de novo
             return None, error
         
     logger.info(f"[file_validator] '{upload_file.filename}' validado com sucesso.")
@@ -136,7 +141,7 @@ async def validate_all_files(
     return validated, errors
 
 def validate_gbd_content(file_bytes: bytes) -> str | None:
-
+    logger.info(f"[validate_gbd_content] Tamanho: {len(file_bytes)} bytes")
     try:
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
             has_gdb = any(

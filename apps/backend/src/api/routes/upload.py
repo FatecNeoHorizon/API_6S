@@ -29,15 +29,16 @@ async def upload_files(
         "indicadores_continuidade_limite": indicadores_continuidade_limite,
     }
 
-    db = get_db()  # ← primeiro
+    db = get_db()
+    upload_id = generate_load_id()  # ← só para a pasta temp
 
-    async with managed_upload_dir() as upload_dir:
+    async with managed_upload_dir(upload_id) as upload_dir:
         paths, errors = await process_uploaded_zip(upload_dir, files)
 
         if errors:
             raise HTTPException(status_code=422, detail=errors)
 
-        load_ids = register_upload_start(db, paths)  # ← depois dos paths, sem load_ids como argumento
+        load_ids = register_upload_start(db, paths)
 
         background_tasks.add_task(run_etl_placeholder, db, load_ids, paths)
 

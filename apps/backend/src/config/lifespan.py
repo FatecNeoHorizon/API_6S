@@ -1,0 +1,39 @@
+from contextlib import asynccontextmanager
+import pymongo
+from fastapi import FastAPI
+from src.config.settings import Settings
+from src.database.connection import get_db
+from src.database.setup import setup
+from src.database import connection
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    
+    settings = Settings()
+    
+    mongo_client = pymongo.MongoClient(
+        settings.mongo_uri,
+        maxPoolSize=settings.mongo_max_pool_size,
+        serverSelectionTimeoutMS=settings.mongo_server_selection_timeout_ms,
+        connectTimeoutMS=settings.mongo_connect_timeout_ms,
+    )
+    
+    app.mongodb = mongo_client
+    connection._client = mongo_client
+    
+    setup()
+    
+    from src.model.seed import seed
+    seed()
+    
+    yield
+
+    connection._client = None
+
+    if hasattr(app, 'mongodb') and app.mongodb:
+        app.mongodb.close()
+        delattr(app, 'mongodb')
+    
+    # Clean up the get_db function reference
+    if hasattr(get_db, '_client'):
+        delattr(get_db, '_client')

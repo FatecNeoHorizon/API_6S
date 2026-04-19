@@ -1,9 +1,3 @@
-"""
-Centralized configuration using Pydantic Settings.
-Loads environment variables from .env.backend file in envs/ directory.
-Supports both MONGO_USER/MONGO_PASSWORD and MONGO_INITDB_ROOT_USERNAME/MONGO_INITDB_ROOT_PASSWORD.
-"""
-
 from pydantic_settings import BaseSettings
 from pydantic import Field, model_validator, ConfigDict
 from dotenv import load_dotenv
@@ -11,14 +5,10 @@ import os
 from pathlib import Path
 from typing import Optional
 
-
-# Load .env files at module import time (similar to parameters.py pattern)
 def _load_env_files():
     """Load .env files from envs/ directory based on APP_ENV."""
     app_env = os.getenv("APP_ENV", "dev")
 
-    # Search upwards for an "envs" directory instead of assuming fixed depth.
-    # This works both locally and inside containers.
     settings_file = Path(__file__).resolve()
     for parent in settings_file.parents:
         envs_dir = parent / "envs"
@@ -33,10 +23,7 @@ def _load_env_files():
                 load_dotenv(dotenv_path=str(env_file), override=False)
                 return
 
-
-# Load environment files on module import
 _load_env_files()
-
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -49,6 +36,8 @@ class Settings(BaseSettings):
 
     # MongoDB Configuration
     mongo_host: str = Field(default="mongo_db")
+    if mongo_host == "localhost":
+        mongo_host = os.getenv("MONGO_DOCKER_HOST", "mongo")
     mongo_port: int = Field(default=27017)
     mongo_user: str = Field(default="")
     mongo_password: str = Field(default="")

@@ -29,8 +29,7 @@ async def upload_files(
         "indicadores_continuidade_limite": indicadores_continuidade_limite,
     }
 
-    load_id = generate_load_id()
-    db = get_db()
+    db = get_db()  # ← primeiro
 
     async with managed_upload_dir() as upload_dir:
         paths, errors = await process_uploaded_zip(upload_dir, files)
@@ -38,14 +37,14 @@ async def upload_files(
         if errors:
             raise HTTPException(status_code=422, detail=errors)
 
-        await register_upload_start(db, load_id, paths)
+        load_ids = register_upload_start(db, paths)  # ← depois dos paths, sem load_ids como argumento
 
-        background_tasks.add_task(run_etl_placeholder, db, load_id, paths)
+        background_tasks.add_task(run_etl_placeholder, db, load_ids, paths)
 
-        logger.info(f"[upload] load_id {load_id} registrado. Arquivos: {list(paths.keys())}")
+        logger.info(f"[upload] load_ids {load_ids} registrados. Arquivos: {list(paths.keys())}")
 
         return {
-            "load_id": load_id,
             "status": "STARTED",
             "arquivos_recebidos": list(paths.keys()),
+            "load_ids": load_ids,
         }

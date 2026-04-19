@@ -1,5 +1,6 @@
-from src.etl.database import get_client
 from src.config.settings import Settings
+from src.database.connection import get_client
+from pymongo import MongoClient
 from src.model.network_structure_model import (
     NetworkSummary,
     NetworkAsset,

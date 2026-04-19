@@ -1,45 +1,39 @@
 import logging
 from pathlib import Path
 from fastapi import UploadFile
+from src.config.settings import Settings
 import magic
 import re
+import zipfile
+import io
 
 logger = logging.getLogger(__name__)
 
-MAX_FILE_SIZE_MB = 500
-MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+_settings = Settings()
+MAX_FILE_SIZE_BYTES = _settings.max_upload_size_mb * 1024 * 1024
 
 DYNAMIC_FILE_PATTERNS = {
     r"^indicadores_continuidade_\d{4}_\d{4}$": {
-        "extensions": ".csv",
+        "extensions": [".csv"],
         "mime_types": ["text/csv", "text/plain", "application/csv"],
     }
 }
 
 ALLOWED_FILES = {
     "energy_losses":{
-        "extensions": ".xlsx",
+        "extensions": [".xlsx"],
         "mime_types": [
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ],
         "required": False,
     },
     "gbd": {
-        "extensions": [".zip", ".rar", ".7z", ".gz", ".tar", ".bz2", ".z"],
-        "mime_types": [
-            "application/zip",
-            "application/x-rar-compressed",
-            "application/x-7z-compressed",
-            "application/gzip",
-            "application/x-tar",
-            "application/x-bzip2",
-            "application/x-compress"
-        ],
+        "extensions": [".zip"],
+        "mime_types": ["application/zip", "application/x-zip-compressed"],
         "required": False,
-
     },
     "indicadores_continuidade": {
-        "extensions": ".csv",
+        "extensions": [".csv"],
         "mime_types": ["text/csv", "text/plain", "application/csv"],
         "required": False,
     },
@@ -71,7 +65,7 @@ def validate_file_size(file_bytes: bytes, file_name: str) -> str | None:
     size = len(file_bytes)
     if size > MAX_FILE_SIZE_BYTES:
         return (
-            f"'{file_name}' excede o limite de {MAX_FILE_SIZE_MB}MB. "
+            f"'{file_name}' excede o limite de {_settings.max_upload_size_mb}MB. "
             f"Tamanho recebido: {size / (1024 * 1024):.2f}MB."
         )
     return None
@@ -114,6 +108,10 @@ async def validate_and_read(
     if error := validate_mime_type(file_bytes, file_key, upload_file.filename):
         return None, error
     
+    if file_key == "gbd":
+        if error := validate_gbd_content(await upload_file.read()):
+            return None, error
+        
     logger.info(f"[file_validator] '{upload_file.filename}' validado com sucesso.")
     return file_bytes, None
 
@@ -136,3 +134,17 @@ async def validate_all_files(
         logger.error("[file_validator] Nenhum arquivo recebido.")
 
     return validated, errors
+
+def validate_gbd_content(file_bytes: bytes) -> str | None:
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            has_gdb = any(
+                ".gdb/" in name or name.endswith(".gdb")
+                for name in zf.namelist()
+            )
+            if not has_gdb:
+                return "O arquivo 'gbd' não contém uma pasta .gdb válida."
+    except zipfile.BadZipFile:
+        return "O arquivo 'gbd' não é um ZIP válido."
+    return None

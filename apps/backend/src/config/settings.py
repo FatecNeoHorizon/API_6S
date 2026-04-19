@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # File Upload Settings
     max_upload_size_mb: int = Field(default=500)
+    tmp_upload_path: str = Field(default="tmp/uploads")
 
     # MongoDB Configuration
     mongo_host: str = Field(default="mongo_db")

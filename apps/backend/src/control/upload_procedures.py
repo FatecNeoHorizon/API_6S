@@ -4,6 +4,7 @@ import shutil
 import aiofiles
 from pathlib import Path
 from contextlib import asynccontextmanager
+from src.config.settings import Settings
 
 from fastapi import UploadFile
 import magic
@@ -11,13 +12,14 @@ import magic
 from src.utils.file_validator import validate_all_files
 from src.utils.unpacker import unpack_zip_file
 
+_settings = Settings()
+
 logger = logging.getLogger(__name__)
 
-UPLOAD_BASE_DIR = Path("tmp/uploads")
+UPLOAD_BASE_DIR = Path(_settings.tmp_upload_path)
 
-def create_upload_dir() -> Path:
-    upload_id = uuid.uuid4().hex
-    upload_dir = UPLOAD_BASE_DIR / upload_id
+def create_upload_dir(load_id: str) -> Path:
+    upload_dir = UPLOAD_BASE_DIR / load_id
     upload_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"[upload_procedures] Pasta temporária criada: {upload_dir}")
     return upload_dir
@@ -28,8 +30,8 @@ def cleanup_upload_dir(upload_dir: Path) -> None:
         logger.info(f"[upload_procedures] Pasta temporária removida: {upload_dir}")
 
 @asynccontextmanager
-async def managed_upload_dir():
-    upload_dir = create_upload_dir()
+async def managed_upload_dir(load_id: str):
+    upload_dir = create_upload_dir(load_id)
     try:
         yield upload_dir
     finally:
@@ -52,8 +54,8 @@ async def process_uploaded_zip(
     
     paths: dict[str, Path] = {}
 
-    for file_key, file_bytes in validated.items():
-        dest_path = upload_dir / f"{file_key}{_resolve_extension(file_key, file_bytes)}"
+    for file_key, (file_bytes, original_filename) in validated.items():
+        dest_path = upload_dir / original_filename
         await save_file(file_bytes, dest_path)
 
         if file_key == "gbd":

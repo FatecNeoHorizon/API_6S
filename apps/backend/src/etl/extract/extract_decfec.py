@@ -1,7 +1,7 @@
 from typing import Generator
 import pandas as pd
 from src.etl.get_decfec_file import get_filepath
-from src.etl.transform_decfec import transform_decfec
+from src.etl.transform.transform_decfec import transform_decfec
 
 FILTRO_INDICADORES = [
     'DEC', 'DEC1i', 'DEC1x', 'DECINC', 'DECIND', 'DECINE', 'DECINO',

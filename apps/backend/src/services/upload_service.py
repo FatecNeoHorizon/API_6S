@@ -43,38 +43,32 @@ def build_load_document(
         "error_message": None,
     }
 
-async def register_upload_start(
+def register_upload_start(
         db: Database,
-        load_id: str,
-        path: dict[str, Path],
-) -> list[str]:
-    
-    registered = []
-
-    for file_key, file_path in path.items():
+        paths: dict[str, Path],
+) -> dict[str, str]:
+    registered = {}
+    for file_key, file_path in paths.items():
+        load_id = generate_load_id()
         document = build_load_document(
             load_id=load_id,
             file_key=file_key,
             source_file=str(file_path)
         )
-        success = await insert_load_history(db, document)
+        success = insert_load_history(db, document)
         if success:
-            registered.append(COLLECTION_MAP.get(file_key, file_key))
+            registered[file_key] = load_id
         else:
             logger.error(f"[upload_service] Falha ao registrar load_history para '{file_key}'")
- 
     return registered
 
-async def run_etl_placeholder(
+def run_etl_placeholder(
         db: Database,
-        load_id: str,
+        load_ids: dict[str, str],
         paths: dict[str, Path],
 ) -> None:
-    
-    logger.info(f"[upload_service] ETL iniciado - load_id: {load_id}")
     for file_key, path in paths.items():
         logger.info(f"[upload_service] Pronto para extração: {file_key} → {path}")
-
-    update_load_history(db, load_id, "SUCCESS")
-    
-    logger.info(f"[upload_service] ETL placeholder concluído — load_id: {load_id}")
+        load_id = load_ids.get(file_key)
+        if load_id:
+            update_load_history(db, load_id, "SUCCESS")

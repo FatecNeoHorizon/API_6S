@@ -93,47 +93,48 @@ def validate_mime_type(file_bytes: bytes, file_key: str, filename: str) -> str |
 async def validate_and_read(
         upload_file: UploadFile | None,
         file_key: str
-) -> tuple[bytes | None, str | None]:
+) -> tuple[bytes | None, str | None, str | None]:
+    
     if upload_file is None:
-        return None, None
+        return None, None, None
     
     config = resolve_file_config(file_key)
 
     if config is None:
-        return None, f"'{file_key}': tipo de arquivo não reconhecido."
+        return None, None, f"'{file_key}': tipo de arquivo não reconhecido."
 
     if error := validate_extensions(upload_file.filename, file_key):
-        return None, error
+        return None, None, error
 
     file_bytes = await upload_file.read() 
 
     if error := validate_file_size(file_bytes, upload_file.filename):
-        return None, error
+        return None, None, error
     
     if error := validate_mime_type(file_bytes, file_key, upload_file.filename):
-        return None, error
+        return None, None, error
     
     if file_key == "gbd":
         if error := validate_gbd_content(file_bytes):  # ← usa file_bytes, não read() de novo
-            return None, error
+            return None, None, error
         
     logger.info(f"[file_validator] '{upload_file.filename}' validado com sucesso.")
-    return file_bytes, None
+    return file_bytes, upload_file.filename, None
 
 async def validate_all_files(
         files: dict[str, UploadFile | None],
 ) -> tuple[dict[str, bytes], list[str]]:
     
-    validated: dict[str, bytes] = {}
+    validated: dict[str, tuple[bytes, str]] = {}
     errors: list[str] = []
 
     for file_key, upload_file in files.items():
-        file_bytes, error = await validate_and_read(upload_file, file_key)
+        file_bytes, filename, error = await validate_and_read(upload_file, file_key)
         if error:
             errors.append(error)
         elif file_bytes is not None:
-            validated[file_key] = file_bytes
-    
+            validated[file_key] = (file_bytes, filename)
+
     if not validated and not errors:
         errors.append("Nenhum arquivo foi enviado. Envie ao menos um arquivo.")
         logger.error("[file_validator] Nenhum arquivo recebido.")

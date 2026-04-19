@@ -15,11 +15,11 @@ def unpack_zip_file(zip_path: Path, extract_to: Path) -> Path:
                 )
         zip_ref.extractall(extract_to)
 
-    zip_dirs = [dir for dir in extract_to.rglob("*.gbd") if dir.is_dir()]
+    zip_dirs = [dir for dir in extract_to.rglob("*.gdb") if dir.is_dir()]
     if not zip_dirs:
         raise HTTPException(
             status_code=422,
-            detail="O arquivo Zip não contém um diretório com extensão .gbd."
+            detail="O arquivo Zip não contém um diretório com extensão .gdb."
         )
     
     zip_path = zip_dirs[0]

@@ -113,21 +113,23 @@ export default function DashboardLayout() {
   };
 
   const validateAndAddFiles = useCallback((newFiles) => {
-    //const invalid = [];
+    const invalid = [];
     const valid = [];
 
     Array.from(newFiles).forEach((file) => {
       const ext = "." + file.name.split(".").pop().toLowerCase();
       if (allowedExtensions.includes(ext)) {
         valid.push({ file, status: "idle", progress: 0, error: null });
+      } else {
+        invalid.push(file.name);
       }
     });
 
-    // if (invalid.length > 0) {
-    //   toast.error(
-    //     `${invalid.length} arquivo(s) com extensão inválida: ${invalid.join(", ")}. Apenas .csv, .xlsx e .zip são permitidos.`,
-    //   );
-    // }
+    if (invalid.length > 0) {
+      toast.error(
+        `${invalid.length} arquivo(s) com extensão inválida: ${invalid.join(", ")}. Apenas .csv, .xlsx e .zip são permitidos.`,
+      );
+    }
 
     if (valid.length > 0) {
       setFileList((prev) => {

@@ -5,7 +5,11 @@ from pathlib import Path
 
 from pymongo.database import Database
 
-from src.repositories.load_history_repository import insert_load_history, update_load_history
+from src.repositories.load_history_repository import (
+    insert_load_history,
+    update_load_history,
+    get_load_history
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +18,8 @@ COLLECTION_MAP = {
     "gbd": "gbd",
     "indicadores_continuidade": "distribution_indices",
     "indicadores_continuidade_limite": "conj",
-}
- 
- 
+    }
+
 def generate_load_id() -> str:
     return uuid.uuid4().hex
 
@@ -25,7 +28,7 @@ def build_load_document(
         file_key: str,
         source_file: str | None = None,
         batch_version: str | None = None
-) -> dict:
+    ) -> dict:
     return {
         "load_id": load_id,
         "collection_name": COLLECTION_MAP.get(file_key, file_key),
@@ -46,7 +49,7 @@ def build_load_document(
 def register_upload_start(
         db: Database,
         paths: dict[str, Path],
-) -> dict[str, str]:
+    ) -> dict[str, str]:
     registered = {}
     for file_key, file_path in paths.items():
         load_id = generate_load_id()
@@ -66,9 +69,24 @@ def run_etl_placeholder(
         db: Database,
         load_ids: dict[str, str],
         paths: dict[str, Path],
-) -> None:
+    ) -> None:
     for file_key, path in paths.items():
         logger.info(f"[upload_service] Pronto para extração: {file_key} → {path}")
         load_id = load_ids.get(file_key)
         if load_id:
             update_load_history(db, load_id, "SUCCESS")
+
+def get_upload_status(db: Database, load_id: str) -> dict | None:
+    load_history = get_load_history(db, load_id)
+    if not load_history:
+        return None
+    
+    response = {
+        "load_id": load_id,
+        "status": load_history["status"],
+    }
+
+    if load_history["status"] == "ERROR":
+        response["error_message"] = load_history.get("error_message")
+    
+    return response

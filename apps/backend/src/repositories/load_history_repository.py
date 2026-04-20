@@ -22,7 +22,7 @@ def update_load_history(
         load_id: str,
         status: str,
         extra_fields: dict | None = None
-) -> bool:
+    ) -> bool:
     
     update = {
         "$set":{
@@ -42,3 +42,6 @@ def update_load_history(
     except PyMongoError as e:
         logger.error(f"[load_history_repository] Erro ao atualizar: {e}")
         return False
+
+def get_load_history(db: Database, load_id: str) -> dict | None:
+    return db[COLLECTION_NAME].find_one({"load_id": load_id})

@@ -14,3 +14,9 @@ GRANT SELECT, INSERT, UPDATE ON TABLE TB_POLICY_CLAUSE TO app_role;
 GRANT INSERT ON TABLE TB_CONSENT_LOG TO log_role;
 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dba_role;
+
+COMMENT ON COLUMN TB_USER.EMAIL_HASH IS
+'Deterministic SHA-256 email hash stored as 64-character hexadecimal text. Salt source: EMAIL_HASH_SALT environment variable. EMAIL is immutable, so no hash update flow is required.';
+
+COMMENT ON COLUMN TB_AUTH_ATTEMPT.EMAIL_HASH IS
+'Deterministic SHA-256 email hash stored as 64-character hexadecimal text for lookup and audit correlation. Salt source: EMAIL_HASH_SALT environment variable.';

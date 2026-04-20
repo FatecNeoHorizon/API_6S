@@ -18,16 +18,6 @@ INSERT INTO TB_AUTH_ATTEMPT (EMAIL_HASH, SOURCE_IP, SUCCESS, BLOCKED) VALUES
 ('$2b$12$E2k7pRn5xM1qL8tV4dZ9wS3yF6uJ0eB7aG4rT1nY8mQ5pL2xV9c', '192.168.1.5', FALSE, FALSE),
 ('$2b$12$M1x6qK9pT3vD7rL2nS8yF4wH0zJ5uB1eC6aG9rT3nY7mQ2pL8xV4', '192.168.1.6', FALSE, TRUE);
 
-INSERT INTO TB_LOG (USER_ID, ACTION, ENTITY, ENTITY_ID, SOURCE_IP, USER_AGENT, RESULT, DETAILS) VALUES 
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_active'), 'LOGIN', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_active')::VARCHAR, '192.168.1.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', 'SUCCESS', '{"message":"User admin_active logged in successfully."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'analyst_active'), 'LOGIN', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'analyst_active')::VARCHAR, '192.168.1.2', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15', 'SUCCESS', '{"message":"User analyst_active logged in successfully."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'manager_active'), 'LOGIN', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'manager_active')::VARCHAR, '192.168.1.3', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/123.0', 'SUCCESS', '{"message":"User manager_active logged in successfully."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_inactive'), 'AUTH_FAILURE', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_inactive')::VARCHAR, '192.168.1.4', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'FAILURE', '{"message":"Failed login attempt for user admin_inactive. Account is inactive."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'analyst_inactive'), 'AUTH_FAILURE', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'analyst_inactive')::VARCHAR, '192.168.1.5', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6)', 'FAILURE', '{"message":"Failed login attempt for user analyst_inactive. Account is inactive."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'manager_inactive'), 'AUTH_FAILURE', 'TB_USER', (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'manager_inactive')::VARCHAR, '192.168.1.6', 'Mozilla/5.0 (X11; Linux x86_64)', 'FAILURE', '{"message":"Failed login attempt for user manager_inactive. Account is inactive."}'::jsonb),
-(NULL, 'READ', 'TB_SESSION', gen_random_uuid()::VARCHAR, '127.0.0.1', 'SYSTEM', 'SUCCESS', '{"message":"System job read sessions for cleanup."}'::jsonb),
-((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_active'), 'LOGOUT', 'TB_SESSION', gen_random_uuid()::VARCHAR, '192.168.1.7', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'SUCCESS', '{"message":"User admin_active logged out successfully."}'::jsonb);
-
 INSERT INTO TB_CONSENT_LOG (USER_ID, CLAUSE_ID, ACTION, SOURCE_IP, CHANNEL) VALUES
 ((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_active'), (SELECT CLAUSE_UUID FROM TB_POLICY_CLAUSE WHERE CODE = 'DATA_COLLECTION'), 'CONSENT', '10.0.0.10', 'WEB'),
 ((SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'analyst_active'), (SELECT CLAUSE_UUID FROM TB_POLICY_CLAUSE WHERE CODE = 'MARKETING'), 'CONSENT', '10.0.0.11', 'MOBILE'),

@@ -42,13 +42,13 @@ Stores user profiles for role-based access control (RBAC). Each user is assigned
 ---
 
 ### `TB_USER`
-Stores system users. Email is stored in two fields — one hashed for lookup, one encrypted for storage — following LGPD data minimization principles.
+Stores system users. Email is stored in two fields — one hashed with deterministic SHA-256 using a fixed salt from the `EMAIL_HASH_SALT` environment variable for lookup, and one encrypted for storage — following LGPD data minimization principles. The email field is immutable, so no hash update flow is required.
 
 | Column | Type | Rules |
 |---|---|---|
 | `USER_UUID` | UUID | PK, auto-generated |
 | `USERNAME` | VARCHAR(255) | NOT NULL, UNIQUE |
-| `EMAIL_HASH` | VARCHAR(255) | NOT NULL, UNIQUE — used for lookup |
+| `EMAIL_HASH` | VARCHAR(255) | NOT NULL, UNIQUE — deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup |
 | `EMAIL_ENC` | VARCHAR(255) | NOT NULL — encrypted value |
 | `PASSWORD_HASH` | VARCHAR(255) | NOT NULL — Argon2id |
 | `PROFILE_ID` | UUID | FK → TB_PROFILE |
@@ -82,7 +82,7 @@ Records every authentication attempt. Does not have a FK to `TB_USER` because th
 | Column | Type | Rules |
 |---|---|---|
 | `ATTEMPT_UUID` | UUID | PK, auto-generated |
-| `EMAIL_HASH` | VARCHAR(255) | NOT NULL — no UNIQUE, multiple attempts allowed |
+| `EMAIL_HASH` | VARCHAR(255) | NOT NULL — deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`; no UNIQUE, multiple attempts allowed |
 | `SOURCE_IP` | VARCHAR(255) | NOT NULL, masked |
 | `SUCCESS` | BOOLEAN | NOT NULL |
 | `BLOCKED` | BOOLEAN | NOT NULL, DEFAULT false |

@@ -2,7 +2,7 @@
 
 Run the following docker command on the project's root directory (API_6S):
 
-'docker compose up --build'
+'docker compose --profile backend up --build'
 
 Then open your browser and access the following URL for swagger:
 

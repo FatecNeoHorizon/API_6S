@@ -75,6 +75,8 @@ Dedicated to the **ETL (Extract, Transform, Load)** lifecycle for large datasets
 | Pandas | latest | Data processing for ETL flows |
 | Python | 3.11 | Base programming language |
 
+---
+
 ## 🔄 Lifecycle & Workflow
 
 The application follows a structured lifespan routine upon startup:
@@ -83,6 +85,8 @@ The application follows a structured lifespan routine upon startup:
 2. **Schema Setup**: Initializes collections and performs necessary validations
 3. **Data Seeding**: Runs seed.py to ensure core indicators and parameters are present
 4. **Route Registration**: Dynamically loads API endpoints
+
+---
 
 ## 🐳 Docker Configuration
 
@@ -93,6 +97,8 @@ The application follows a structured lifespan routine upon startup:
 | Exposed Port | `8000` |
 | Execution Command | `fastapi dev` (Optimized for development) |
 
+---
+
 ## 📊 Database Context (MongoDB)
 
 The repository manages specific collections for energy grid infrastructure and performance indicators:
@@ -100,6 +106,8 @@ The repository manages specific collections for energy grid infrastructure and p
 - **Network Structure**: `substations`, `distribution_transformers`, `at_network_segments`
 - **Indicators**: `distribution_indices` (DEC/FEC), `energy_losses_tariff`
 - **Consumer Data**: `consumer_units_pj`, `load_history`
+
+---
 
 ## 🚀 Available Scripts
 
@@ -109,6 +117,81 @@ The repository manages specific collections for energy grid infrastructure and p
 | `npm run test` | Executes the test suite using pytest |
 | `npm run build` | Placeholder for CI/CD pipeline checks |
 
+## 🔌 API Endpoint Documentation (Developer Reference)
+
+This section documents backend API endpoints for developers, including upload processing flow, validation rules, temporary storage behavior, and load tracking.
+
+### Upload Endpoints (`/upload`)
+
+- `POST /upload/` (status `202 Accepted`)
+    - Receives multipart files and starts asynchronous ETL processing.
+    - Accepted form fields:
+        - `energy_losses` (`.xlsx`)
+        - `gbd` (`.zip`, expected to contain a `.gdb` directory)
+        - `indicadores_continuidade` (`.csv`)
+        - `indicadores_continuidade_limite` (`.csv`)
+    - Response payload:
+        - `status`: upload execution state initialization (`STARTED`)
+        - `arquivos_recebidos`: list of successfully validated file keys
+        - `load_ids`: dictionary mapping `file_key -> load_id`
+
+- `GET /upload/status/{load_id}`
+    - Returns load execution status from `load_history`.
+    - Returns `404` when `load_id` does not exist.
+    - When status is `ERROR`, includes `error_message`.
+
+### Processing Flow
+
+1. The route creates a temporary upload folder using a generated `upload_id`.
+2. Each provided file is validated and read in memory.
+3. Valid files are persisted to disk under `tmp/uploads/{upload_id}`.
+4. For `gbd`, ZIP content is extracted into a dedicated directory and the `.gdb` path is used for ETL input.
+5. A `load_history` document is created per accepted file (`file_key`).
+6. A background task is scheduled to execute ETL processing.
+
+### Validation Rules
+
+- Extension validation per file key.
+- MIME validation using content-based detection (`python-magic`), not only filename metadata.
+- File size validation with configurable limit:
+    - `max_upload_size_mb` (default: `500`)
+- Empty upload protection:
+    - If no file is sent, request is rejected.
+- Dynamic file key support:
+    - Pattern `^indicadores_continuidade_\d{4}_\d{4}$` is accepted as CSV input.
+
+### ZIP/GBD Security and Integrity
+
+- ZIP traversal protection:
+    - Rejects entries containing `..` or absolute paths during extraction.
+- GBD content integrity:
+    - Rejects ZIP files that do not include a directory with `.gdb` suffix.
+
+### Error Contract
+
+- Validation failures are aggregated and returned as HTTP `422` with a list in `detail`.
+- Typical validation errors include:
+    - Unsupported file type for `file_key`
+    - Invalid extension
+    - Invalid detected MIME type
+    - File size limit exceeded
+    - Invalid ZIP/GBD structure
+
+### Configuration Parameters
+
+Upload behavior is controlled by backend settings:
+
+- `max_upload_size_mb`: maximum accepted upload size per file
+- `tmp_upload_path`: base path for temporary upload folders
+
+### Operational Notes for Developers
+
+- The current asynchronous worker function is a placeholder and marks load status as `SUCCESS` after scheduling flow execution.
+- Load tracking is stored in `load_history`, enabling status polling independent of request lifecycle.
+- Upload temporary folders are managed by context manager and cleaned up automatically.
+
 ---
 
-*Last updated: 04/17/2026*
+
+
+*Last updated: 04/20/2026*

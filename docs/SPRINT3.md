@@ -9,16 +9,16 @@
 
 ## Sprint 3: Execution and Planning
 
-- **Estimated Team Capacity:** `TBD`
+- **Estimated Team Capacity:** `31`
 - **Sprint Goal:** Deliver user stories `US10: SAM Indicator`, `US11: Geographic Heatmap`, `US12: LGPD Transparency and Control`, and `US13: Automatic Recalculation`, consolidating the strategic, compliance and post-processing layer of the product.
 - **Sprint Forecast (Stretch goals - non-committed items):** No stretch goals defined for this sprint.
 
 | Id | Prioridade | Titulo | User Story | Estimativa | Sprint |
 | -- | ---------- | ------ | ---------- | ---------- | ------ |
-| US10 | Medium | SAM Indicator | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical and regulatory criteria. | TBD | 3 |
-| US11 | Medium | Geographic Heatmap | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | TBD | 3 |
-| US12 | Medium | LGPD Transparency and Control | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | TBD | 3 |
-| US13 | Medium | Automatic Recalculation | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | TBD | 3 |
+| US10 | Medium | SAM Indicator | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical and regulatory criteria. | 5 | 3 |
+| US11 | Medium | Geographic Heatmap | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | 13 | 3 |
+| US12 | Medium | LGPD Transparency and Control | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | 8 | 3 |
+| US13 | Low | Automatic Recalculation | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | 5 | 3 |
 
 ### Definition of Done (DoD)
 For a User Story to be considered **complete**, the following criteria must be met:

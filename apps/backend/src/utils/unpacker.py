@@ -1,27 +1,20 @@
 import zipfile
-import logging
+import io
 from pathlib import Path
-from fastapi import HTTPException
 
-logger = logging.getLogger(__name__)
+def unpack_zip_file(zip_path: Path, extract_dir: Path) -> Path:
+    # mantém para outros usos eventuais
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(extract_dir)
+    return _find_gdb(extract_dir)
 
-def unpack_zip_file(zip_path: Path, extract_to: Path) -> Path:
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        for member in zip_ref.namelist():
-            if ".." in member or member.startswith("/"):
-                raise HTTPException(
-                    status_code=422,
-                    detail="O arquivo Zip contém caminhos inválidos ou inseguros (possível path traversal)."
-                )
-        zip_ref.extractall(extract_to)
+def unpack_zip_from_bytes(file_bytes: bytes, extract_dir: Path) -> Path:
+    with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+        zf.extractall(extract_dir)
+    return _find_gdb(extract_dir)
 
-    zip_dirs = [dir for dir in extract_to.rglob("*.gdb") if dir.is_dir()]
-    if not zip_dirs:
-        raise HTTPException(
-            status_code=422,
-            detail="O arquivo Zip não contém um diretório com extensão .gdb."
-        )
-    
-    zip_path = zip_dirs[0]
-    logger.info(f"Arquivo Zip descompactado com sucesso: {zip_path}")
-    return zip_path
+def _find_gdb(extract_dir: Path) -> Path:
+    candidates = [p for p in extract_dir.rglob("*.gdb") if p.is_dir()]
+    if not candidates:
+        raise ValueError("Nenhuma pasta .gdb encontrada após extração.")
+    return candidates[0]

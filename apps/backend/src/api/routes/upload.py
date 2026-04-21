@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
-from src.control.upload_procedures import managed_upload_dir, process_uploaded_zip
+from src.control.upload_procedures import process_uploaded_zip
 from src.database.connection import get_db
 from src.services.upload_service import (
     generate_load_id,
@@ -19,13 +19,13 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 async def upload_files(
     background_tasks: BackgroundTasks,
     energy_losses: UploadFile | None = File(default=None),
-    gbd: UploadFile | None = File(default=None),
+    gdb: UploadFile | None = File(default=None),
     indicadores_continuidade: UploadFile | None = File(default=None),
     indicadores_continuidade_limite: UploadFile | None = File(default=None),
     ):
     files = {
         "energy_losses": energy_losses,
-        "gbd": gbd,
+        "gdb": gdb,
         "indicadores_continuidade": indicadores_continuidade,
         "indicadores_continuidade_limite": indicadores_continuidade_limite,
     }

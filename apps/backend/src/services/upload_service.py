@@ -11,11 +11,13 @@ from src.repositories.load_history_repository import (
     get_load_history
     )
 
+from src.control.upload_procedures import cleanup_upload_dir
+
 logger = logging.getLogger(__name__)
 
 COLLECTION_MAP = {
     "energy_losses": "losses",
-    "gbd": "gbd",
+    "gdb": "gdb",
     "indicadores_continuidade": "distribution_indices",
     "indicadores_continuidade_limite": "conj",
     }
@@ -75,6 +77,17 @@ def run_etl_placeholder(
         load_id = load_ids.get(file_key)
         if load_id:
             update_load_history(db, load_id, "SUCCESS")
+
+def run_etl_and_cleanup(
+        db: Database,
+        load_ids: dict[str, str],
+        paths: dict[str, Path],
+        upload_dir: Path,
+    ) -> None:
+    try:
+        run_etl_placeholder(db, load_ids, paths)
+    finally:
+        cleanup_upload_dir(upload_dir)
 
 def get_upload_status(db: Database, load_id: str) -> dict | None:
     load_history = get_load_history(db, load_id)

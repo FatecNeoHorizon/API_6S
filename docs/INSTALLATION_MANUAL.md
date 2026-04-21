@@ -5,7 +5,7 @@ Guide to prepare the environment, configure variables, and deploy the Zeus appli
 ## Contents
 
 - Prerequisites and component overview
-- `.env` file configuration and CSV data setup
+- segmented `.env` files configuration and CSV data setup
 - Docker installation steps
 - Validation and troubleshooting
 
@@ -36,6 +36,15 @@ The main installation method is via the `docker-compose.yml` file in the project
 | **backend** | FastAPI and ETL trigger | 8000 |
 | **frontend** | React/Vite application | 5173 |
 
+### 1.2 Compose Profiles
+
+| Profile | Services started | Use case |
+|---------|------------------|----------|
+| **backend** | `postgres`, `flyway`, `mongo`, `backend` | Backend and ETL development |
+| **frontend** | `postgres`, `flyway`, `mongo`, `backend`, `frontend` | UI development with complete backend stack |
+| **full** | All services | Full integration environment |
+| **tools** | `mongo`, `mongo-express` | MongoDB administration interface |
+
 ---
 
 ## 2. Prerequisites
@@ -56,86 +65,126 @@ After extracting the ZIP file, the project root must contain at least these dire
 - `database/`
 - `docs/`
 - `docker-compose.yml`
+- `envs/`
 
 The backend is located in `apps/backend` and the frontend in `apps/frontend`.
 
 ### 3.1 Data Folder
 
-The backend service mounts the local folder `./data` to `/app/data` inside the container. In `docker-compose.yml`, the `CSV_FILE_PATH` variable points to `/app/data/indicadores-continuidade-coletivos-2020-2029.csv`.
+The backend service mounts the local folder `./data` to `/app/data` inside the container. The `CSV_FILE_PATH` value must be set in `envs/.env.backend.{dev|prod}`.
 
 **Important:** Place the CSV file with this name inside the `data` folder at the project root before running the ETL.
 
 ---
 
-## 4. `.env` File Configuration
+## 4. Segmented `.env` File Configuration
 
-The ZIP file includes a `.env.example` file with necessary variables. The recommended practice is to create a `.env` file in the root, filling in the fields according to your environment.
+The project uses service-specific environment files in the repository root, with a version per environment (`dev` and `prod`) and a tracked template (`example`).
 
 > **⚠️ Security:** Do not include real credentials in public repositories.
 
-### 4.1 Main Variables
+### 4.1 Files by Service
+
+| Service | Dev file | Prod file | Tracked template |
+|-------|-----------|-----------|------------------|
+| **Backend (FastAPI)** | `envs/.env.backend.dev` | `envs/.env.backend.prod` | `envs/.env.backend.example` |
+| **Frontend (Vite)** | `envs/.env.frontend.dev` | `envs/.env.frontend.prod` | `envs/.env.frontend.example` |
+| **MongoDB** | `envs/.env.mongo.dev` | `envs/.env.mongo.prod` | `envs/.env.mongo.example` |
+| **PostgreSQL** | `envs/.env.postgres.dev` | `envs/.env.postgres.prod` | `envs/.env.postgres.example` |
+| **Flyway** | `envs/.env.flyway.dev` | `envs/.env.flyway.prod` | `envs/.env.flyway.example` |
+
+### 4.2 Main Variables
 
 | Block | Variables | Note |
 |-------|-----------|------|
 | **PostgreSQL** | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_HOST`, `POSTGRES_PORT` | Used by database and Flyway |
 | **MongoDB** | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB_NAME` | Used by MongoDB and backend |
-| **Application** | `FRONTEND_URL`, `BACKEND_URL` | Base URLs for service integration |
-| **Flyway** | `FLYWAY_URL`, `FLYWAY_USER`, `FLYWAY_PASSWORD` | PostgreSQL migrations |
+| **Backend application** | `APP_ENV`, `FRONTEND_URL`, `BACKEND_URL`, `CSV_FILE_PATH`, `EMAIL_HASH_SALT` | `EMAIL_HASH_SALT` is required for deterministic SHA-256 email hashing |
+| **Flyway** | `FLYWAY_URL`, `FLYWAY_USER`, `FLYWAY_PASSWORD`, `FLYWAY_PLACEHOLDERS_seed_synthetic_data` | PostgreSQL migrations and control of synthetic dev seed |
 
-### 4.2 Fill-in Example
+### 4.3 Fill-in Example
 
-Below is an illustrative example of value composition. Adjust the username, password, and database names according to your environment:
+Below is an illustrative `dev` setup. Adjust usernames, passwords, hosts and database names according to your environment:
 
-```env
-POSTGRES_USER=zeus_user
-POSTGRES_PASSWORD=secure_password
-POSTGRES_DB=zeus
+In `envs/.env.postgres.dev`:
+
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=password
+POSTGRES_DB=tecsys
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 
+In `envs/.env.mongo.dev`:
+
 MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=secure_password
-MONGO_HOST=mongo_db
+MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_HOST=mongo
 MONGO_PORT=27017
 MONGO_USER=admin
-MONGO_PASSWORD=secure_password
-MONGO_DB_NAME=zeus
+MONGO_PASSWORD=password
+MONGO_DB_NAME=tecsys
 
-FRONTEND_URL=http://localhost:5173
+In `envs/.env.backend.dev`:
+
+APP_ENV=dev
 BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:5173
+CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
+EMAIL_HASH_SALT=dev-fixed-salt-change-me
+MONGO_MAX_POOL_SIZE=10
+MONGO_SERVER_SELECTION_TIMEOUT_MS=120000
+MONGO_CONNECT_TIMEOUT_MS=10000
 
-FLYWAY_URL=jdbc:postgresql://postgres:5432/zeus
-```
+In `envs/.env.frontend.dev`:
 
-> **Frontend Note:** The frontend already has its own file in `apps/frontend/.env` with `VITE_API_URL=http://localhost:8000`. In a standard local Docker installation, this value is compatible with the API exposed on port 8000.
+VITE_API_URL=http://localhost:8000
+
+In `envs/.env.flyway.dev`:
+
+FLYWAY_URL=jdbc:postgresql://postgres:5432/tecsys
+FLYWAY_USER=admin
+FLYWAY_PASSWORD=password
+FLYWAY_PLACEHOLDERS_seed_synthetic_data=true
+
+> **Environment selection note:** Docker Compose selects files with `APP_ENV` (`dev` by default), e.g. `envs/.env.backend.${APP_ENV:-dev}`.
 
 ---
 
 ## 5. Installation with Docker Compose
 
-This is the main installation flow identified in the project. Execute all commands from the `API_6S` root directory.
+### 5.1 Standard Flow
 
-### Steps
-
-1. Open a terminal in the project root folder
-2. Ensure the `.env` file has been created and saved
-3. Ensure the `data` folder exists and, if necessary, place the CSV indicators file in it
-4. Execute:
+1. Review the service-specific environment files for the target environment
+2. Ensure the `data` folder exists and, if necessary, place the CSV indicators file in it
+3. Execute:
    ```bash
-   docker compose up --build
+   docker compose --profile full up --build
    ```
-5. Wait for image creation, PostgreSQL and MongoDB startup, and Flyway migration execution
-6. After completion, validate the services at the URLs mentioned in the next section
+4. Wait for image creation, PostgreSQL and MongoDB startup, and Flyway migration execution
+5. After completion, validate the services at the URLs mentioned in the next section
 
-### 5.1 What Happens During Startup
+### 5.2 What Happens During Startup
 
-Compose executes the following sequence:
+Compose executes the following sequence (profile `full`):
 
 1. Starts PostgreSQL and waits for the healthcheck
 2. Executes SQL migrations via Flyway
-3. Starts MongoDB and Mongo Express
-4. Creates the backend container with FastAPI/Uvicorn
+3. Starts MongoDB
+4. Creates the backend container with FastAPI/Uvicorn only after PostgreSQL and MongoDB are healthy, and Flyway has completed successfully
 5. Starts the Vite frontend
+
+To run only part of the stack:
+
+```bash
+# Backend focused flow
+docker compose --profile backend up --build
+
+# Frontend focused flow
+docker compose --profile frontend up --build
+
+# Mongo Express only
+docker compose --profile tools up
+```
 
 The backend mounts the data folder and is ready to process the CSV via endpoint.
 
@@ -151,17 +200,17 @@ Once the containers are active, use the table below to verify that the installat
 | Backend | `http://localhost:8000` | Simple JSON response from root route |
 | Swagger | `http://localhost:8000/docs` | FastAPI automatic documentation |
 | Mongo Express | `http://localhost:8081` | MongoDB web panel |
-| Containers | `docker compose ps` | All services with `running`/`healthy` status |
+| Containers | `docker compose --profile full ps` | Services with `running`/`healthy` status for the selected profile |
 
-### 6.1 ETL Indicators Execution
+### 6.1 Relational Validation
 
-With the correct CSV in the `data` folder, access the `/process-decfec` endpoint via browser, Swagger, or a tool like `curl`:
+To confirm the relational structure after startup, check:
 
-```bash
-GET http://localhost:8000/process-decfec
-```
-
-The backend calls `load_decfec.py`, filters DEC/FEC indicators, applies the transformation step, and saves the documents in the `distribution_indices` collection of MongoDB.
+- `TB_PASSWORD_RESET` exists
+- `ANONYMIZED_AT` exists in `TB_USER`
+- `EMAIL_HASH` is `VARCHAR(64)` in `TB_USER` and `TB_AUTH_ATTEMPT`
+- `V_PENDING_CONSENT` exists
+- `TB_POLICY_VERSION`, `TB_POLICY_CLAUSE`, and `TB_CONSENT_LOG` are append-only
 
 ---
 
@@ -181,22 +230,24 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 | Symptom | Likely Cause | Suggested Action |
 |-----------|-------------|-------------------|
 | Frontend doesn't load | Frontend container didn't start or port 5173 is occupied | Check logs with `docker compose logs frontend` and free the port |
-| Swagger unavailable | Backend didn't start or crashed due to connection error | Check backend logs and credentials in `.env` |
-| Migration fails | Wrong PostgreSQL parameters | Review `POSTGRES_*` and `FLYWAY_URL` |
+| Swagger unavailable | Backend didn't start or crashed due to connection error | Check backend logs and credentials in environment files |
+| Migration fails | Wrong PostgreSQL/Flyway parameters | Review `envs/.env.postgres.*` and `envs/.env.flyway.*` |
+| Synthetic seed should not run in production | Flyway placeholder still enabled | Set `FLYWAY_PLACEHOLDERS_seed_synthetic_data=false` in production |
+| Hash lookup behavior differs between environments | Missing or inconsistent `EMAIL_HASH_SALT` | Align `EMAIL_HASH_SALT` in the backend environment file |
 | CSV processing fails | File not found or name mismatch | Confirm file in `data` folder and `CSV_FILE_PATH` |
-| Mongo connection error | Incompatible MongoDB username/password | Review `MONGO_*` in `.env` |
+| Mongo connection error | Incompatible MongoDB username/password | Review `MONGO_*` in `envs/.env.mongo.*` and `envs/.env.backend.*` |
 
 ---
 
 ## 9. Final Installation Checklist
 
-- [ ] The `.env` file has been created and filled
-- [ ] The `docker compose up --build` command completed without critical errors
+- [ ] Service-specific files (`.env.*.dev` or `.env.*.prod`) have been created and filled
+- [ ] A profile-based command (for example `docker compose --profile full up --build`) completed without critical errors
 - [ ] Ports 5173, 8000, 8081, 5432, and 27017 are accessible
 - [ ] Backend Swagger opens correctly
-- [ ] The `/process-decfec` endpoint works when the CSV file is present
+- [ ] The relational schema contains the expected security and LGPD support fields
 - [ ] The frontend opens and allows navigation to the dashboard
 
 ---
 
-**Last updated:** April 5, 2026
+**Last updated:** April 20, 2026

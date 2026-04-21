@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.etl.load import load_decfec
 from src.control import distribution_indices_procedures
+from src.etl.extract.extract_limits import extract_limits
 
 router = APIRouter()
 
@@ -36,3 +37,7 @@ async def get_dec_fec(
         "year": {"$gte": year_min, "$lte": year_max},
     }
     return distribution_indices_procedures.Distribution_indices_procedures().getAll(filter_dict)
+
+@router.get("/test-limits-file-extraction")
+async def test_limits_file_extraction():
+    return extract_limits()

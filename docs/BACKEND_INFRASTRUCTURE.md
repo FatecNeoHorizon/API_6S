@@ -44,9 +44,9 @@ This layer acts as the **Entry Point** for the system, responsible for the HTTP 
 * **Data Transfer Objects (DTOs/Schemas):** Utilizes Pydantic for strict type validation and data serialization. This ensures that internal **Domain Entities** are never directly exposed to the client, preventing unintended side effects and over-posting.
 
 ### 2. Business Logic & Domain Procedures (`src/control/` & `src/services/`)
-The core of the application where the **Enterprise Rules** reside.
-* **Domain Procedures:** Contains specialized logic for power system calculations (e.g., DEC/FEC indices and energy loss algorithms). These are "pure" functions or procedures that operate on domain data.
-* **Application Services:** Acts as an orchestrator (Use Case layer). It coordinates the flow of data between the repositories and the logic procedures, managing the high-level application state.
+The core of the application where the **Enterprise Rules** reside. The separation is made as follows:
+* **Domain Procedures (`src/control/`)**: Contains the pure business logic and specialized algorithms, such as indicator calculations (DEC/FEC) and energy losses. These functions are unaware of the infrastructure (HTTP, database) and operate directly on domain data.
+* **Application Services (`src/services/`)**: Acts as the Use Cases layer. It orchestrates the data flow, coordinating actions between repositories (to fetch/save data) and domain procedures (to execute business logic).
 
 ### 3. Data Access & Persistence Abstraction (`src/repositories/`)
 Implements the **Repository Pattern** to decouple the business logic from the specific database implementation (MongoDB/PostgreSQL).
@@ -142,12 +142,12 @@ This section documents backend API endpoints for developers, including upload pr
 
 ### Processing Flow
 
-1. The route creates a temporary upload folder using a generated `upload_id`.
+1. **Temporary File Management**: To ensure system security and cleanliness, each upload operates within an isolated temporary directory (`tmp/uploads/{upload_id}`). This directory is created at the beginning of the process and **automatically destroyed** at the end, even in case of failures, through an asynchronous context manager.
 2. Each provided file is validated and read in memory.
-3. Valid files are persisted to disk under `tmp/uploads/{upload_id}`.
-4. For `gbd`, ZIP content is extracted into a dedicated directory and the `.gdb` path is used for ETL input.
+3. Valid files are persisted to disk inside the temporary folder.
+4. For `gbd`, ZIP content is extracted into a dedicated directory, and the `.gdb` path is used for ETL input.
 5. A `load_history` document is created per accepted file (`file_key`).
-6. A background task is scheduled to execute ETL processing.
+6. **Asynchronous Task Scheduling**: A background task is scheduled to execute ETL processing. This allows the API to return an immediate response to the client (`202 Accepted`) while the data processing occurs independently in a dedicated worker.
 
 ### Validation Rules
 

@@ -30,6 +30,16 @@
 
 <img src="../burndown/src/main/resources/static/sprint-1.png" alt="Sprint 1 burndown">
 
+### Definition of Ready (DoR)
+For a User Story to be ready to start in a sprint, the following criteria must be met:
+- Mandatory items already defined
+- It has a clear **title, description, and objective**.
+- **Acceptance criteria and business rules** are defined.
+- **Priority** has been established.
+- **Required data or system access** is available, or an alternative plan has been defined.
+- The **effort** has been estimated by the team.
+- **Supporting artifacts** have been provided (e.g., wireframes, mockups, diagrams).
+
 ### Definition of Done (DoD)
 For a User Story to be considered **complete**, the following criteria must be met:
 - The code has been written, locally tested, and is clean (following team standards).
@@ -40,13 +50,3 @@ For a User Story to be considered **complete**, the following criteria must be m
 - The interface complies with **usability principles**, providing clear and consistent navigation for the end user.
 - The task complies with **LGPD (data protection) principles**.
 - The functionality has been **tested and approved by the Product Owner (PO)**.
-
-### Definition of Ready (DoR)
-For a User Story to be ready to start in a sprint, the following criteria must be met:
-- Mandatory items already defined
-- It has a clear **title, description, and objective**.
-- **Acceptance criteria and business rules** are defined.
-- **Priority** has been established.
-- **Required data or system access** is available, or an alternative plan has been defined.
-- The **effort** has been estimated by the team.
-- **Supporting artifacts** have been provided (e.g., wireframes, mockups, diagrams).

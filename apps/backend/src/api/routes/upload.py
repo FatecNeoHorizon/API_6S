@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
-from src.control.upload_procedures import process_uploaded_zip
+from src.control.upload_procedures import process_uploaded_zip, create_upload_dir
 from src.database.connection import get_db
 from src.services.upload_service import (
     generate_load_id,
@@ -32,22 +32,22 @@ async def upload_files(
 
     db = get_db()
     upload_id = generate_load_id()  # ← só para a pasta temp
+    upload_dir = create_upload_dir(upload_id)
 
-    async with managed_upload_dir(upload_id) as upload_dir:
-        paths, errors = await process_uploaded_zip(upload_dir, files)
+    paths, errors = await process_uploaded_zip(upload_dir, files)
 
-        if errors:
-            raise HTTPException(status_code=422, detail=errors)
+    if errors:
+        raise HTTPException(status_code=422, detail=errors)
 
-        load_ids = register_upload_start(db, paths)
+    load_ids = register_upload_start(db, paths)
 
-        background_tasks.add_task(run_etl_placeholder, db, load_ids, paths)
+    background_tasks.add_task(run_etl_placeholder, db, load_ids, paths, upload_dir)
 
-        logger.info(f"[upload] load_ids {load_ids} registrados. Arquivos: {list(paths.keys())}")
+    logger.info(f"[upload] load_ids {load_ids} registrados. Arquivos: {list(paths.keys())}")
 
-        return {
-            "status": "STARTED",
-            "arquivos_recebidos": list(paths.keys()),
+    return {
+        "status": "STARTED",
+        "arquivos_recebidos": list(paths.keys()),
             "load_ids": load_ids,
         }
 

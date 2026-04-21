@@ -4,7 +4,6 @@ from pathlib import Path
 
 #The list returned can be retrieved with commands such as "data_dict[1]" or data_dict[1]['UF']
 #Only the 'DatGeracaoConjuntoDados' column won't be used
-
 def extract_limits():
     path_value = os.getenv("LIMITS_FILE_PATH")
     

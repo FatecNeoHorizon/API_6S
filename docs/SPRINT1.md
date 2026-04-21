@@ -9,14 +9,14 @@
 
 ## Sprint 1: Planning and Execution
 
-- **Estimated Team Capacity:** `TBD`
+- **Estimated Team Capacity:** `13`
 - **Sprint Goal:** Deliver user stories `US01: Network Structure Reports` and `US02: Quality Indicators Dashboard`, establishing the initial ETL pipeline and the first analytical indicators for the platform.
 - **Sprint Forecast (Stretch goals - non-committed items):** No stretch goals defined for this sprint.
 
 | Id | Prioridade | Titulo | User Story | Estimativa | Sprint |
 | -- | ---------- | ------ | ---------- | ---------- | ------ |
-| US01 | Highest | [Network Structure Reports](https://github.com/FatecNeoHorizon/API_6S/wiki/US01-%E2%80%94-Network-Structure-Reports-TO-DO) | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | TBD | 1 |
-| US02 | Highest | [Quality Indicators Dashboard](https://github.com/FatecNeoHorizon/API_6S/wiki/US02-%E2%80%94-Quality-Indicators-Dashboard-TO-DO) | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | TBD | 1 |
+| US01 | Highest | Network Structure Reports | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | 8 | 1 |
+| US02 | Highest | Quality Indicators Dashboard | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | 5 | 1 |
 
 ### Demonstration Video
 
@@ -30,6 +30,16 @@
 
 <img src="../burndown/src/main/resources/static/sprint-1.png" alt="Sprint 1 burndown">
 
+### Definition of Ready (DoR)
+For a User Story to be ready to start in a sprint, the following criteria must be met:
+- Mandatory items already defined
+- It has a clear **title, description, and objective**.
+- **Acceptance criteria and business rules** are defined.
+- **Priority** has been established.
+- **Required data or system access** is available, or an alternative plan has been defined.
+- The **effort** has been estimated by the team.
+- **Supporting artifacts** have been provided (e.g., wireframes, mockups, diagrams).
+
 ### Definition of Done (DoD)
 For a User Story to be considered **complete**, the following criteria must be met:
 - The code has been written, locally tested, and is clean (following team standards).
@@ -40,13 +50,3 @@ For a User Story to be considered **complete**, the following criteria must be m
 - The interface complies with **usability principles**, providing clear and consistent navigation for the end user.
 - The task complies with **LGPD (data protection) principles**.
 - The functionality has been **tested and approved by the Product Owner (PO)**.
-
-### Definition of Ready (DoR)
-For a User Story to be ready to start in a sprint, the following criteria must be met:
-- Mandatory items already defined
-- It has a clear **title, description, and objective**.
-- **Acceptance criteria and business rules** are defined.
-- **Priority** has been established.
-- **Required data or system access** is available, or an alternative plan has been defined.
-- The **effort** has been estimated by the team.
-- **Supporting artifacts** have been provided (e.g., wireframes, mockups, diagrams).

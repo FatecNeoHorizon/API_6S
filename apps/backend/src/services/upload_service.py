@@ -71,7 +71,16 @@ def run_etl_placeholder(
         db: Database,
         load_ids: dict[str, str],
         paths: dict[str, Path],
+        upload_dir: Path | None = None,
     ) -> None:
+    """
+    Placeholder for ETL execution.
+    When the actual ETL is implemented, add cleanup here:
+    
+    finally:
+        if upload_dir:
+            cleanup_upload_dir(upload_dir)
+    """
     for file_key, path in paths.items():
         logger.info(f"[upload_service] Pronto para extração: {file_key} → {path}")
         load_id = load_ids.get(file_key)

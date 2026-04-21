@@ -27,7 +27,7 @@ ALLOWED_FILES = {
             ],
         "required": False,
     },
-    "gbd": {
+    "gdb": {
         "extensions": [".zip"],
         "mime_types": ["application/zip", "application/x-zip-compressed","application/octet-stream"],
         "required": False,
@@ -114,8 +114,8 @@ async def validate_and_read(
     if error := validate_mime_type(file_bytes, file_key, upload_file.filename):
         return None, None, error
     
-    if file_key == "gbd":
-        if error := validate_gbd_content(file_bytes):  # ← usa file_bytes, não read() de novo
+    if file_key == "gdb":
+        if error := validate_gdb_content(file_bytes):  # ← usa file_bytes, não read() de novo
             return None, None, error
         
     logger.info(f"[file_validator] '{upload_file.filename}' validado com sucesso.")
@@ -141,8 +141,8 @@ async def validate_all_files(
 
     return validated, errors
 
-def validate_gbd_content(file_bytes: bytes) -> str | None:
-    logger.info(f"[validate_gbd_content] Tamanho: {len(file_bytes)} bytes")
+def validate_gdb_content(file_bytes: bytes) -> str | None:
+    logger.info(f"[validate_gdb_content] Tamanho: {len(file_bytes)} bytes")
     try:
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
             has_gdb = any(
@@ -150,7 +150,7 @@ def validate_gbd_content(file_bytes: bytes) -> str | None:
                 for name in zf.namelist()
             )
             if not has_gdb:
-                return "O arquivo 'gbd' não contém uma pasta .gdb válida."
+                return "O arquivo 'gdb' não contém uma pasta .gdb válida."
     except zipfile.BadZipFile:
-        return "O arquivo 'gbd' não é um ZIP válido."
+        return "O arquivo 'gdb' não é um ZIP válido."
     return None

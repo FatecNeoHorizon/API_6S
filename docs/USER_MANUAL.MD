@@ -135,7 +135,7 @@ GET http://localhost:8000/process-decfec
 ```
 
 The backend will:
-1. Read the file defined by `CSV_FILE_PATH`
+1. Read the file defined by `CSV_FILE_PATH` in `envs/.env.backend.{dev|prod}`
 2. Call the `load_decfec.py` routine
 3. Apply the transformation step
 4. Record valid entries in MongoDB

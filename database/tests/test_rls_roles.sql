@@ -121,7 +121,7 @@ INSERT INTO TB_USER (
 )
 VALUES (
     'admin_policy_test_user',
-    'admin_policy_test_hash',
+    '9f2a4c6d8e1b3f50728496a0b1c2d3e4f5a6b7c8d9e0f112233445566778899a',
     'ENCRYPTED::admin.policy.test@example.com',
     '$2b$12$AdminPolicyInsertTestHashValue123456789012345678901234',
     TRUE,
@@ -170,28 +170,23 @@ END $$;
 RESET ROLE;
 RESET app.current_user_id;
 
-\echo 'TEST 5: log_role can still insert into TB_LOG'
+
+\echo 'TEST 5: log_role can still insert into TB_CONSENT_LOG'
 SET ROLE log_role;
 
-INSERT INTO TB_LOG (
+INSERT INTO TB_CONSENT_LOG (
     USER_ID,
+    CLAUSE_ID,
     ACTION,
-    ENTITY,
-    ENTITY_ID,
     SOURCE_IP,
-    USER_AGENT,
-    RESULT,
-    DETAILS
+    CHANNEL
 )
 VALUES (
-    NULL,
-    'READ',
-    'TB_LOG',
-    'test-log-role',
+    (SELECT USER_UUID FROM TB_USER WHERE USERNAME = 'admin_active'),
+    (SELECT CLAUSE_UUID FROM TB_POLICY_CLAUSE WHERE CODE = 'DATA_COLLECTION'),
+    'CONSENT',
     '127.0.0.1',
-    'psql-test',
-    'SUCCESS',
-    '{"message":"log_role insert test"}'::jsonb
+    'psql-test'
 );
 
 RESET ROLE;

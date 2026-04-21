@@ -13,6 +13,8 @@ FILTRO_INDICADORES = [
     'FECXP', 'FECXPC', 'FECi', 'FECx', 'Fec1', 'Fec1r', 'Fecr',
 ]
 
+INDICATORS_FILTER_NEW = ['DEC', "FEC"]
+
 CHUNK_SIZE = 100_000
 
 def extract_decfec() -> Generator[tuple[pd.DataFrame, str], None, None]:
@@ -41,6 +43,7 @@ def extract_decfec_new():
     path = Path(path_value)
 
     df : pd.DataFrame = pd.read_csv(path, sep=";", encoding="latin-1")
+    df = df[df['SigIndicador'].isin(INDICATORS_FILTER_NEW)]
     df = df.drop(columns=['DatGeracaoConjuntoDados'])
     data_dict = df.to_dict(orient='records')
 

@@ -7,3 +7,7 @@ auto_mix_prep==0.2.0
 uvicorn
 psycopg2-binary
 pandas
+bcrypt
+cryptography
+pydantic[email]
+pytest

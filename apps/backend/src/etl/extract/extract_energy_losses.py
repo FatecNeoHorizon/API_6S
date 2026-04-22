@@ -6,7 +6,11 @@ from pathlib import Path
 #All columns of the excel file will be used
 def extract_losses():
 
-    path_value = os.getenv("LOSSES_FILE_PATH")
+    # path_value = os.getenv("LOSSES_FILE_PATH")
+    file_name = os.getenv("LOSSES_FILE_PATH")
+    search_folder = os.getenv("TMP_UPLOAD_PATH")
+
+    path_value = _find_file(file_name, search_folder)
     
     if not path_value:
         raise ValueError("LOSSES_FILE_PATH environment variable is not set.")
@@ -17,3 +21,9 @@ def extract_losses():
     data_dict = df.to_dict(orient='records')
 
     return data_dict
+
+def _find_file(file_name, search_folder):
+    for root, dirs, files in os.walk(search_folder):
+        if file_name in files:
+            return os.path.join(root, file_name)
+    return None

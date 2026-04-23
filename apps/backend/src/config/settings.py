@@ -21,13 +21,19 @@ def _load_env_files():
         if not envs_dir.exists():
             continue
 
+        loaded_any = False
         for env_file in (
             envs_dir / f".env.backend.{app_env}",
             envs_dir / ".env.backend",
+            envs_dir / f".env.postgres.{app_env}",
+            envs_dir / ".env.postgres",
         ):
             if env_file.exists():
                 load_dotenv(dotenv_path=str(env_file), override=False)
-                return
+                loaded_any = True
+
+        if loaded_any:
+            return
 
 _load_env_files()
 
@@ -38,7 +44,10 @@ class Settings(BaseSettings):
     app_env: str = Field(default="dev")
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
-    csv_file_path: str = Field(default="./data/")
+
+    # File Upload Settings
+    max_upload_size_mb: int = Field(default=500)
+    tmp_upload_path: str = Field(default="tmp/uploads")
 
     # PostgreSQL Configuration
     postgres_host: str = Field(default="postgres")
@@ -60,6 +69,18 @@ class Settings(BaseSettings):
     mongo_max_pool_size: int = Field(default=10)
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
+
+    # PostgreSQL Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="postgres")
+    postgres_password: str = Field(default="postgres")
+    postgres_db: str = Field(default="postgres")
+    postgres_sslmode: str = Field(default="prefer")
+
+    # User Security Configuration
+    email_hash_salt: str = Field(default="change-me")
+    email_encryption_key: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(
         case_sensitive=False,

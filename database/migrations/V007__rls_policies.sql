@@ -14,11 +14,11 @@ FOR SELECT
 USING (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 
@@ -28,11 +28,11 @@ FOR INSERT
 WITH CHECK (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 
@@ -42,21 +42,21 @@ FOR UPDATE
 USING (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 )
 WITH CHECK (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 
@@ -81,11 +81,11 @@ FOR SELECT
 USING (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 
@@ -95,11 +95,11 @@ FOR INSERT
 WITH CHECK (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 
@@ -109,21 +109,21 @@ FOR UPDATE
 USING (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 )
 WITH CHECK (
     EXISTS (
         SELECT 1
-        FROM TB_USER cu
-        JOIN TB_PROFILE cp
-          ON cp.PROFILE_UUID = cu.PROFILE_ID
-        WHERE cu.USER_UUID = current_setting('app.current_user_id')::UUID
-          AND cp.PROFILE_NAME = 'ADMIN'
+        FROM TB_USER auth_user
+        JOIN TB_PROFILE auth_profile
+          ON auth_profile.PROFILE_UUID = auth_user.PROFILE_ID
+        WHERE auth_user.USER_UUID = current_setting('app.current_user_id')::UUID
+          AND auth_profile.PROFILE_NAME = 'ADMIN'
     )
 );
 

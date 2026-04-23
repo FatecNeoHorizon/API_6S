@@ -64,10 +64,13 @@ Real data is never used outside production. The `V006__synthetic_seed.sql` migra
 | Field | Table | Protection |
 |---|---|---|
 | `EMAIL_ENC` | TB_USER | AES-256 encryption at application layer |
-| `EMAIL_HASH` | TB_USER | One-way hash for lookup without exposing value |
+| `EMAIL_HASH` | TB_USER |  Deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup without exposing or decrypting the email |
 | `PASSWORD_HASH` | TB_USER | Argon2id — never stored in plain text |
 | `SOURCE_IP` | TB_LOG, TB_SESSION, TB_AUTH_ATTEMPT, TB_CONSENT_LOG | Masked — only first 3 octets stored |
 | `DETAILS` | TB_LOG | Encrypted JSONB |
+| `TOKEN_HASH` | TB_PASSWORD_RESET | SHA-256 hash of the password reset token — the raw token is never stored |
+
+Password reset tokens are not stored in plain text. The database stores only `TOKEN_HASH`, which contains the SHA-256 hash of the issued token. This reduces exposure in case of database access while preserving the ability to validate single-use reset requests.
 
 ## Audit Trail
 

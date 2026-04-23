@@ -1,121 +1,108 @@
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List
 from uuid import UUID
-from psycopg2.extras import RealDictCursor
+
+from psycopg2.errors import ForeignKeyViolation, UniqueViolation
+
+from src.database.postgres_connection import get_postgres_connection
 
 
-class ProfileNotFoundError(Exception):
+class UserAlreadyExistsError(Exception):
     pass
 
 
-def create_user(conn, data: dict) -> dict:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        if data.get('profile_id') is None:
-            cur.execute("SELECT PROFILE_UUID FROM TB_PROFILE WHERE PROFILE_NAME = 'ANALYST'")
-            profile = cur.fetchone()
-            if profile is None:
-                raise ProfileNotFoundError("Perfil padrão 'ANALYST' não encontrado.")
-            data['profile_id'] = str(profile['profile_uuid'])
-        else:
-            cur.execute("SELECT 1 FROM TB_PROFILE WHERE PROFILE_UUID = %s", (str(data['profile_id']),))
-            if cur.fetchone() is None:
-                raise ProfileNotFoundError(f"Perfil com ID '{data['profile_id']}' não encontrado.")
-            data['profile_id'] = str(data['profile_id'])
-
-        query = """
-            INSERT INTO TB_USER (username, email_hash, email_enc, password_hash, profile_id)
-            VALUES (%(username)s, %(email_hash)s, %(email_enc)s, %(password_hash)s, %(profile_id)s)
-            RETURNING user_uuid, username, profile_id, active, created_at;
-        """
-        cur.execute(query, data)
-        new_user = cur.fetchone()
-        conn.commit()
-        return new_user
+class UserProfileNotFoundError(Exception):
+    pass
 
 
-def exists_by_username(conn, username: str, exclude_user_id: UUID = None) -> bool:
-    with conn.cursor() as cur:
-        if exclude_user_id:
-            cur.execute(
-                "SELECT 1 FROM TB_USER WHERE username = %s AND user_uuid != %s",
-                (username, str(exclude_user_id))
-            )
-        else:
-            cur.execute("SELECT 1 FROM TB_USER WHERE username = %s", (username,))
-        return cur.fetchone() is not None
+class UserPersistenceError(Exception):
+    pass
 
 
-def exists_by_email_hash(conn, email_hash: str, exclude_user_id: UUID = None) -> bool:
-    with conn.cursor() as cur:
-        if exclude_user_id:
-            cur.execute(
-                "SELECT 1 FROM TB_USER WHERE email_hash = %s AND user_uuid != %s",
-                (email_hash, str(exclude_user_id))
-            )
-        else:
-            cur.execute("SELECT 1 FROM TB_USER WHERE email_hash = %s", (email_hash,))
-        return cur.fetchone() is not None
+class ProfilePersistenceError(Exception):
+    pass
 
 
-def get_all_users(conn) -> list[dict]:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        query = """
-            SELECT user_uuid, username, profile_id, active, created_at 
-            FROM TB_USER 
-            WHERE deleted_at IS NULL
-            ORDER BY created_at DESC;
-        """
-        cur.execute(query)
-        return cur.fetchall()
+@dataclass
+class UserCreateResult:
+    user_uuid: UUID
+    username: str
+    profile_id: UUID
+    active: bool
+    created_at: datetime
 
 
-def get_user_by_id(conn, user_id: UUID) -> dict | None:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        query = """
-            SELECT user_uuid, username, profile_id, active, created_at 
-            FROM TB_USER 
-            WHERE user_uuid = %s AND deleted_at IS NULL;
-        """
-        cur.execute(query, (str(user_id),))
-        return cur.fetchone()
+@dataclass
+class ProfileResult:
+    profile_uuid: UUID
+    profile_name: str
 
 
-def update_user(conn, user_id: UUID, fields: dict) -> dict | None:
-    set_clauses = ", ".join(f"{key} = %({key})s" for key in fields)
-    query = f"""
-        UPDATE TB_USER
-        SET {set_clauses}, updated_at = NOW()
-        WHERE user_uuid = %(user_id)s AND deleted_at IS NULL
-        RETURNING user_uuid, username, profile_id, active, created_at;
-    """
-    params = {**fields, "user_id": str(user_id)}
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(query, params)
-        updated_user = cur.fetchone()
-        conn.commit()
-        return updated_user
-
-
-def delete_user(conn, user_id: UUID) -> bool:
+def create_user(
+    username: str,
+    email_hash: str,
+    email_enc: str,
+    password_hash: str,
+    profile_id: UUID,
+) -> UserCreateResult:
     query = """
-        UPDATE TB_USER
-        SET deleted_at = NOW()
-        WHERE user_uuid = %s AND deleted_at IS NULL;
+        INSERT INTO TB_USER (
+            USERNAME,
+            EMAIL_HASH,
+            EMAIL_ENC,
+            PASSWORD_HASH,
+            PROFILE_ID
+        )
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT
     """
-    with conn.cursor() as cur:
-        cur.execute(query, (str(user_id),))
-        affected = cur.rowcount
-        conn.commit()
-        return affected > 0
+
+    try:
+        with get_postgres_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (username, email_hash, email_enc, password_hash, str(profile_id)),
+                )
+                row = cursor.fetchone()
+            conn.commit()
+    except UniqueViolation as exc:
+        raise UserAlreadyExistsError("Username or email already registered.") from exc
+    except ForeignKeyViolation as exc:
+        raise UserProfileNotFoundError("Profile not found for the provided profile_id.") from exc
+    except Exception as exc:
+        raise UserPersistenceError("Failed to persist user into PostgreSQL.") from exc
+
+    if row is None:
+        raise UserPersistenceError("PostgreSQL did not return created user data.")
+
+    return UserCreateResult(
+        user_uuid=row[0],
+        username=row[1],
+        profile_id=row[2],
+        active=row[3],
+        created_at=row[4],
+    )
 
 
-def reactivate_user(conn, user_id: UUID) -> bool:
+def list_profiles() -> List[ProfileResult]:
     query = """
-        UPDATE TB_USER
-        SET deleted_at = NULL
-        WHERE user_uuid = %s AND deleted_at IS NOT NULL;
+        SELECT PROFILE_UUID, PROFILE_NAME
+        FROM TB_PROFILE
+        WHERE DELETED_AT IS NULL
+        ORDER BY PROFILE_NAME ASC
     """
-    with conn.cursor() as cur:
-        cur.execute(query, (str(user_id),))
-        affected = cur.rowcount
-        conn.commit()
-        return affected > 0
+
+    try:
+        with get_postgres_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+    except Exception as exc:
+        raise ProfilePersistenceError("Failed to fetch profiles from PostgreSQL.") from exc
+
+    return [
+        ProfileResult(profile_uuid=row[0], profile_name=row[1])
+        for row in rows
+    ]

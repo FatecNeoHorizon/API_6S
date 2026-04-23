@@ -13,7 +13,7 @@ _pg_pool = SimpleConnectionPool(
 )
 
 @contextmanager
-def get_db_connection():
+def get_postgres_connection():
     conn = _pg_pool.getconn()
     try:
         yield conn

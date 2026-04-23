@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from uuid import UUID
 from datetime import datetime
 import re
@@ -23,7 +23,12 @@ class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    profile_id: Optional[UUID] = None
+    profile_id: UUID
+
+    @field_validator("email")
+    def validate_email_format(cls, v: EmailStr) -> str:
+        # EmailStr already validates RFC format; this ensures normalized persistence.
+        return str(v).strip().lower()
 
     @field_validator('password')
     def validate_password(cls, v: str) -> str:
@@ -34,10 +39,17 @@ class UserUpdateRequest(BaseModel):
     email: Optional[EmailStr] = None
     profile_id: Optional[UUID] = None
 
-class UserResponse(UserBase):
+class UserCreateResponse(UserBase):
     user_uuid: UUID
     active: bool
     created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
+
+class UserResponse(UserCreateResponse):
+    pass
+
+
+class ProfileResponse(BaseModel):
+    profile_uuid: UUID
+    profile_name: str

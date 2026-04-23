@@ -32,7 +32,10 @@ class Settings(BaseSettings):
     app_env: str = Field(default="dev")
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
-    csv_file_path: str = Field(default="./data/")
+
+    # File Upload Settings
+    max_upload_size_mb: int = Field(default=500)
+    tmp_upload_path: str = Field(default="tmp/uploads")
 
     # MongoDB Configuration
     mongo_host: str = Field(default="mongo_db")

@@ -27,3 +27,6 @@ def extract_decfec() -> Generator[tuple[pd.DataFrame, str], None, None]:
         chunk_df = transform_decfec(chunk_df)
         chunk_df = chunk_df.drop_duplicates().reset_index(drop=True)
         yield chunk_df, source_file
+
+def extract_decfec_new():
+    pass

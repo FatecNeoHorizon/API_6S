@@ -10,3 +10,4 @@ python-magic
 uvicorn
 psycopg2-binary
 pandas
+openpyxl

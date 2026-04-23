@@ -1,7 +1,25 @@
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool
+from contextlib import contextmanager
 from pymongo import MongoClient
 from src.config.settings import Settings
 
 settings = Settings()
+
+_pg_pool = SimpleConnectionPool(
+    minconn=1,
+    maxconn=10,
+    dsn=settings.postgres_dsn
+)
+
+@contextmanager
+def get_db_connection():
+    conn = _pg_pool.getconn()
+    try:
+        yield conn
+    finally:
+        _pg_pool.putconn(conn)
+
 
 _client: MongoClient | None = None
 

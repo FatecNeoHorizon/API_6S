@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from src.config.middleware import setup_middleware
+from src.config.validation import format_validation_errors
 from src.api.routes import decfec
 from src.api.routes import energy_losses
 from src.api.routes import network_structure
@@ -17,3 +20,8 @@ app.include_router(energy_losses.router)
 app.include_router(network_structure.router)
 app.include_router(upload.router)
 app.include_router(users.router)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": format_validation_errors(exc.errors())})

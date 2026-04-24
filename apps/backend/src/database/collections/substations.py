@@ -1,5 +1,15 @@
 from pymongo import ASCENDING
 
+"""
+Example Document:
+{
+    "_id": "ObjectId('69e3b182218b5f69b67bd0bc')",
+    "code": "SE-001",
+    "distributor_code": "001",
+    "description": "Subestacao Centro"
+}
+"""
+
 def setup_substations(db):
     db.create_collection(
         "substations",

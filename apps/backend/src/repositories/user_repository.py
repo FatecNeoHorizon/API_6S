@@ -46,7 +46,7 @@ class UserResult:
 
 
 def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
-    if not _exists_by_profile_id(conn, data["profile_id"]):
+    if not exists_by_profile_id(conn, data["profile_id"]):
         raise UserProfileNotFoundError("Profile not found for the provided profile_id.")
 
     query = """
@@ -119,7 +119,7 @@ def exists_by_username(conn: PgConnection, username: str) -> bool:
         cursor.execute(query, (username,))
         return cursor.fetchone() is not None
 
-def _exists_by_profile_id(conn: PgConnection, profile_id: UUID) -> bool:
+def exists_by_profile_id(conn: PgConnection, profile_id: UUID) -> bool:
     query = "SELECT 1 FROM TB_PROFILE WHERE PROFILE_UUID = %s AND DELETED_AT IS NULL LIMIT 1"
     with conn.cursor() as cursor:
         cursor.execute(query, (str(profile_id),))

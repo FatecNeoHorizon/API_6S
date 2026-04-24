@@ -10,6 +10,7 @@ import {
   Upload,
   CheckCircle2,
   Loader2,
+  Users, 
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -25,6 +26,11 @@ const menuItems = [
     label: "Estrutura das Redes",
     href: "/dashboard/estrutura-redes",
     icon: Network,
+  },
+  { 
+    label: "Gestao de Usuarios", 
+    href: "/dashboard/usuarios", 
+    icon: Users,
   },
 ];
 

@@ -13,8 +13,7 @@ def setup_distribution_indices(db):
                     "consumer_unit_set_description",
                     "indicator_type_code",
                     "year",
-                    "period",
-                    "value"
+                    "period"
                 ],
                 "properties": {
                     "_id":{
@@ -38,17 +37,17 @@ def setup_distribution_indices(db):
                     },
                     "indicator_type_code": {
                         "bsonType": "string",
-                        "description": "Indicator acronym. Reference to indicators_domain._id. Mapped from SigIndicador."
+                        "description": "Indicator acronym. Reference to domain_indicators._id. Mapped from SigIndicador."
                     },
                     "year": {
                         "bsonType": "int",
-                        "description": "Year of the measurement. Mapped from Ano."
+                        "description": "Year of the measurement. Mapped from AnoIndice."
                     },
                     "period": {
                         "bsonType": "int",
                         "minimum": 1,
                         "maximum": 12,
-                        "description": "Index period/month (1–12). Mapped from IndexPeriodNumber."
+                        "description": "Index period/month (1–12). Mapped from NumPeriodoIndice."
                     },
                     "value": {
                         "bsonType": ["double", "null"],

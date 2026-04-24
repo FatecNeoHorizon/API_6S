@@ -93,6 +93,7 @@ services:
     restart: always
     env_file:
       - envs/.env.backend.${APP_ENV:-dev}
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "8000:8000"
     volumes:

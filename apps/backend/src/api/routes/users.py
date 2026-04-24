@@ -33,6 +33,11 @@ def get_profiles() -> List[ProfileResponse]:
 def create_user(payload: UserCreateRequest) -> UserCreateResponse:
     try:
         return create_user_service(payload)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
     except UserAlreadyExistsError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except UserProfileNotFoundError as exc:

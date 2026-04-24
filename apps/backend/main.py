@@ -1,6 +1,4 @@
-from src.etl.load_decfec import load_decfec
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 
 from src.control import distribution_indices_procedures
 from src.control import energy_losses_tariff_procedures
@@ -12,15 +10,7 @@ from src.api.routes import network_structure
 from src.api.routes import upload
 from src.api.routes import gdb
 
-from contextlib import asynccontextmanager
-from src.etl.database import setup
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    setup()
-    from src.model.seed import seed
-    seed()
-    yield
+from src.config.lifespan import lifespan
 
 app = FastAPI(lifespan=lifespan)
 

@@ -4,7 +4,7 @@ def setup_energy_losses_tariff(db):
     db.create_collection(
         "energy_losses_tariff",
         validator={
-            "$jsonSchema":{
+            "$jsonSchema": {
                 "bsonType": "object",
                 "required": [
                     "distributor",
@@ -19,20 +19,15 @@ def setup_energy_losses_tariff(db):
                     "technical_loss_cost_brl",
                     "non_technical_loss_cost_brl",
                     "parcel_b_brl",
-                    "required_revenue_brl",
-                    "distributor_slug"
+                    "required_revenue_brl"
                 ],
                 "properties": {
-                    "_id":{
+                    "_id": {
                         "bsonType": "objectId"
                     },
                     "distributor": {
                         "bsonType": "string",
                         "description": "Name of the energy distributor. Mapped from 'Distribuidora'."
-                    },
-                    "distributor_slug": {
-                        "bsonType": "string",
-                        "description": "Distributor identifier slug for joining with other collections. Mapped from 'sigla'."
                     },
                     "state": {
                         "bsonType": "string",
@@ -74,7 +69,6 @@ def setup_energy_losses_tariff(db):
                         "bsonType": "double",
                         "description": "Financial cost of non-technical losses (theft/fraud) in BRL. Mapped from 'Custo Perdas Não Técnicas (R$)'."
                     },
-    
                     "parcel_b_brl": {
                         "bsonType": "double",
                         "description": "Parcel B of the tariff process in BRL — regulatory cost component. Mapped from 'Parcela B (R$)'."
@@ -93,15 +87,15 @@ def setup_energy_losses_tariff(db):
     col = db["energy_losses_tariff"]
 
     col.create_index(
-        [("distributor_slug", ASCENDING),
-            ("process_date", ASCENDING)],
+        [("distributor", ASCENDING),
+         ("process_date", ASCENDING)],
         name="idx_unique_distributor_process",
         unique=True
     )
 
     col.create_index(
         [("uf", ASCENDING),
-            ("process_date", ASCENDING)],
+         ("process_date", ASCENDING)],
         name="idx_uf_process_date"
     )
 

@@ -28,7 +28,7 @@ const menuItems = [
     icon: Network,
   },
   { 
-    label: "Gestao de Usuarios", 
+    label: "Gestão de Usuários", 
     href: "/dashboard/usuarios", 
     icon: Users,
   },

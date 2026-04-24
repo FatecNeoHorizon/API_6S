@@ -3,26 +3,20 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from psycopg2.errors import ForeignKeyViolation, UniqueViolation
-
-from src.database.postgres_connection import get_postgres_connection
-
+from psycopg2.errors import  UniqueViolation
+from psycopg2.extensions import connection as PgConnection
 
 class UserAlreadyExistsError(Exception):
     pass
 
-
 class UserProfileNotFoundError(Exception):
     pass
-
 
 class UserPersistenceError(Exception):
     pass
 
-
 class ProfilePersistenceError(Exception):
     pass
-
 
 @dataclass
 class UserCreateResult:
@@ -38,14 +32,23 @@ class ProfileResult:
     profile_uuid: UUID
     profile_name: str
 
+def exists_by_username(conn: PgConnection, username: str) -> bool:
+    query = "SELECT 1 FROM TB_USER WHERE USERNAME = %s LIMIT 1"
+    with conn.cursor() as cursor:
+        cursor.execute(query, (username,))
+        return cursor.fetchone() is not None
 
-def create_user(
-    username: str,
-    email_hash: str,
-    email_enc: str,
-    password_hash: str,
-    profile_id: UUID,
-) -> UserCreateResult:
+def _exists_by_profile_id(conn: PgConnection, profile_id: UUID) -> bool:
+    query = "SELECT 1 FROM TB_PROFILE WHERE PROFILE_UUID = %s AND DELETED_AT IS NULL LIMIT 1"
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(profile_id),))
+        return cursor.fetchone() is not None
+
+
+def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
+    if not _exists_by_profile_id(conn, data["profile_id"]):
+        raise UserProfileNotFoundError("Profile not found for the provided profile_id.")
+
     query = """
         INSERT INTO TB_USER (
             USERNAME,
@@ -59,18 +62,20 @@ def create_user(
     """
 
     try:
-        with get_postgres_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    query,
-                    (username, email_hash, email_enc, password_hash, str(profile_id)),
-                )
-                row = cursor.fetchone()
-            conn.commit()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    data["username"],
+                    data["email_hash"],
+                    data["email_enc"],
+                    data["password_hash"],
+                    str(data["profile_id"]),
+                ),
+            )
+            row = cursor.fetchone()
     except UniqueViolation as exc:
         raise UserAlreadyExistsError("Username or email already registered.") from exc
-    except ForeignKeyViolation as exc:
-        raise UserProfileNotFoundError("Profile not found for the provided profile_id.") from exc
     except Exception as exc:
         raise UserPersistenceError("Failed to persist user into PostgreSQL.") from exc
 
@@ -85,8 +90,7 @@ def create_user(
         created_at=row[4],
     )
 
-
-def list_profiles() -> List[ProfileResult]:
+def list_profiles(conn: PgConnection) -> List[ProfileResult]:
     query = """
         SELECT PROFILE_UUID, PROFILE_NAME
         FROM TB_PROFILE
@@ -95,10 +99,9 @@ def list_profiles() -> List[ProfileResult]:
     """
 
     try:
-        with get_postgres_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(query)
-                rows = cursor.fetchall()
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
     except Exception as exc:
         raise ProfilePersistenceError("Failed to fetch profiles from PostgreSQL.") from exc
 

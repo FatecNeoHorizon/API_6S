@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List
 
 from src.api.schemas.user_schemas import ProfileResponse, UserCreateRequest, UserCreateResponse
+from src.database.postgres_connection import get_postgres_connection
 from src.repositories.user_repository import (
     ProfilePersistenceError,
     UserAlreadyExistsError,
@@ -17,7 +18,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/profiles", response_model=List[ProfileResponse], status_code=status.HTTP_200_OK)
 def get_profiles() -> List[ProfileResponse]:
     try:
-        profiles = list_profiles()
+        with get_postgres_connection() as conn:
+            profiles = list_profiles(conn)
         return [
             ProfileResponse(profile_uuid=p.profile_uuid, profile_name=p.profile_name)
             for p in profiles
@@ -41,7 +43,7 @@ def create_user(payload: UserCreateRequest) -> UserCreateResponse:
     except UserAlreadyExistsError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except UserProfileNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except UserPersistenceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

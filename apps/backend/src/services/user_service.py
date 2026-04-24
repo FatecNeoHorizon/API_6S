@@ -6,6 +6,7 @@ from cryptography.fernet import Fernet
 
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.settings import Settings
+from src.database.postgres_connection import get_postgres_connection
 from src.repositories.user_repository import create_user
 
 
@@ -29,7 +30,6 @@ def _resolve_email_encryption_key(settings: Settings) -> bytes:
     if settings.email_encryption_key:
         return _sanitize_fernet_key(settings.email_encryption_key).encode("utf-8")
 
-    # Keep deterministic fallback for local/dev setups without explicit key.
     digest = hashlib.sha256(settings.email_hash_salt.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest)
 
@@ -52,13 +52,17 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
 
-    result = create_user(
-        username=payload.username,
-        email_hash=_build_email_hash(normalized_email, settings.email_hash_salt),
-        email_enc=_encrypt_email(normalized_email, settings),
-        password_hash=_hash_password(payload.password),
-        profile_id=payload.profile_id,
-    )
+    data = {
+        "username": payload.username,
+        "email_hash": _build_email_hash(normalized_email, settings.email_hash_salt),
+        "email_enc": _encrypt_email(normalized_email, settings),
+        "password_hash": _hash_password(payload.password),
+        "profile_id": payload.profile_id,
+    }
+
+    with get_postgres_connection() as conn:
+        result = create_user(conn, data)
+        conn.commit()
 
     return UserCreateResponse(
         user_uuid=result.user_uuid,

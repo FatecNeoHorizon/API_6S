@@ -1,8 +1,12 @@
 fastapi==0.135.2
 pydantic==2.12.5
+pydantic-settings==2.10.1
 pymongo==4.16.0
 python-dotenv==1.2.2
 auto_mix_prep==0.2.0
+aiofiles
+python-multipart
+python-magic
 uvicorn
 psycopg2-binary
 pandas

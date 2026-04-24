@@ -52,7 +52,7 @@ Stores system users. Email is stored in two fields — one hashed with determini
 | `USERNAME` | VARCHAR(255) | NOT NULL, UNIQUE |
 | `EMAIL_HASH` | VARCHAR(255) | NOT NULL, UNIQUE — deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup |
 | `EMAIL_ENC` | VARCHAR(255) | NOT NULL — encrypted value |
-| `PASSWORD_HASH` | VARCHAR(255) | NOT NULL — Argon2id |
+| `PASSWORD_HASH` | VARCHAR(255) | NOT NULL — bcrypt hash |
 | `PROFILE_ID` | UUID | FK → TB_PROFILE |
 | `ACTIVE` | BOOLEAN | NOT NULL, DEFAULT true |
 | `CREATED_AT` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() |

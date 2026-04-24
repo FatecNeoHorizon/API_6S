@@ -7,8 +7,15 @@ from cryptography.fernet import Fernet
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.settings import Settings
 from src.database.postgres_connection import get_postgres_connection
-from src.repositories.user_repository import create_user
-
+from src.repositories.user_repository import ProfileResult
+from typing import List
+from src.repositories.user_repository import (
+    UserAlreadyExistsError,
+    create_user,
+    exists_by_username,
+    exists_by_email_hash,
+    list_profiles,
+)
 
 def _build_email_hash(email: str, salt: str) -> str:
     payload = f"{email}:{salt}".encode("utf-8")
@@ -51,16 +58,22 @@ def _hash_password(password: str) -> str:
 def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
-
-    data = {
-        "username": payload.username,
-        "email_hash": _build_email_hash(normalized_email, settings.email_hash_salt),
-        "email_enc": _encrypt_email(normalized_email, settings),
-        "password_hash": _hash_password(payload.password),
-        "profile_id": payload.profile_id,
-    }
+    email_hash = _build_email_hash(normalized_email, settings.email_hash_salt)
 
     with get_postgres_connection() as conn:
+        if exists_by_username(conn, payload.username):
+            raise UserAlreadyExistsError("Username already registered.")
+        if exists_by_email_hash(conn, email_hash):
+            raise UserAlreadyExistsError("Email already registered.")
+
+        data = {
+            "username": payload.username,
+            "email_hash": email_hash,
+            "email_enc": _encrypt_email(normalized_email, settings),
+            "password_hash": _hash_password(payload.password),
+            "profile_id": payload.profile_id,
+        }
+
         result = create_user(conn, data)
         conn.commit()
 
@@ -71,3 +84,7 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
         active=result.active,
         created_at=result.created_at,
     )
+
+def list_profiles_service() -> List[ProfileResult]:
+    with get_postgres_connection() as conn:
+        return list_profiles(conn)

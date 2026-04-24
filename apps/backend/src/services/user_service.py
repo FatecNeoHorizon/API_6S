@@ -9,13 +9,90 @@ from src.config.settings import Settings
 from src.database.postgres_connection import get_postgres_connection
 from src.repositories.user_repository import ProfileResult
 from typing import List
+from uuid import UUID
 from src.repositories.user_repository import (
     UserAlreadyExistsError,
+    UserNotFoundError,
+    UserResult,
     create_user,
     exists_by_username,
     exists_by_email_hash,
+    get_user_by_id,
+    list_users,
+    update_user,
+    set_user_active,
+    delete_user,
     list_profiles,
 )
+def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
+    settings = Settings()
+    normalized_email = str(payload.email).strip().lower()
+    email_hash = _build_email_hash(normalized_email, settings.email_hash_salt)
+
+    with get_postgres_connection() as conn:
+        if exists_by_username(conn, payload.username):
+            raise UserAlreadyExistsError("Username already registered.")
+        if exists_by_email_hash(conn, email_hash):
+            raise UserAlreadyExistsError("Email already registered.")
+
+        data = {
+            "username": payload.username,
+            "email_hash": email_hash,
+            "email_enc": _encrypt_email(normalized_email, settings),
+            "password_hash": _hash_password(payload.password),
+            "profile_id": payload.profile_id,
+        }
+
+        result = create_user(conn, data)
+        conn.commit()
+
+    return UserCreateResponse(
+        user_uuid=result.user_uuid,
+        username=result.username,
+        profile_id=result.profile_id,
+        active=result.active,
+        created_at=result.created_at,
+    )
+
+def get_user_by_id_service(user_uuid: UUID) -> UserResult:
+    with get_postgres_connection() as conn:
+        user = get_user_by_id(conn, user_uuid)
+    if user is None:
+        raise UserNotFoundError("User not found.")
+    return user
+
+
+def list_users_service() -> List[UserResult]:
+    with get_postgres_connection() as conn:
+        return list_users(conn)
+
+
+def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
+    with get_postgres_connection() as conn:
+        if not _exists_by_profile_id(conn, data["profile_id"]):
+            raise UserProfileNotFoundError("Profile not found for the provided profile_id.")
+        result = update_user(conn, user_uuid, data)
+        conn.commit()
+    if result is None:
+        raise UserNotFoundError("User not found.")
+    return result
+
+
+def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
+    with get_postgres_connection() as conn:
+        result = set_user_active(conn, user_uuid, active)
+        conn.commit()
+    if result is None:
+        raise UserNotFoundError("User not found.")
+    return result
+
+
+def delete_user_service(user_uuid: UUID) -> None:
+    with get_postgres_connection() as conn:
+        deleted = delete_user(conn, user_uuid)
+        conn.commit()
+    if not deleted:
+        raise UserNotFoundError("User not found.")
 
 def _build_email_hash(email: str, salt: str) -> str:
     payload = f"{email}:{salt}".encode("utf-8")
@@ -55,35 +132,7 @@ def _hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
-    settings = Settings()
-    normalized_email = str(payload.email).strip().lower()
-    email_hash = _build_email_hash(normalized_email, settings.email_hash_salt)
 
-    with get_postgres_connection() as conn:
-        if exists_by_username(conn, payload.username):
-            raise UserAlreadyExistsError("Username already registered.")
-        if exists_by_email_hash(conn, email_hash):
-            raise UserAlreadyExistsError("Email already registered.")
-
-        data = {
-            "username": payload.username,
-            "email_hash": email_hash,
-            "email_enc": _encrypt_email(normalized_email, settings),
-            "password_hash": _hash_password(payload.password),
-            "profile_id": payload.profile_id,
-        }
-
-        result = create_user(conn, data)
-        conn.commit()
-
-    return UserCreateResponse(
-        user_uuid=result.user_uuid,
-        username=result.username,
-        profile_id=result.profile_id,
-        active=result.active,
-        created_at=result.created_at,
-    )
 
 def list_profiles_service() -> List[ProfileResult]:
     with get_postgres_connection() as conn:

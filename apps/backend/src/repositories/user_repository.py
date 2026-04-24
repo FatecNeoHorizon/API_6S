@@ -47,7 +47,7 @@ class UserResult:
 
 def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
     if not exists_by_profile_id(conn, data["profile_id"]):
-        raise UserProfileNotFoundError("Profile not found for the provided profile_id.")
+        raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
 
     query = """
         INSERT INTO TB_USER (
@@ -75,12 +75,12 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
             )
             row = cursor.fetchone()
     except UniqueViolation as exc:
-        raise UserAlreadyExistsError("Username or email already registered.") from exc
+        raise UserAlreadyExistsError("Nome de usuário ou e-mail já cadastrado.") from exc
     except Exception as exc:
-        raise UserPersistenceError("Failed to persist user into PostgreSQL.") from exc
+        raise UserPersistenceError("Falha ao salvar o usuário no PostgreSQL.") from exc
 
     if row is None:
-        raise UserPersistenceError("PostgreSQL did not return created user data.")
+        raise UserPersistenceError("O PostgreSQL não retornou os dados do usuário criado.")
 
     return UserCreateResult(
         user_uuid=row[0],
@@ -142,7 +142,7 @@ def update_user(conn: PgConnection, user_uuid: UUID, data: dict) -> Optional[Use
             cursor.execute(query, (data["username"], str(data["profile_id"]), str(user_uuid)))
             row = cursor.fetchone()
     except UniqueViolation as exc:
-        raise UserAlreadyExistsError("Username already registered.") from exc
+        raise UserAlreadyExistsError("Nome de usuário já cadastrado.") from exc
     if row is None:
         return None
     return UserResult(user_uuid=row[0], username=row[1], profile_id=row[2], active=row[3], created_at=row[4], updated_at=row[5])
@@ -184,7 +184,7 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
             cursor.execute(query)
             rows = cursor.fetchall()
     except Exception as exc:
-        raise ProfilePersistenceError("Failed to fetch profiles from PostgreSQL.") from exc
+        raise ProfilePersistenceError("Falha ao buscar os perfis no PostgreSQL.") from exc
 
     return [
         ProfileResult(profile_uuid=row[0], profile_name=row[1])

@@ -1,5 +1,42 @@
 from pymongo import ASCENDING, GEOSPHERE
 
+"""
+Example Document:
+{
+  "_id": "ObjectId('68f63cd3e9d041a73c2b646a')",
+  "name": "São Francisco",
+  "code": "12596",
+  "status": "active",
+  "shape_length": 142.5,
+  "shape_area": 890.3,
+  "arat_id": "ObjectId('68f63cd3e9d041a73c2b646b')",
+  "geodatabase_id": "ObjectId('68f63cd3e9d041a73c2b646c')",
+  "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [[[ ... ]]]
+  },
+  "distribution_indices": [
+    {
+      "indicator_type_code": "DEC",
+      "year": 2024,
+      "period": 1,
+      "value": 1.60
+    }
+  ],
+  "annual_summaries": [
+    {
+      "indicator_type_code": "DEC",
+      "year": 2024,
+      "accumulated_value": 7.20,
+      "periods_count": 6,
+      "status": "partial",
+      "limit": 8.00,
+      "criticality": "normal"
+    }
+  ]
+}
+"""
+
 def setup_conj(db):
     db.create_collection(
         "conj",

@@ -1,5 +1,20 @@
 from pymongo import ASCENDING
 
+"""
+Example Document:
+{
+  "_id": "ObjectId('68f63cd3e9d041a73c2b646d')",
+  "agent_acronym": "ENEL SP",
+  "cnpj_number": "46065339000113",
+  "consumer_unit_set_id": "68f63cd3e9d041a73c2b646e",
+  "consumer_unit_set_description": "Conjunto 1",
+  "indicator_type_code": "DEC",
+  "year": 2024,
+  "period": 1,
+  "value": 1.6
+}
+"""
+
 def setup_distribution_indices(db):
     db.create_collection(
         "distribution_indices",

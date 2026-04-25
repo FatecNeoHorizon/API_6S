@@ -1,5 +1,20 @@
 from pymongo import ASCENDING
 
+"""
+Example Document:
+{
+    "_id": "ObjectId('69e3b182218b5f69b67bd0bf')",
+    "code": "TR-001-A",
+    "distributor_code": "001",
+    "description": "Transformador Centro A",
+    "status": "SM",
+    "location_area": "1",
+    "nominal_power_kva": 500.0,
+    "iron_losses_kw": 45.0,
+    "copper_losses_kw": 60.0
+}
+"""
+
 def setup_distribution_transformers(db):
     db.create_collection(
         "distribution_transformers",

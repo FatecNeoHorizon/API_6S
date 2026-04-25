@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from uuid import UUID
 from datetime import datetime
@@ -33,11 +32,6 @@ class UserCreateRequest(BaseModel):
     @field_validator('password')
     def validate_password(cls, v: str) -> str:
         return password_validator(v)
-
-class UserUpdateRequest(BaseModel):
-    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
-    email: Optional[EmailStr] = None
-    profile_id: Optional[UUID] = None
 
 class UserCreateResponse(UserBase):
     user_uuid: UUID

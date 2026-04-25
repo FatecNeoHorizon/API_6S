@@ -2,6 +2,9 @@
 .env
 .env.local
 .env.*.local
+.env.*.dev
+.env.*.prod
+!.env.*.example
 
 # Maven
 target/
@@ -295,7 +298,8 @@ celerybeat.pid
 
 # Environments
 .venv
-env/
+envs/*
+!envs/.env.*.example
 venv/
 ENV/
 env.bak/
@@ -346,3 +350,4 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python,node
 
 /data
+/tmp

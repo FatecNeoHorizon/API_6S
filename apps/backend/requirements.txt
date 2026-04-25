@@ -10,6 +10,9 @@ python-magic
 uvicorn
 psycopg2-binary
 pandas
+openpyxl
+geopandas
+pyogrio
 bcrypt
 cryptography
 pydantic[email]

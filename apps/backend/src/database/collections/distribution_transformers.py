@@ -65,7 +65,24 @@ def setup_distribution_transformers(db):
     )
 
     col = db["distribution_transformers"]
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
-    col.create_index([("location_area", ASCENDING)], name="idx_location_area")
-    col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power")
+
+    col.create_index(
+        [("code", ASCENDING)],
+        unique=True,
+        name="idx_unique_code",
+        background=True
+    )
+
+    col.create_index(
+        [("distributor_code", ASCENDING)],
+        name="idx_distributor",
+        background=True
+    )
+
+    col.create_index(
+        [("location_area", ASCENDING)],
+        name="idx_location_area",
+        background=True
+    )
+
+    col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power", background=True)

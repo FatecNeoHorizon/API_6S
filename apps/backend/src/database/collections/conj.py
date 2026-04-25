@@ -122,7 +122,28 @@ def setup_conj(db):
     )
 
     col = db["conj"]
-    col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("status", ASCENDING)], name="idx_status")
-    col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+
+    col.create_index(
+        [("geometry", GEOSPHERE)],
+        name="idx_geo",
+        background=True
+    )
+
+    col.create_index(
+        [("code", ASCENDING)],
+        unique=True,
+        name="idx_unique_code",
+        background=True
+    )
+
+    col.create_index(
+        [("status", ASCENDING)],
+        name="idx_status",
+        background=True
+    )
+
+    col.create_index(
+        [("geodatabase_id", ASCENDING)],
+        name="idx_geodatabase",
+        background=True
+    )

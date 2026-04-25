@@ -26,8 +26,6 @@ app.include_router(network_structure.router)
 app.include_router(upload.router)
 app.include_router(gdb.router)
 app.include_router(tam_sam.router)
-app.include_router(upload.router)
-
 app.include_router(users.router)
 
 

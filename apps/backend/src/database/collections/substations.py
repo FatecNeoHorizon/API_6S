@@ -39,5 +39,16 @@ def setup_substations(db):
     )
 
     col = db["substations"]
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
+
+    col.create_index(
+        [("code", ASCENDING)],
+        unique=True,
+        name="idx_unique_code",
+        background=True
+    )
+
+    col.create_index(
+        [("distributor_code", ASCENDING)],
+        name="idx_distributor",
+        background=True
+    )

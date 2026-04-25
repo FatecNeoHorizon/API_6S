@@ -11,3 +11,5 @@ uvicorn
 psycopg2-binary
 pandas
 openpyxl
+geopandas
+pyogrio

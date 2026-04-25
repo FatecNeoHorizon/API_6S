@@ -13,3 +13,5 @@ pandas
 openpyxl
 geopandas
 pyogrio
+structlog
+python-json-logger

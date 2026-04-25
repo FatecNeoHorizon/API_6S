@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from typing import List
 from uuid import UUID
 
@@ -25,7 +25,7 @@ def get_profiles():
         profiles = list_profiles_service()
         return [ProfileResponse(profile_uuid=p.profile_uuid, profile_name=p.profile_name) for p in profiles]
     except ProfilePersistenceError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to list profiles.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha ao listar perfis.") from exc
 
 
 @router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
@@ -52,7 +52,7 @@ def create_user(payload: UserCreateRequest):
     except UserProfileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except UserPersistenceError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create user.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha ao criar usuário.") from exc
 
 
 @router.patch("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)

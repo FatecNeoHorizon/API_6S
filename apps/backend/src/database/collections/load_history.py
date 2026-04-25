@@ -41,7 +41,7 @@ def setup_load_history(db):
                     },
                     "status": {
                         "bsonType": "string",
-                        "enum": ["STARTED", "SUCCESS", "PARTIAL", "ERROR"],
+                        "enum": ["STARTED", "SUCCESS", "PARTIAL", "ERROR","PROCESSING"],
                         "description": "Execution status."
                     },
                     "total_processed": {

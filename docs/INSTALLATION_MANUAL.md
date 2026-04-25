@@ -5,7 +5,7 @@ Guide to prepare the environment, configure variables, and deploy the Zeus appli
 ## Contents
 
 - Prerequisites and component overview
-- `.env` file configuration and CSV data setup
+- segmented `.env` files configuration and CSV data setup
 - Docker installation steps
 - Validation and troubleshooting
 
@@ -36,6 +36,15 @@ The main installation method is via the `docker-compose.yml` file in the project
 | **backend** | FastAPI and ETL trigger | 8000 |
 | **frontend** | React/Vite application | 5173 |
 
+### 1.2 Compose Profiles
+
+| Profile | Services started | Use case |
+|---------|------------------|----------|
+| **backend** | `postgres`, `flyway`, `mongo`, `backend` | Backend and ETL development |
+| **frontend** | `postgres`, `flyway`, `mongo`, `backend`, `frontend` | UI development with complete backend stack |
+| **full** | All services | Full integration environment |
+| **tools** | `mongo`, `mongo-express` | MongoDB administration interface |
+
 ---
 
 ## 2. Prerequisites
@@ -61,19 +70,29 @@ The backend is located in `apps/backend` and the frontend in `apps/frontend`.
 
 ### 3.1 Data Folder
 
-The backend service mounts the local folder `./data` to `/app/data` inside the container. In `docker-compose.yml`, the `CSV_FILE_PATH` variable points to `/app/data/indicadores-continuidade-coletivos-2020-2029.csv`.
+The backend service mounts the local folder `./data` to `/app/data` inside the container. The `CSV_FILE_NAME` value must be set in `envs/.env.backend.{dev|prod}`.
 
 **Important:** Place the CSV file with this name inside the `data` folder at the project root before running the ETL.
 
 ---
 
-## 4. `.env` File Configuration
+## 4. Segmented `.env` File Configuration
 
-The ZIP file includes a `.env.example` file with necessary variables. The recommended practice is to create a `.env` file in the root, filling in the fields according to your environment.
+The project uses service-specific environment files in the repository root, with a version per environment (`dev` and `prod`) and a tracked template (`example`).
 
 > **⚠️ Security:** Do not include real credentials in public repositories.
 
-### 4.1 Main Variables
+### 4.1 Files by Service
+
+| Service | Dev file | Prod file | Tracked template |
+|-------|-----------|-----------|------------------|
+| **Backend (FastAPI)** | `envs/.env.backend.dev` | `envs/.env.backend.prod` | `envs/.env.backend.example` |
+| **Frontend (Vite)** | `envs/.env.frontend.dev` | `envs/.env.frontend.prod` | `envs/.env.frontend.example` |
+| **MongoDB** | `envs/.env.mongo.dev` | `envs/.env.mongo.prod` | `envs/.env.mongo.example` |
+| **PostgreSQL** | `envs/.env.postgres.dev` | `envs/.env.postgres.prod` | `envs/.env.postgres.example` |
+| **Flyway** | `envs/.env.flyway.dev` | `envs/.env.flyway.prod` | `envs/.env.flyway.example` |
+
+### 4.2 Main Variables
 
 | Block | Variables | Note |
 |-------|-----------|------|
@@ -82,32 +101,48 @@ The ZIP file includes a `.env.example` file with necessary variables. The recomm
 | **Application** | `FRONTEND_URL`, `BACKEND_URL` | Base URLs for service integration |
 | **Flyway** | `FLYWAY_URL`, `FLYWAY_USER`, `FLYWAY_PASSWORD` | PostgreSQL migrations |
 
-### 4.2 Fill-in Example
+### 4.3 Fill-in Example
 
-Below is an illustrative example of value composition. Adjust the username, password, and database names according to your environment:
+Below is an illustrative `dev` setup. Adjust usernames, passwords, hosts and database names according to your environment:
 
-```env
+In `envs/.env.postgres.dev`:
+
 POSTGRES_USER=zeus_user
 POSTGRES_PASSWORD=secure_password
 POSTGRES_DB=zeus
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 
+In `envs/.env.mongo.dev`:
+
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=secure_password
-MONGO_HOST=mongo_db
+MONGO_HOST=mongo
 MONGO_PORT=27017
 MONGO_USER=admin
 MONGO_PASSWORD=secure_password
 MONGO_DB_NAME=zeus
 
-FRONTEND_URL=http://localhost:5173
+In `envs/.env.backend.dev`:
+
 BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:5173
+CSV_FILE_NAME=indicadores-continuidade-coletivos-2020-2029.csv
+MONGO_MAX_POOL_SIZE=10
+MONGO_SERVER_SELECTION_TIMEOUT_MS=120000
+MONGO_CONNECT_TIMEOUT_MS=10000
+
+In `envs/.env.frontend.dev`:
+
+VITE_API_URL=http://localhost:8000
+
+In `envs/.env.flyway.dev`:
 
 FLYWAY_URL=jdbc:postgresql://postgres:5432/zeus
-```
+FLYWAY_USER=zeus_user
+FLYWAY_PASSWORD=secure_password
 
-> **Frontend Note:** The frontend already has its own file in `apps/frontend/.env` with `VITE_API_URL=http://localhost:8000`. In a standard local Docker installation, this value is compatible with the API exposed on port 8000.
+> **Environment selection note:** Docker Compose selects files with `APP_ENV` (`dev` by default), e.g. `envs/.env.backend.${APP_ENV:-dev}`.
 
 ---
 
@@ -118,24 +153,37 @@ This is the main installation flow identified in the project. Execute all comman
 ### Steps
 
 1. Open a terminal in the project root folder
-2. Ensure the `.env` file has been created and saved
+2. Ensure all `*.dev` files have been created and saved (or export `APP_ENV=prod` and configure all `*.prod` files)
 3. Ensure the `data` folder exists and, if necessary, place the CSV indicators file in it
 4. Execute:
    ```bash
-   docker compose up --build
+   docker compose --profile full up --build
    ```
 5. Wait for image creation, PostgreSQL and MongoDB startup, and Flyway migration execution
 6. After completion, validate the services at the URLs mentioned in the next section
 
 ### 5.1 What Happens During Startup
 
-Compose executes the following sequence:
+Compose executes the following sequence (profile `full`):
 
 1. Starts PostgreSQL and waits for the healthcheck
 2. Executes SQL migrations via Flyway
-3. Starts MongoDB and Mongo Express
-4. Creates the backend container with FastAPI/Uvicorn
+3. Starts MongoDB
+4. Creates the backend container with FastAPI/Uvicorn only after PostgreSQL and MongoDB are healthy, and Flyway has completed successfully
 5. Starts the Vite frontend
+
+To run only part of the stack:
+
+```bash
+# Backend focused flow
+docker compose --profile backend up --build
+
+# Frontend focused flow
+docker compose --profile frontend up --build
+
+# Mongo Express only
+docker compose --profile tools up
+```
 
 The backend mounts the data folder and is ready to process the CSV via endpoint.
 
@@ -151,7 +199,7 @@ Once the containers are active, use the table below to verify that the installat
 | Backend | `http://localhost:8000` | Simple JSON response from root route |
 | Swagger | `http://localhost:8000/docs` | FastAPI automatic documentation |
 | Mongo Express | `http://localhost:8081` | MongoDB web panel |
-| Containers | `docker compose ps` | All services with `running`/`healthy` status |
+| Containers | `docker compose --profile full ps` | Services with `running`/`healthy` status for the selected profile |
 
 ### 6.1 ETL Indicators Execution
 
@@ -182,16 +230,16 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 |-----------|-------------|-------------------|
 | Frontend doesn't load | Frontend container didn't start or port 5173 is occupied | Check logs with `docker compose logs frontend` and free the port |
 | Swagger unavailable | Backend didn't start or crashed due to connection error | Check backend logs and credentials in `.env` |
-| Migration fails | Wrong PostgreSQL parameters | Review `POSTGRES_*` and `FLYWAY_URL` |
-| CSV processing fails | File not found or name mismatch | Confirm file in `data` folder and `CSV_FILE_PATH` |
-| Mongo connection error | Incompatible MongoDB username/password | Review `MONGO_*` in `.env` |
+| Migration fails | Wrong PostgreSQL/Flyway parameters | Review `envs/.env.postgres.*` and `envs/.env.flyway.*` |
+| CSV processing fails | File not found or name mismatch | Confirm file in `data` folder and `CSV_FILE_NAME` |
+| Mongo connection error | Incompatible MongoDB username/password | Review `MONGO_*` in `envs/.env.mongo.*` and `envs/.env.backend.*` |
 
 ---
 
 ## 9. Final Installation Checklist
 
-- [ ] The `.env` file has been created and filled
-- [ ] The `docker compose up --build` command completed without critical errors
+- [ ] Service-specific files (`.env.*.dev` or `.env.*.prod`) have been created and filled
+- [ ] A profile-based command (for example `docker compose --profile full up --build`) completed without critical errors
 - [ ] Ports 5173, 8000, 8081, 5432, and 27017 are accessible
 - [ ] Backend Swagger opens correctly
 - [ ] The `/process-decfec` endpoint works when the CSV file is present

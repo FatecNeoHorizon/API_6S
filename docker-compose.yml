@@ -98,6 +98,7 @@ services:
     volumes:
       - ./apps/backend:/app
       - ./data:/app/data
+      - ./data/app/logs
     networks:
       - db_network
       - app_network

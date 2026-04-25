@@ -77,30 +77,35 @@ def setup_distribution_indices(db):
     
     col = db["distribution_indices"]
 
-    col.create_index([("indicator_type_code", ASCENDING),
-                        ("year", ASCENDING),
-                        ("agent_acronym", ASCENDING)],
-                        name="idx_indicator_year_agent"
-                    )
+    col.create_index(
+        [("indicator_type_code", ASCENDING),
+         ("year", ASCENDING),
+         ("agent_acronym", ASCENDING)],
+        name="idx_indicator_year_agent",
+        background=True
+    )
 
     col.create_index(
         [("consumer_unit_set_id", ASCENDING),
-            ("indicator_type_code", ASCENDING),
-            ("year", ASCENDING)],
-        name="idx_set_indicator_year"
+         ("indicator_type_code", ASCENDING),
+         ("year", ASCENDING)],
+        name="idx_set_indicator_year",
+        background=True
     )
 
     col.create_index(
         [("cnpj_number", ASCENDING)],
-        name="idx_cnpj"
+        name="idx_cnpj",
+        background=True
     )
 
     col.create_index(
         [("agent_acronym", ASCENDING),
-            ("consumer_unit_set_id", ASCENDING),
-            ("indicator_type_code", ASCENDING),
-            ("year", ASCENDING),
-            ("period", ASCENDING)],
+         ("consumer_unit_set_id", ASCENDING),
+         ("indicator_type_code", ASCENDING),
+         ("year", ASCENDING),
+         ("period", ASCENDING)],
         name="idx_unique_measurement",
-        unique=True
+        unique=True,
+        background=True
     )

@@ -8,17 +8,14 @@ logger = logging.getLogger(__name__)
 def extract_gdb_generator(path: Path, chunk_size: int = 100):
     raw_layers = pyo.list_layers(path)
 
-    target_layers = {
-        "CONJ",
-        "SUB",
-        "UNTRMT",
-        "UNTRAT",
-    }
+    GROUP_1 = ["CONJ", "SUB"]
+    GROUP_2 = ["UNTRMT", "UNTRAT"]
+
+    ORDERED_LAYERS = GROUP_1 + GROUP_2
 
     layer_names = [
-        layer[0]
-        for layer in raw_layers
-        if layer[0] in target_layers
+        layer for layer in ORDERED_LAYERS
+        if layer in [l[0] for l in raw_layers]
     ]
 
     for layer_name in layer_names:
@@ -38,7 +35,7 @@ def extract_gdb_generator(path: Path, chunk_size: int = 100):
 
             if "geometry" in gdf.columns:
                 logger.info(f"[GEOM] Serializando {layer_name}")
-                gdf["geometry"] = gdf["geometry"].apply(
+                gdf["geometry_geojson"] = gdf["geometry"].apply(
                     lambda g: g.__geo_interface__ if g else None
                 )
 

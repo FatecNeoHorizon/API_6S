@@ -1,5 +1,29 @@
 from pymongo import ASCENDING
 
+"""
+Example Document:
+[
+   {
+      "_id":{
+         "$oid":"69cc58e000cd5bef24e5de81"
+      },
+      "distributor":"Amazonas Energia",
+      "state":"Amazonas",
+      "uf":"AM",
+      "process_date":"2023-11-01",
+      "tme_brl_mwh":195.17,
+      "basic_network_loss_mwh":95581.132,
+      "technical_loss_mwh":786836.937,
+      "non_technical_loss_mwh":3269260.00001,
+      "basic_network_loss_cost_brl":18655010.1,
+      "technical_loss_cost_brl":153570600.1,
+      "non_technical_loss_cost_brl":638076500.1,
+      "parcel_b_brl":386332500.1,
+      "required_revenue_brl":2847472000.1
+   }
+]
+"""
+
 def setup_energy_losses_tariff(db):
     db.create_collection(
         "energy_losses_tariff",

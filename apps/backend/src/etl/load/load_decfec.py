@@ -8,6 +8,7 @@ import pandas as pd
 from pymongo import UpdateOne
 
 from src.config.settings import Settings
+from src.control.tam_sam_procedures import Tam_sam_procedures
 from src.database.connection import get_client
 from src.etl.extract.extract_decfec import extract_decfec
 
@@ -113,6 +114,8 @@ def load_decfec(
     )
 
     try:
+        tam_result = None
+
         for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
             chunk_start_perf = time.perf_counter()
             chunk_rows = len(chunk_df)
@@ -213,6 +216,8 @@ def load_decfec(
         finished_at = datetime.now(timezone.utc)
         final_status = "PARTIAL" if totals["rows_rejected"] > 0 else "SUCCESS"
 
+        tam_result = Tam_sam_procedures(connection=client).calculate_and_persist_tam_total()
+
         load_history.update_one(
             {"load_id": load_id},
             {"$set": {
@@ -227,6 +232,7 @@ def load_decfec(
             load_id=load_id,
             batch_version=batch_version,
             status=final_status,
+            tam_total=tam_result["tam_total"],
             duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
             totals=totals,
         )
@@ -262,6 +268,10 @@ def load_decfec(
         "source_file": source_file,
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
+        "tam_sam": {
+            "tam_total": tam_result["tam_total"] if tam_result else None,
+            "calculated_on": tam_result["calculated_on"] if tam_result else None,
+        },
         **totals,
     }
 

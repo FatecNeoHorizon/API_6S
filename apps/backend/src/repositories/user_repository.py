@@ -44,6 +44,11 @@ def _exists_by_profile_id(conn: PgConnection, profile_id: UUID) -> bool:
         cursor.execute(query, (str(profile_id),))
         return cursor.fetchone() is not None
 
+def exists_by_email_hash(conn: PgConnection, email_hash: str) -> bool:
+    query = "SELECT 1 FROM TB_USER WHERE EMAIL_HASH = %s LIMIT 1"
+    with conn.cursor() as cursor:
+        cursor.execute(query, (email_hash,))
+        return cursor.fetchone() is not None
 
 def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
     if not _exists_by_profile_id(conn, data["profile_id"]):

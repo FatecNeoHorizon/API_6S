@@ -3,12 +3,12 @@ from typing import List
 
 from src.api.schemas.user_schemas import ProfileResponse, UserCreateRequest, UserCreateResponse
 from src.database.postgres_connection import get_postgres_connection
+from src.services.user_service import create_user_service, list_profiles_service
 from src.repositories.user_repository import (
     ProfilePersistenceError,
     UserAlreadyExistsError,
     UserPersistenceError,
     UserProfileNotFoundError,
-    list_profiles,
 )
 from src.services.user_service import create_user_service
 
@@ -18,8 +18,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/profiles", response_model=List[ProfileResponse], status_code=status.HTTP_200_OK)
 def get_profiles() -> List[ProfileResponse]:
     try:
-        with get_postgres_connection() as conn:
-            profiles = list_profiles(conn)
+        profiles = list_profiles_service()
         return [
             ProfileResponse(profile_uuid=p.profile_uuid, profile_name=p.profile_name)
             for p in profiles
@@ -29,7 +28,6 @@ def get_profiles() -> List[ProfileResponse]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list profiles.",
         ) from exc
-
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_user(payload: UserCreateRequest) -> UserCreateResponse:

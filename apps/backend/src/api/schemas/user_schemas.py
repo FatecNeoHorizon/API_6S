@@ -53,3 +53,19 @@ class UserResponse(UserCreateResponse):
 class ProfileResponse(BaseModel):
     profile_uuid: UUID
     profile_name: str
+
+class UserResult(BaseModel):
+    user_uuid: UUID
+    username: str
+    profile_id: UUID
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class UserUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    profile_id: UUID
+
+class UserSetActiveRequest(BaseModel):
+    active: bool

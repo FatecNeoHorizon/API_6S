@@ -114,16 +114,19 @@ def setup_energy_losses_tariff(db):
         [("distributor", ASCENDING),
          ("process_date", ASCENDING)],
         name="idx_unique_distributor_process",
-        unique=True
+        unique=True,
+        background=True
     )
 
     col.create_index(
         [("uf", ASCENDING),
          ("process_date", ASCENDING)],
-        name="idx_uf_process_date"
+        name="idx_uf_process_date",
+        background=True
     )
 
     col.create_index(
         [("non_technical_loss_cost_brl", ASCENDING)],
-        name="idx_non_technical_loss_cost"
+        name="idx_non_technical_loss_cost",
+        background=True
     )

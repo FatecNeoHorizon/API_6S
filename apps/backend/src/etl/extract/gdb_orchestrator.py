@@ -8,22 +8,9 @@ from src.repositories.load_history_repository import (
     insert_load_history,
     update_load_history
 )
-from src.utils.find_uploaded_file import find_file_full_path
-import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-def get_gdb_path() -> Path:
-    file_name = os.getenv("GDB_FILE_PATH")
-    search_folder = os.getenv("TMP_UPLOAD_PATH")
-    path_value = find_file_full_path(file_name, search_folder)
-
-    if not path_value:
-        raise ValueError("GDB_FILE_PATH não encontrado")
-
-    return Path(path_value)
-
 
 def build_batch(load_id, file_key, source_file, layer_name, df, chunk_index):
     return {
@@ -50,27 +37,15 @@ def build_envelope(batch):
     }
 
 
-def run_extraction(db: Database):
-    load_id = str(uuid.uuid4())
+def run_extraction(db: Database, path: Path, load_id: str):
     file_key = "gdb_file"
-
-    insert_load_history(db, {
-        "load_id": load_id,
-        "status": "STARTED",
-        "started_at": datetime.now(timezone.utc),
-        "collection_name": "gdb_extraction",
-        "batch_version": "1.0"
-    })
-
-    path = get_gdb_path()
-
     total_processed = 0
     chunks_completed = 0
 
     try:
         for chunk, layer_name, source_file in extract_gdb_generator(path):
 
-            if isinstance(chunk, dict):  # erro
+            if isinstance(chunk, dict):
                 update_load_history(
                     db,
                     load_id,
@@ -91,7 +66,6 @@ def run_extraction(db: Database):
             envelope = build_envelope(batch)
 
             # 👉 aqui seria envio (fila, storage, etc)
-            # print(envelope)
 
             total_processed += len(chunk)
             chunks_completed += 1
@@ -117,4 +91,14 @@ def run_extraction(db: Database):
         )
         raise
 
-    return {"load_id": load_id}
+def extract_gdb_preview(path: Path) -> list[dict]:
+    results = []
+    for chunk, layer_name, source_file in extract_gdb_generator(path):
+        if isinstance(chunk, dict):
+            continue
+        df = chunk.drop(columns=["geometry"], errors="ignore")
+        results.append({
+            "layer_name": layer_name,
+            "records": df.to_dict(orient="records")
+        })
+    return results

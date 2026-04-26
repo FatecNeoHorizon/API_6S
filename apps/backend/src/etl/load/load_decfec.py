@@ -164,6 +164,7 @@ def load_decfec(
                     "load_id":                       load_id,
                 }
 
+                # Natural key used to avoid duplicate measurements across reprocessings.
                 filter_key = {
                     "agent_acronym":        agent_acronym,
                     "consumer_unit_set_id": consumer_unit_set_id,
@@ -172,6 +173,7 @@ def load_decfec(
                     "period":               int(period),
                 }
 
+                # Upsert makes the DECFEC load idempotent for the same natural key.
                 operations.append(UpdateOne(filter_key, {"$set": doc}, upsert=True))
 
             totals["rows_valid"] += len(operations)
@@ -259,7 +261,7 @@ def load_decfec(
         raise
 
     finally:
-        client.close()
+        pass
 
     return {
         "collection": "distribution_indices",

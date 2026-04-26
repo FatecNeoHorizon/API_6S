@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle, Plus, Eye, EyeOff } from "lucide-react"
+import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle, Plus, Eye, EyeOff, RotateCcw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -91,6 +91,28 @@ const getPerfilClassName = (perfil) => {
 
 const getStatusClassName = (active) => {
   return active ? "bg-chart-1/10 text-chart-1" : "bg-muted text-muted-foreground"
+}
+
+const getApiErrorMessage = (error, fallbackMessage) => {
+  const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const firstDetail = detail[0]
+
+    if (typeof firstDetail === "string" && firstDetail.trim()) {
+      return firstDetail
+    }
+
+    if (typeof firstDetail?.msg === "string" && firstDetail.msg.trim()) {
+      return firstDetail.msg
+    }
+  }
+
+  return fallbackMessage
 }
 
 const createUserRequest = async (payload) => {
@@ -225,6 +247,7 @@ export default function UsuariosPage() {
   })
   const [editError, setEditError] = useState("")
   const [isEditingUser, setIsEditingUser] = useState(false)
+  const [isConfirmingDeleteAction, setIsConfirmingDeleteAction] = useState(false)
 
   const loadUsersAndProfiles = async () => {
     setIsLoading(true)
@@ -319,28 +342,6 @@ export default function UsuariosPage() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
   }
 
-  const getApiErrorMessage = (error, fallbackMessage) => {
-    const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
-
-    if (typeof detail === "string" && detail.trim()) {
-      return detail
-    }
-
-    if (Array.isArray(detail) && detail.length > 0) {
-      const firstDetail = detail[0]
-
-      if (typeof firstDetail === "string" && firstDetail.trim()) {
-        return firstDetail
-      }
-
-      if (typeof firstDetail?.msg === "string" && firstDetail.msg.trim()) {
-        return firstDetail.msg
-      }
-    }
-
-    return fallbackMessage
-  }
-
   const handleCreateUser = async () => {
     const username = createForm.username.trim()
     const email = createForm.email.trim()
@@ -410,6 +411,7 @@ export default function UsuariosPage() {
   }
 
   const closeDeleteModal = () => {
+    setIsConfirmingDeleteAction(false)
     setShowDeleteModal(false)
     setSelectedUser(null)
   }
@@ -460,22 +462,30 @@ export default function UsuariosPage() {
   const handleConfirmDelete = async () => {
     if (!selectedUser) return
 
-    const nextActive = !selectedUser.active
+    setIsConfirmingDeleteAction(true)
 
-    setAllUsers((prev) =>
-      prev.map((user) =>
-        user.user_uuid === selectedUser.user_uuid
-          ? {
-              ...user,
-              active: nextActive,
-              updated_at: new Date().toISOString(),
-            }
-          : user,
-      ),
-    )
+    try {
+      if (selectedUser.active) {
+        await setUserActiveRequest(selectedUser.user_uuid, false)
+        toast.success("Usuário desativado com sucesso")
+      } else {
+        await setUserActiveRequest(selectedUser.user_uuid, true)
+        toast.success("Usuário reativado com sucesso")
+      }
 
-    toast.success(nextActive ? "Usuário reativado com sucesso" : "Usuário desativado com sucesso")
-    closeDeleteModal()
+      closeDeleteModal()
+      await loadUsersAndProfiles()
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          selectedUser.active
+            ? "Não foi possível desativar o usuário. Tente novamente."
+            : "Não foi possível reativar o usuário. Tente novamente.",
+        ),
+      )
+      setIsConfirmingDeleteAction(false)
+    }
   }
 
   const profileOptions = profiles.filter((profile) =>
@@ -483,6 +493,7 @@ export default function UsuariosPage() {
   )
 
   const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
+  const deleteActionButtonLabel = selectedUser?.active ? "Desativar Usuário" : "Reativar Usuário"
 
   return (
     <>
@@ -663,11 +674,11 @@ export default function UsuariosPage() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              className={`h-8 w-8 text-muted-foreground ${user.active ? "hover:text-destructive" : "hover:text-chart-1"}`}
                               aria-label={user.active ? `Desativar ${user.username}` : `Reativar ${user.username}`}
                               onClick={() => openDeleteModal(user)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {user.active ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
                             </Button>
                           </div>
                         </td>
@@ -963,8 +974,12 @@ export default function UsuariosPage() {
           <Card className="w-full max-w-sm border-border bg-card">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-destructive/10 p-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                <div className={`rounded-lg p-2 ${selectedUser.active ? "bg-destructive/10" : "bg-chart-1/10"}`}>
+                  {selectedUser.active ? (
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  ) : (
+                    <RotateCcw className="h-5 w-5 text-chart-1" />
+                  )}
                 </div>
                 <div>
                   <CardTitle className="text-foreground">
@@ -972,7 +987,7 @@ export default function UsuariosPage() {
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
                     {selectedUser.active
-                      ? "O usuário será marcado como inativo"
+                      ? "Esta ação realiza soft delete (desativação lógica)"
                       : "O usuário voltará para status ativo"}
                   </CardDescription>
                 </div>
@@ -991,16 +1006,25 @@ export default function UsuariosPage() {
                   variant="outline"
                   className="flex-1 border-border text-foreground hover:bg-muted"
                   onClick={closeDeleteModal}
+                  disabled={isConfirmingDeleteAction}
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="button"
                   variant={selectedUser.active ? "destructive" : "default"}
-                  className="flex-1"
+                  className={`flex-1 ${selectedUser.active ? "" : "bg-chart-1 text-background hover:bg-chart-1/90"}`}
                   onClick={handleConfirmDelete}
+                  disabled={isConfirmingDeleteAction}
                 >
-                  {selectedUser.active ? "Desativar Usuário" : "Reativar Usuário"}
+                  {isConfirmingDeleteAction ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    deleteActionButtonLabel
+                  )}
                 </Button>
               </div>
             </CardContent>

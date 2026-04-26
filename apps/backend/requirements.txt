@@ -13,3 +13,7 @@ pandas
 openpyxl
 geopandas
 pyogrio
+bcrypt
+cryptography
+pydantic[email]
+pytest

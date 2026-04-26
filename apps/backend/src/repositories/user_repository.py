@@ -46,9 +46,6 @@ class UserResult:
 
 
 def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
-    if not exists_by_profile_id(conn, data["profile_id"]):
-        raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
-
     query = """
         INSERT INTO TB_USER (
             USERNAME,
@@ -114,7 +111,7 @@ def list_users(conn: PgConnection) -> List[UserResult]:
     return [UserResult(user_uuid=r[0], username=r[1], profile_id=r[2], active=r[3], created_at=r[4], updated_at=r[5]) for r in rows]
 
 def exists_by_username(conn: PgConnection, username: str) -> bool:
-    query = "SELECT 1 FROM TB_USER WHERE USERNAME = %s LIMIT 1"
+    query = "SELECT 1 FROM TB_USER WHERE UPPER(USERNAME) = UPPER(%s) LIMIT 1"
     with conn.cursor() as cursor:
         cursor.execute(query, (username,))
         return cursor.fetchone() is not None

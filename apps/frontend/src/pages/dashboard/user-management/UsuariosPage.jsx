@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle } from "lucide-react"
+import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle, Plus, Eye, EyeOff } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,8 @@ import { apiClient } from "@/api/client"
 
 const DEFAULT_PAGE_SIZE = 5
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100]
+const ALLOWED_PROFILE_NAMES = new Set(["ADMIN", "ANALYST", "MANAGER"])
+const API_BASE_URL = import.meta.env.VITE_API_URL
 
 const normalizeUser = (user) => ({
   user_uuid: user.user_uuid,
@@ -91,6 +93,37 @@ const getStatusClassName = (active) => {
   return active ? "bg-chart-1/10 text-chart-1" : "bg-muted text-muted-foreground"
 }
 
+const createUserRequest = async (payload) => {
+  if (!API_BASE_URL) {
+    const error = new Error("VITE_API_URL não configurada")
+    error.status = 500
+    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
+    throw error
+  }
+
+  const response = await fetch(`${API_BASE_URL}/users/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const contentType = response.headers.get("content-type")
+  const responseBody = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text()
+
+  if (!response.ok) {
+    const error = new Error(`Erro na API: ${response.status}`)
+    error.status = response.status
+    error.data = responseBody
+    throw error
+  }
+
+  return responseBody
+}
+
 export default function UsuariosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -112,53 +145,51 @@ export default function UsuariosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    profile_id: "",
+  })
+  const [createError, setCreateError] = useState("")
+  const [isCreatingUser, setIsCreatingUser] = useState(false)
+  const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState({
     username: "",
     profile_id: "",
   })
 
-  useEffect(() => {
-    let isMounted = true
+  const loadUsersAndProfiles = async () => {
+    setIsLoading(true)
 
-    const loadInitialData = async () => {
-      setIsLoading(true)
+    try {
+      const [profilesResponse, usersResponse] = await Promise.all([
+        apiClient.get("/users/profiles"),
+        apiClient.get("/users/"),
+      ])
 
-      try {
-        const [profilesResponse, usersResponse] = await Promise.all([
-          apiClient.get("/users/profiles"),
-          apiClient.get("/users/"),
-        ])
+      const apiProfiles = normalizeProfiles(resolvePayloadArray(profilesResponse))
+      const apiUsers = resolvePayloadArray(usersResponse).map(normalizeUser)
 
-        const apiProfiles = normalizeProfiles(resolvePayloadArray(profilesResponse))
-        const apiUsers = resolvePayloadArray(usersResponse).map(normalizeUser)
-
-        if (!isMounted) return
-
-        setProfiles(apiProfiles)
-        setAllUsers(apiUsers)
-      } catch (error) {
-        if (!isMounted) return
-
-        if (!navigator.onLine || error instanceof TypeError) {
-          toast.error("Sem conexão com a internet. Verifique sua rede e tente novamente.")
-        } else if (error?.response?.status === 403 || error?.status === 403) {
-          toast.error("Acesso negado. Você não tem permissão para visualizar estes dados.")
-        } else {
-          toast.error("Erro ao carregar dados. Tente novamente.")
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+      setProfiles(apiProfiles)
+      setAllUsers(apiUsers)
+    } catch (error) {
+      if (!navigator.onLine || error instanceof TypeError) {
+        toast.error("Sem conexão com a internet. Verifique sua rede e tente novamente.")
+      } else if (error?.response?.status === 403 || error?.status === 403) {
+        toast.error("Acesso negado. Você não tem permissão para visualizar estes dados.")
+      } else {
+        toast.error("Erro ao carregar dados. Tente novamente.")
       }
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    loadInitialData()
-
-    return () => {
-      isMounted = false
-    }
+  useEffect(() => {
+    loadUsersAndProfiles()
   }, [])
 
   useEffect(() => {
@@ -194,6 +225,101 @@ export default function UsuariosPage() {
   const handlePageSizeChange = (event) => {
     setPageSize(Number(event.target.value))
     setCurrentPage(1)
+  }
+
+  const handleCreateFormChange = (event) => {
+    const { name, value } = event.target
+    setCreateForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleOpenCreateModal = () => {
+    setCreateForm({
+      username: "",
+      email: "",
+      password: "",
+      profile_id: "",
+    })
+    setCreateError("")
+    setShowCreatePassword(false)
+    setShowCreateModal(true)
+  }
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false)
+    setCreateError("")
+    setShowCreatePassword(false)
+  }
+
+  const isValidEmail = (value) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  }
+
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
+
+    if (typeof detail === "string" && detail.trim()) {
+      return detail
+    }
+
+    if (Array.isArray(detail) && detail.length > 0) {
+      const firstDetail = detail[0]
+
+      if (typeof firstDetail === "string" && firstDetail.trim()) {
+        return firstDetail
+      }
+
+      if (typeof firstDetail?.msg === "string" && firstDetail.msg.trim()) {
+        return firstDetail.msg
+      }
+    }
+
+    return fallbackMessage
+  }
+
+  const handleCreateUser = async () => {
+    const username = createForm.username.trim()
+    const email = createForm.email.trim()
+    const password = createForm.password
+    const profile_id = createForm.profile_id
+
+    if (!username || !email || !password || !profile_id) {
+      setCreateError("Preencha todos os campos obrigatórios.")
+      return
+    }
+
+    if (!isValidEmail(email)) {
+      setCreateError("Informe um email válido.")
+      return
+    }
+
+    setCreateError("")
+    setIsCreatingUser(true)
+
+    try {
+      await createUserRequest({
+        username,
+        email,
+        password,
+        profile_id,
+      })
+
+      toast.success("Usuário criado com sucesso")
+      handleCloseCreateModal()
+      await loadUsersAndProfiles()
+      setCurrentPage(1)
+    } catch (error) {
+      const status = error?.status
+
+      if (status === 409) {
+        setCreateError(getApiErrorMessage(error, "Username ou email já cadastrado."))
+      } else if (status === 404) {
+        setCreateError(getApiErrorMessage(error, "Perfil selecionado não existe."))
+      } else {
+        setCreateError(getApiErrorMessage(error, "Não foi possível criar o usuário. Tente novamente."))
+      }
+    } finally {
+      setIsCreatingUser(false)
+    }
   }
 
   const openEditModal = (user) => {
@@ -270,6 +396,12 @@ export default function UsuariosPage() {
     closeDeleteModal()
   }
 
+  const profileOptions = profiles.filter((profile) =>
+    ALLOWED_PROFILE_NAMES.has(profile.profile_name.toUpperCase()),
+  )
+
+  const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -319,20 +451,31 @@ export default function UsuariosPage() {
           />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="text-sm text-muted-foreground" htmlFor="status-filter">
-            Filtrar por status
-          </label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={handleStatusFilterChange}
-            className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground sm:w-56"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="text-sm text-muted-foreground" htmlFor="status-filter">
+              Filtrar por status
+            </label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground sm:w-56"
+            >
+              <option value="all">Todos</option>
+              <option value="active">Ativos</option>
+              <option value="inactive">Inativos</option>
+            </select>
+          </div>
+
+          <Button
+            type="button"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={handleOpenCreateModal}
           >
-            <option value="all">Todos</option>
-            <option value="active">Ativos</option>
-            <option value="inactive">Inativos</option>
-          </select>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
         </div>
 
         <Card className="border-border bg-card">
@@ -345,7 +488,7 @@ export default function UsuariosPage() {
                 </CardDescription>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-auto">
+              <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
                 <label htmlFor="users-page-size" className="text-sm text-muted-foreground">
                   Mostrar
                 </label>
@@ -553,6 +696,147 @@ export default function UsuariosPage() {
                   onClick={handleSaveEdit}
                 >
                   Salvar Alterações
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">Novo Usuário</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCloseCreateModal}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Fechar modal de criação"
+                  disabled={isCreatingUser}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">
+                Cadastre um usuário com perfil e senha temporária.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-user-username">
+                  Username
+                </label>
+                <Input
+                  id="create-user-username"
+                  name="username"
+                  value={createForm.username}
+                  onChange={handleCreateFormChange}
+                  placeholder="Digite o username"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingUser}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-user-email">
+                  Email
+                </label>
+                <Input
+                  id="create-user-email"
+                  name="email"
+                  type="email"
+                  value={createForm.email}
+                  onChange={handleCreateFormChange}
+                  placeholder="Digite o email"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingUser}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-user-profile">
+                  Perfil
+                </label>
+                <select
+                  id="create-user-profile"
+                  name="profile_id"
+                  value={createForm.profile_id}
+                  onChange={handleCreateFormChange}
+                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
+                  disabled={isCreatingUser}
+                >
+                  <option value="">Selecione um perfil</option>
+                  {createProfileOptions.map((profile) => (
+                    <option key={profile.profile_uuid} value={profile.profile_uuid}>
+                      {profile.profile_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-user-password">
+                  Senha Temporária
+                </label>
+                <div className="relative">
+                  <Input
+                    id="create-user-password"
+                    name="password"
+                    type={showCreatePassword ? "text" : "password"}
+                    value={createForm.password}
+                    onChange={handleCreateFormChange}
+                    placeholder="Digite a senha temporária"
+                    className="border-border bg-input pr-10 text-foreground"
+                    disabled={isCreatingUser}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowCreatePassword((prev) => !prev)}
+                    aria-label={showCreatePassword ? "Ocultar senha" : "Mostrar senha"}
+                    disabled={isCreatingUser}
+                  >
+                    {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              {createError && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {createError}
+                </p>
+              )}
+
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-border text-foreground hover:bg-muted"
+                  onClick={handleCloseCreateModal}
+                  disabled={isCreatingUser}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={handleCreateUser}
+                  disabled={isCreatingUser}
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    "Criar Usuário"
+                  )}
                 </Button>
               </div>
             </CardContent>

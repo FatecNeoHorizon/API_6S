@@ -1,6 +1,41 @@
 from src.database.postgres import dict_cursor
 
 
+def get_session_user(conn, session_uuid: str) -> dict | None:
+    """
+    Reads the authenticated user from an active session.
+
+    Repository layer rule:
+    - only SQL;
+    - no HTTPException;
+    - no response formatting;
+    - no business validation.
+    """
+    with dict_cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT
+                s.SESSION_UUID,
+                u.USER_UUID,
+                p.PROFILE_NAME
+            FROM TB_SESSION s
+            JOIN TB_USER u
+              ON u.USER_UUID = s.USER_ID
+            JOIN TB_PROFILE p
+              ON p.PROFILE_UUID = u.PROFILE_ID
+            WHERE s.SESSION_UUID = %s
+              AND s.INVALIDATED_AT IS NULL
+              AND s.EXPIRES_AT > NOW()
+              AND s.DELETED_AT IS NULL
+              AND u.ACTIVE = TRUE
+              AND u.DELETED_AT IS NULL
+            """,
+            (session_uuid,),
+        )
+
+        return cur.fetchone()
+
+
 def list_pending_clauses(conn, user_id: str) -> list[dict]:
     """
     Lists mandatory clauses pending consent for a specific authenticated user.
@@ -61,23 +96,17 @@ def insert_consent_event(
     user_id: str,
     clause_uuid: str,
     policy_version_id: str,
-    action: str,
+    event_action: str,
     source_ip: str,
     user_agent: str,
 ) -> bool:
     """
     Inserts an immutable consent event.
 
-    The INSERT uses SELECT from TB_POLICY_CLAUSE to guarantee that:
-    - the clause exists;
-    - the policy version exists;
-    - the clause belongs to the given policy version.
+    The service layer must already map:
+    - CONSENT -> CONSENT_ACCEPTED
+    - REVOCATION -> CONSENT_REVOKED
     """
-    event_action = {
-        "CONSENT": "CONSENT_ACCEPTED",
-        "REVOCATION": "CONSENT_REVOKED",
-    }[action]
-
     with dict_cursor(conn) as cur:
         cur.execute(
             """

@@ -259,7 +259,7 @@ def load_decfec(
         raise
 
     finally:
-        client.close()
+        pass
 
     return {
         "collection": "distribution_indices",

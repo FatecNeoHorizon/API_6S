@@ -23,4 +23,5 @@ def setup_tam_sam(db):
         validationAction="error"
     )
     db.tam_sam.create_index([("calculated_on", ASCENDING)], name="idx_calculated_on")
+    # Exactly one document per metric (tam_total), updated by upsert during recalculation.
     db.tam_sam.create_index([("metric", ASCENDING)], name="ux_metric", unique=True)

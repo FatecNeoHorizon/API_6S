@@ -11,7 +11,8 @@ Example Document:
     "location_area": "1",
     "nominal_power_kva": 500.0,
     "iron_losses_kw": 45.0,
-    "copper_losses_kw": 60.0
+    "copper_losses_kw": 60.0,
+    "substation": "SE-001"
 }
 """
 
@@ -21,7 +22,7 @@ def setup_distribution_transformers(db):
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["code", "distributor_code"],
+                "required": ["code", "distributor_code", "substation"],
                 "properties": {
                     "_id": {"bsonType": "objectId"},
                     "code": {
@@ -56,11 +57,15 @@ def setup_distribution_transformers(db):
                     "copper_losses_kw": {
                         "bsonType": ["double", "null"],
                         "description": "Copper (load) losses in kW. Mapped from PER_COB."
+                    },
+                    "substation": {
+                        "bsonType": "string",
+                        "description": "Substation code this transformer belongs to. Foreign key to substations.code. Mapped from ETL."
                     }
                 }
             }
         },
-        validationLevel="moderate",
+        validationLevel="strict",
         validationAction="error"
     )
 
@@ -86,3 +91,9 @@ def setup_distribution_transformers(db):
     )
 
     col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power", background=True)
+
+    col.create_index(
+        [("substation", ASCENDING)],
+        name="idx_substation",
+        background=True
+    )

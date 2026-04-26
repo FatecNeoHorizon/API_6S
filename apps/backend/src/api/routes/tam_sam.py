@@ -10,7 +10,7 @@ async def calculate_tam_total():
     return Tam_sam_procedures().calculate_and_persist_tam_total()
 
 
-@router.get("/")
+@router.get("/tam")
 async def get_tam_total():
     result = Tam_sam_procedures().get_tam_total()
 

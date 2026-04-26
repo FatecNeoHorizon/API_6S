@@ -6,112 +6,6 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { apiClient } from "@/api/client"
 
-const mockProfiles = [
-  {
-    profile_uuid: "11111111-1111-1111-1111-111111111111",
-    profile_name: "ADMIN",
-  },
-  {
-    profile_uuid: "22222222-2222-2222-2222-222222222222",
-    profile_name: "ANALYST",
-  },
-  {
-    profile_uuid: "33333333-3333-3333-3333-333333333333",
-    profile_name: "MANAGER",
-  },
-]
-
-const mockUsers = [
-  {
-    user_uuid: "a28e4f8b-948f-4f72-b173-6cfc64ac0011",
-    username: "admin.principal",
-    profile_id: "11111111-1111-1111-1111-111111111111",
-    active: true,
-    created_at: "2024-01-15T10:30:00Z",
-    updated_at: "2026-03-15T10:30:00Z",
-  },
-  {
-    user_uuid: "b28e4f8b-948f-4f72-b173-6cfc64ac0022",
-    username: "maria.silva",
-    profile_id: "22222222-2222-2222-2222-222222222222",
-    active: true,
-    created_at: "2024-03-20T16:45:00Z",
-    updated_at: "2026-03-14T16:45:00Z",
-  },
-  {
-    user_uuid: "c28e4f8b-948f-4f72-b173-6cfc64ac0033",
-    username: "joao.santos",
-    profile_id: "33333333-3333-3333-3333-333333333333",
-    active: true,
-    created_at: "2024-06-10T09:15:00Z",
-    updated_at: "2026-03-13T09:15:00Z",
-  },
-  {
-    user_uuid: "d28e4f8b-948f-4f72-b173-6cfc64ac0044",
-    username: "ana.costa",
-    profile_id: "22222222-2222-2222-2222-222222222222",
-    active: false,
-    created_at: "2024-08-05T14:20:00Z",
-    updated_at: "2026-02-28T14:20:00Z",
-  },
-  {
-    user_uuid: "e28e4f8b-948f-4f72-b173-6cfc64ac0055",
-    username: "carlos.oliveira",
-    profile_id: "33333333-3333-3333-3333-333333333333",
-    active: true,
-    created_at: "2025-01-12T08:00:00Z",
-    updated_at: "2026-03-15T08:00:00Z",
-  },
-  {
-    user_uuid: "f28e4f8b-948f-4f72-b173-6cfc64ac0066",
-    username: "fernanda.rocha",
-    profile_id: "22222222-2222-2222-2222-222222222222",
-    active: true,
-    created_at: "2025-02-08T13:25:00Z",
-    updated_at: "2026-03-11T13:25:00Z",
-  },
-  {
-    user_uuid: "a38e4f8b-948f-4f72-b173-6cfc64ac0077",
-    username: "bruno.almeida",
-    profile_id: "33333333-3333-3333-3333-333333333333",
-    active: false,
-    created_at: "2025-03-01T17:40:00Z",
-    updated_at: "2026-02-20T17:40:00Z",
-  },
-  {
-    user_uuid: "b38e4f8b-948f-4f72-b173-6cfc64ac0088",
-    username: "patricia.lima",
-    profile_id: "11111111-1111-1111-1111-111111111111",
-    active: true,
-    created_at: "2025-03-22T11:10:00Z",
-    updated_at: "2026-03-15T11:10:00Z",
-  },
-  {
-    user_uuid: "c38e4f8b-948f-4f72-b173-6cfc64ac0099",
-    username: "ricardo.mendes",
-    profile_id: "22222222-2222-2222-2222-222222222222",
-    active: true,
-    created_at: "2025-04-14T09:05:00Z",
-    updated_at: "2026-03-10T09:05:00Z",
-  },
-  {
-    user_uuid: "d38e4f8b-948f-4f72-b173-6cfc64ac0100",
-    username: "juliana.pereira",
-    profile_id: "33333333-3333-3333-3333-333333333333",
-    active: true,
-    created_at: "2025-05-06T15:55:00Z",
-    updated_at: "2026-03-09T15:55:00Z",
-  },
-  {
-    user_uuid: "e38e4f8b-948f-4f72-b173-6cfc64ac0111",
-    username: "thiago.barbosa",
-    profile_id: "22222222-2222-2222-2222-222222222222",
-    active: false,
-    created_at: "2025-06-18T10:00:00Z",
-    updated_at: "2026-01-18T10:00:00Z",
-  },
-]
-
 const DEFAULT_PAGE_SIZE = 5
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100]
 
@@ -202,8 +96,8 @@ export default function UsuariosPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [profiles, setProfiles] = useState(mockProfiles)
-  const [allUsers, setAllUsers] = useState(mockUsers)
+  const [profiles, setProfiles] = useState([])
+  const [allUsers, setAllUsers] = useState([])
   const [usersPage, setUsersPage] = useState({
     data: [],
     meta: {
@@ -241,18 +135,18 @@ export default function UsuariosPage() {
 
         if (!isMounted) return
 
-        if (apiProfiles.length > 0) {
-          setProfiles(apiProfiles)
-        }
-
-        if (apiUsers.length > 0) {
-          setAllUsers(apiUsers)
-        }
-      } catch {
+        setProfiles(apiProfiles)
+        setAllUsers(apiUsers)
+      } catch (error) {
         if (!isMounted) return
 
-        setProfiles(mockProfiles)
-        setAllUsers(mockUsers)
+        if (!navigator.onLine || error instanceof TypeError) {
+          toast.error("Sem conexão com a internet. Verifique sua rede e tente novamente.")
+        } else if (error?.response?.status === 403 || error?.status === 403) {
+          toast.error("Acesso negado. Você não tem permissão para visualizar estes dados.")
+        } else {
+          toast.error("Erro ao carregar dados. Tente novamente.")
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false)

@@ -24,10 +24,7 @@ async def lifespan(app: FastAPI):
     connection._client = mongo_client
     
     setup()
-    
-    from src.model.seed import seed
-    seed()
-    
+
     yield
 
     connection._client = None

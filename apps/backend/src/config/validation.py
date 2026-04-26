@@ -19,6 +19,7 @@ def format_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any
         formatted_errors.append(
             {
                 **error,
+                "ctx": None,  # remove o ctx — contém objetos não serializáveis
                 "msg": _translate_error(error, field_name),
             }
         )

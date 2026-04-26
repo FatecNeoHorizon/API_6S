@@ -24,8 +24,6 @@ Flyway executes migrations in sequential order. The following order must be resp
 | `V006__synthetic_seed.sql` | Inserts fictional data for dev environment only |
 | `V007__rls_policies.sql` | Creates Row Level Security policies |
 
-| `V009__create_tb_password_reset.sql` | Creates `TB_PASSWORD_RESET` for single-use password reset tokens |
-
 ## Table Descriptions
 
 ### `TB_PROFILE`

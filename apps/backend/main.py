@@ -10,7 +10,7 @@ from src.api.routes import network_structure
 from src.api.routes import tam_sam
 from src.api.routes import upload
 from src.api.routes import gdb
-from src.api.routes import consent
+from src.api.routes import terms
 
 from src.config.lifespan import lifespan
 
@@ -25,4 +25,4 @@ app.include_router(upload.router)
 app.include_router(gdb.router)
 app.include_router(tam_sam.router)
 app.include_router(upload.router)
-app.include_router(consent.router)
+app.include_router(terms.router)

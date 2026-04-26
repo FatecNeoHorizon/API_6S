@@ -1,6 +1,41 @@
 from src.database.postgres import dict_cursor
 
 
+def list_current_terms(conn) -> list[dict]:
+    """
+    Lists all currently effective policy versions and their clauses.
+    """
+    with dict_cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT
+                pv.VERSION_UUID,
+                pv.VERSION,
+                pv.POLICY_TYPE,
+                pv.CONTENT,
+                pv.EFFECTIVE_FROM,
+                c.CLAUSE_UUID,
+                c.CODE,
+                c.TITLE,
+                c.DESCRIPTION,
+                c.MANDATORY,
+                c.DISPLAY_ORDER
+            FROM TB_POLICY_VERSION pv
+            LEFT JOIN TB_POLICY_CLAUSE c
+              ON c.POLICY_VERSION_ID = pv.VERSION_UUID
+             AND c.DELETED_AT IS NULL
+            WHERE pv.DELETED_AT IS NULL
+              AND pv.EFFECTIVE_FROM <= NOW()
+            ORDER BY
+                pv.POLICY_TYPE,
+                pv.EFFECTIVE_FROM DESC,
+                c.DISPLAY_ORDER ASC
+            """
+        )
+
+        return cur.fetchall()
+
+
 def policy_version_exists(conn, version: str, policy_type: str) -> bool:
     with dict_cursor(conn) as cur:
         cur.execute(
@@ -18,7 +53,13 @@ def policy_version_exists(conn, version: str, policy_type: str) -> bool:
         return cur.fetchone() is not None
 
 
-def create_policy_version(conn, version: str, policy_type: str, content: str, effective_from):
+def create_policy_version(
+    conn,
+    version: str,
+    policy_type: str,
+    content: str,
+    effective_from,
+):
     with dict_cursor(conn) as cur:
         cur.execute(
             """
@@ -72,7 +113,7 @@ def list_policy_versions(conn) -> list[dict]:
         return cur.fetchall()
 
 
-def get_policy_version(conn, version_id: str):
+def get_policy_version(conn, version_id: str) -> dict | None:
     with dict_cursor(conn) as cur:
         cur.execute(
             """

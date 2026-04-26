@@ -23,9 +23,6 @@ async def lifespan(app: FastAPI):
     
     setup()
     
-    from src.model.seed import seed
-    seed()
-    
     yield
 
     connection._client = None

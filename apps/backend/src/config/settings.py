@@ -124,3 +124,13 @@ class Settings(BaseSettings):
             f"{self.mongo_host}:{self.mongo_port}/{self.mongo_db_name}?"
             f"authSource=admin"
         )
+
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"host={self.postgres_host} "
+            f"port={self.postgres_port} "
+            f"user={self.postgres_user} "
+            f"password={self.postgres_password} "
+            f"dbname={self.postgres_db}"
+        )

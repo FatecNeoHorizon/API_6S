@@ -95,6 +95,7 @@ services:
       - envs/.env.postgres.${APP_ENV:-dev}
       - envs/.env.mongo.${APP_ENV:-dev}
       - envs/.env.backend.${APP_ENV:-dev}
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "8000:8000"
     volumes:

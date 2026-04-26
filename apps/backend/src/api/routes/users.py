@@ -18,6 +18,10 @@ from src.services.user_service import (
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+@router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
+def list_users():
+    return list_users_service()
+
 
 @router.get("/profiles", response_model=List[ProfileResponse], status_code=status.HTTP_200_OK)
 def get_profiles():
@@ -26,11 +30,6 @@ def get_profiles():
         return [ProfileResponse(profile_uuid=p.profile_uuid, profile_name=p.profile_name) for p in profiles]
     except ProfilePersistenceError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha ao listar perfis.") from exc
-
-
-@router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
-def list_users():
-    return list_users_service()
 
 
 @router.get("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)

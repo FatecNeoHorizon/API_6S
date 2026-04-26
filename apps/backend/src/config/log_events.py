@@ -1,0 +1,7 @@
+USER_CREATED = "user.created"
+USER_UPDATED = "user.updated"
+USER_DEACTIVATED = "user.deactivated"
+USER_DELETED = "user.deleted"
+USER_NOT_FOUND = "user.not_found"
+USER_CONFLICT = "user.conflict"
+USER_LISTED = "user.listed"

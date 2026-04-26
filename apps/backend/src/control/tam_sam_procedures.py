@@ -22,6 +22,7 @@ class Tam_sam_procedures:
         self.db = self.connection[_settings.mongo_db_name]
 
     def calculate_and_persist_tam_total(self):
+        # TAM is the number of distinct consumer unit sets in the indicators collection.
         pipeline = [
             {"$match": {"consumer_unit_set_id": {"$nin": [None, ""]}}},
             {"$group": {"_id": "$consumer_unit_set_id"}},
@@ -33,6 +34,7 @@ class Tam_sam_procedures:
 
         calculated_on = datetime.now(timezone.utc)
 
+        # Upsert keeps a single logical TAM record and replaces it on reprocessing.
         self.db.tam_sam.update_one(
             {"metric": "tam_total"},
             {

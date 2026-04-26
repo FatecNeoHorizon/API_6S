@@ -9,6 +9,7 @@ from src.database.collections.load_history import setup_load_history
 from src.database.collections.mt_network_segments import setup_mt_network_segments
 from src.database.collections.municipalities import setup_municipalities
 from src.database.collections.substations import setup_substations
+from src.database.collections.tam_sam import setup_tam_sam
 
 COLLECTION_SETUPS = [
     ("at_network_segments",    setup_at_network_segments),
@@ -21,6 +22,7 @@ COLLECTION_SETUPS = [
     ("mt_network_segments",    setup_mt_network_segments),
     ("municipalities",         setup_municipalities),
     ("substations",            setup_substations),
+    ("tam_sam",                setup_tam_sam),
 ]
 
 def setup():

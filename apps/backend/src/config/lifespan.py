@@ -2,15 +2,17 @@ from contextlib import asynccontextmanager
 import pymongo
 from fastapi import FastAPI
 from src.config.settings import Settings
+from src.config.logger import configure_logging 
 from src.database.connection import get_db
 from src.database.setup import setup
 from src.database import connection
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
+    configure_logging()
     settings = Settings()
-    
+        
     mongo_client = pymongo.MongoClient(
         settings.mongo_uri,
         maxPoolSize=settings.mongo_max_pool_size,
@@ -22,10 +24,7 @@ async def lifespan(app: FastAPI):
     connection._client = mongo_client
     
     setup()
-    
-    from src.model.seed import seed
-    seed()
-    
+
     yield
 
     connection._client = None

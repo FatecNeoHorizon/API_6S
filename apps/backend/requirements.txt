@@ -10,3 +10,12 @@ python-magic
 uvicorn
 psycopg2-binary
 pandas
+openpyxl
+geopandas
+pyogrio
+structlog
+python-json-logger
+bcrypt
+cryptography
+pydantic[email]
+pytest

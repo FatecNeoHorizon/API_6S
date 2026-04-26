@@ -27,11 +27,7 @@ async def lifespan(app: FastAPI):
     init_postgres_pool()
 
     setup()
-
-    from src.model.seed import seed
-
-    seed()
-
+    
     yield
 
     close_postgres_pool()
@@ -40,7 +36,8 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app, "mongodb") and app.mongodb:
         app.mongodb.close()
-        delattr(app, "mongodb")
-
-    if hasattr(get_db, "_client"):
-        delattr(get_db, "_client")
+        delattr(app, 'mongodb')
+    
+    # Clean up the get_db function reference
+    if hasattr(get_db, '_client'):
+        delattr(get_db, '_client')

@@ -32,7 +32,10 @@ class Settings(BaseSettings):
     app_env: str = Field(default="dev")
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
-    csv_file_path: str = Field(default="./data/")
+
+    # File Upload Settings
+    max_upload_size_mb: int = Field(default=500)
+    tmp_upload_path: str = Field(default="tmp/uploads")
 
     # MongoDB Configuration
     mongo_host: str = Field(default="mongo_db")
@@ -47,6 +50,13 @@ class Settings(BaseSettings):
     mongo_max_pool_size: int = Field(default=10)
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
+
+    #Postgres Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="")
+    postgres_password: str = Field(default="")
+    postgres_db: str = Field(default="")
 
     model_config = ConfigDict(
         case_sensitive=False,
@@ -82,4 +92,14 @@ class Settings(BaseSettings):
             f"mongodb://{self.mongo_user}:{self.mongo_password}@"
             f"{self.mongo_host}:{self.mongo_port}/{self.mongo_db_name}?"
             f"authSource=admin"
+        )
+
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"host={self.postgres_host} "
+            f"port={self.postgres_port} "
+            f"user={self.postgres_user} "
+            f"password={self.postgres_password} "
+            f"dbname={self.postgres_db}"
         )

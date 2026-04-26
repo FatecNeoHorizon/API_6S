@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 from typing import Optional
+import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def _load_env_files():
     """Load .env files from envs/ directory based on APP_ENV."""
@@ -15,13 +21,19 @@ def _load_env_files():
         if not envs_dir.exists():
             continue
 
+        loaded_any = False
         for env_file in (
             envs_dir / f".env.backend.{app_env}",
             envs_dir / ".env.backend",
+            envs_dir / f".env.postgres.{app_env}",
+            envs_dir / ".env.postgres",
         ):
             if env_file.exists():
                 load_dotenv(dotenv_path=str(env_file), override=False)
-                return
+                loaded_any = True
+
+        if loaded_any:
+            return
 
 _load_env_files()
 
@@ -37,6 +49,13 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = Field(default=500)
     tmp_upload_path: str = Field(default="tmp/uploads")
 
+    # PostgreSQL Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="admin")
+    postgres_password: str = Field(default="password")
+    postgres_db: str = Field(default="tecsys")
+
     # MongoDB Configuration
     mongo_host: str = Field(default="mongo_db")
     if mongo_host == "localhost":
@@ -51,10 +70,29 @@ class Settings(BaseSettings):
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
 
+    # PostgreSQL Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="postgres")
+    postgres_password: str = Field(default="postgres")
+    postgres_db: str = Field(default="postgres")
+    postgres_sslmode: str = Field(default="prefer")
+
+    # User Security Configuration
+    email_hash_salt: str = Field(default="change-me")
+    email_encryption_key: Optional[str] = Field(default=None)
+
     model_config = ConfigDict(
         case_sensitive=False,
         extra="ignore",
     )
+
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
     @model_validator(mode="after")
     def validate_mongo_credentials(self) -> "Settings":
@@ -85,4 +123,14 @@ class Settings(BaseSettings):
             f"mongodb://{self.mongo_user}:{self.mongo_password}@"
             f"{self.mongo_host}:{self.mongo_port}/{self.mongo_db_name}?"
             f"authSource=admin"
+        )
+
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"host={self.postgres_host} "
+            f"port={self.postgres_port} "
+            f"user={self.postgres_user} "
+            f"password={self.postgres_password} "
+            f"dbname={self.postgres_db}"
         )

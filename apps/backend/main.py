@@ -17,6 +17,7 @@ from src.config.lifespan import lifespan
 app = FastAPI(lifespan=lifespan)
 
 setup_middleware(app)
+
 app.include_router(decfec.router)
 app.include_router(energy_losses.router)
 app.include_router(network_structure.router)

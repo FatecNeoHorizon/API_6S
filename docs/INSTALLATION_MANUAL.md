@@ -127,7 +127,7 @@ In `envs/.env.backend.dev`:
 
 BACKEND_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:5173
-CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
+CSV_FILE_PATH=indicadores-continuidade-coletivos-2020-2029.csv
 MONGO_MAX_POOL_SIZE=10
 MONGO_SERVER_SELECTION_TIMEOUT_MS=120000
 MONGO_CONNECT_TIMEOUT_MS=10000
@@ -231,7 +231,7 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 | Frontend doesn't load | Frontend container didn't start or port 5173 is occupied | Check logs with `docker compose logs frontend` and free the port |
 | Swagger unavailable | Backend didn't start or crashed due to connection error | Check backend logs and credentials in `.env` |
 | Migration fails | Wrong PostgreSQL/Flyway parameters | Review `envs/.env.postgres.*` and `envs/.env.flyway.*` |
-| CSV processing fails | File not found or name mismatch | Confirm file in `data` folder and `CSV_FILE_PATH` |
+| CSV processing fails | File not found or name mismatch | Confirm file in `data` folder and `CSV_FILE_PATH |
 | Mongo connection error | Incompatible MongoDB username/password | Review `MONGO_*` in `envs/.env.mongo.*` and `envs/.env.backend.*` |
 
 ---

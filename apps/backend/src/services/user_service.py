@@ -33,13 +33,15 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     email_hash = _build_email_hash(normalized_email, settings.email_hash_salt)
 
     with get_postgres_connection() as conn:
-        if exists_by_username(conn, payload.username):
+        if not exists_by_profile_id(conn, payload.profile_id):
+            raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
+        if exists_by_username(conn, payload.username.strip().upper()):
             raise UserAlreadyExistsError("Nome de usuário já cadastrado.")
         if exists_by_email_hash(conn, email_hash):
             raise UserAlreadyExistsError("E-mail já cadastrado.")
 
         data = {
-            "username": payload.username,
+            "username": payload.username.strip().upper(),
             "email_hash": email_hash,
             "email_enc": _encrypt_email(normalized_email, settings),
             "password_hash": _hash_password(payload.password),

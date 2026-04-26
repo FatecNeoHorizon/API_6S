@@ -10,6 +10,24 @@
 
 ## 📄 Main Documents
 
+### 0. **[TAM_IMPLEMENTATION.md](TAM_IMPLEMENTATION.md)**
+
+**Who is it for?** Backend developers and QA
+
+**What is it?** End-to-end reference for TAM calculation, persistence, validation, and reprocessing
+
+**Contains:**
+- ✅ Data flow from `distribution_indices` to `tam_sam`
+- ✅ Deduplication and upsert behavior
+- ✅ Raw/target record examples
+- ✅ Manual reprocessing commands
+- ✅ Traceability table and validation checklist
+
+**When to read?**
+- 🧮 Implementing or changing TAM logic
+- 🧪 Validating TAM behavior in tests
+- 🔁 Debugging or rerunning TAM in development
+
 ### 1. **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 **Who is it for?** Everyone involved (Devs, Scrum, DevOps)

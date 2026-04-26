@@ -124,6 +124,68 @@ const createUserRequest = async (payload) => {
   return responseBody
 }
 
+const updateUserRequest = async (userId, payload) => {
+  if (!API_BASE_URL) {
+    const error = new Error("VITE_API_URL não configurada")
+    error.status = 500
+    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
+    throw error
+  }
+
+  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const contentType = response.headers.get("content-type")
+  const responseBody = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text()
+
+  if (!response.ok) {
+    const error = new Error(`Erro na API: ${response.status}`)
+    error.status = response.status
+    error.data = responseBody
+    throw error
+  }
+
+  return responseBody
+}
+
+const setUserActiveRequest = async (userId, active) => {
+  if (!API_BASE_URL) {
+    const error = new Error("VITE_API_URL não configurada")
+    error.status = 500
+    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
+    throw error
+  }
+
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/active`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ active }),
+  })
+
+  const contentType = response.headers.get("content-type")
+  const responseBody = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text()
+
+  if (!response.ok) {
+    const error = new Error(`Erro na API: ${response.status}`)
+    error.status = response.status
+    error.data = responseBody
+    throw error
+  }
+
+  return responseBody
+}
+
 export default function UsuariosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -159,7 +221,10 @@ export default function UsuariosPage() {
   const [editForm, setEditForm] = useState({
     username: "",
     profile_id: "",
+    active: "true",
   })
+  const [editError, setEditError] = useState("")
+  const [isEditingUser, setIsEditingUser] = useState(false)
 
   const loadUsersAndProfiles = async () => {
     setIsLoading(true)
@@ -327,7 +392,9 @@ export default function UsuariosPage() {
     setEditForm({
       username: user.username,
       profile_id: user.profile_id,
+      active: String(user.active),
     })
+    setEditError("")
     setShowEditModal(true)
   }
 
@@ -338,6 +405,7 @@ export default function UsuariosPage() {
 
   const closeEditModal = () => {
     setShowEditModal(false)
+    setEditError("")
     setSelectedUser(null)
   }
 
@@ -348,31 +416,45 @@ export default function UsuariosPage() {
 
   const handleEditFormChange = (event) => {
     const { name, value } = event.target
+    setEditError("")
     setEditForm((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSaveEdit = async () => {
     if (!selectedUser) return
 
-    const payload = {
-      username: editForm.username,
-      profile_id: editForm.profile_id,
+    const username = editForm.username.trim()
+    const profile_id = editForm.profile_id
+    const active = editForm.active === "true"
+
+    if (!username || !profile_id) {
+      setEditError("Preencha os campos obrigatórios.")
+      return
     }
 
-    setAllUsers((prev) =>
-      prev.map((user) =>
-        user.user_uuid === selectedUser.user_uuid
-          ? {
-              ...user,
-              ...payload,
-              updated_at: new Date().toISOString(),
-            }
-          : user,
-      ),
-    )
+    setEditError("")
+    setIsEditingUser(true)
 
-    toast.success("Usuário editado com sucesso")
-    closeEditModal()
+    const payload = {
+      username,
+      profile_id,
+    }
+
+    try {
+      await updateUserRequest(selectedUser.user_uuid, payload)
+
+      if (active !== selectedUser.active) {
+        await setUserActiveRequest(selectedUser.user_uuid, active)
+      }
+
+      toast.success("Usuário editado com sucesso")
+      closeEditModal()
+      await loadUsersAndProfiles()
+    } catch (error) {
+      setEditError(getApiErrorMessage(error, "Não foi possível editar o usuário. Tente novamente."))
+    } finally {
+      setIsEditingUser(false)
+    }
   }
 
   const handleConfirmDelete = async () => {
@@ -681,12 +763,36 @@ export default function UsuariosPage() {
                 </select>
               </div>
 
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="edit-user-status">
+                  Status
+                </label>
+                <select
+                  id="edit-user-status"
+                  name="active"
+                  value={editForm.active}
+                  onChange={handleEditFormChange}
+                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
+                  disabled={isEditingUser}
+                >
+                  <option value="true">Ativo</option>
+                  <option value="false">Inativo</option>
+                </select>
+              </div>
+
+              {editError && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {editError}
+                </p>
+              )}
+
               <div className="mt-2 flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   className="flex-1 border-border text-foreground hover:bg-muted"
                   onClick={closeEditModal}
+                  disabled={isEditingUser}
                 >
                   Cancelar
                 </Button>
@@ -694,8 +800,16 @@ export default function UsuariosPage() {
                   type="button"
                   className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={handleSaveEdit}
+                  disabled={isEditingUser}
                 >
-                  Salvar Alterações
+                  {isEditingUser ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar Alterações"
+                  )}
                 </Button>
               </div>
             </CardContent>

@@ -8,7 +8,7 @@ from src.config.logger import configure_logging
 from src.database.connection import get_db
 from src.database.setup import setup
 from src.database import connection
-
+from src.database.postgres import init_postgres_pool, close_postgres_pool
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

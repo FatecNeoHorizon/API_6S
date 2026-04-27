@@ -1,10 +1,14 @@
+import structlog
+
 from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import HTTPException
 
 from src.repositories import consent_repository
+from src.config.log_events import  CONSENT_REGISTERED, CONSENT_REVOKED
 
+log = structlog.get_logger()
 
 @dataclass
 class AuthenticatedUser:
@@ -165,9 +169,6 @@ def submit_consent_batch(
     source_ip: str,
     user_agent: str,
 ) -> list[dict]:
-    """
-    Validates and records a full consent payload.
-    """
     validate_mandatory_acceptance(conn, actions)
 
     for action_item in actions:
@@ -194,5 +195,7 @@ def submit_consent_batch(
                     "policy_version_id": policy_version_id,
                 },
             )
-
+        event = CONSENT_REGISTERED if action == "CONSENT" else CONSENT_REVOKED
+        log.info(event, user_id=user_id, clause_id=clause_uuid, channel="WEB")
+        
     return get_pending_consent(conn, user_id)

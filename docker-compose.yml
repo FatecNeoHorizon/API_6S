@@ -92,12 +92,16 @@ services:
       - full
     restart: always
     env_file:
+      - envs/.env.postgres.${APP_ENV:-dev}
+      - envs/.env.mongo.${APP_ENV:-dev}
       - envs/.env.backend.${APP_ENV:-dev}
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "8000:8000"
     volumes:
       - ./apps/backend:/app
       - ./data:/app/data
+      - ./logs:/app/logs
     networks:
       - db_network
       - app_network

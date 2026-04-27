@@ -177,27 +177,12 @@ class NetworkStructureProcedures():
                 ]
             }},
 
-            {"$lookup": {
-                "from": "mt_network_segments",
-                "localField": "code",
-                "foreignField": "feeder_code",
-                "as": "feeders",
-                "pipeline": [
-                    {"$group": {"_id": "$feeder_code"}},
-                    {"$count": "total"}
-                ]
-            }},
-
             {"$addFields": {
-                "qtd_transformers": {"$size": "$transformers"},
-                "qtd_feeders": {
-                    "$ifNull": [{"$arrayElemAt": ["$feeders.total", 0]}, 0]
-                }
+                "qtd_transformers": {"$size": "$transformers"}
             }},
 
             {"$project": {
-                "transformers": 0,
-                "feeders": 0
+                "transformers": 0
             }}
         ]
 
@@ -216,6 +201,5 @@ class NetworkStructureProcedures():
             shape_area=s.get("shape_area"),
             geodatabase_id=s.get("geodatabase_id"),
             geometry=s.get("geometry"),
-            qtd_transformers=s.get("qtd_transformers"),
-            qtd_feeders=s.get("qtd_feeders")
+            qtd_transformers=s.get("qtd_transformers")
         )

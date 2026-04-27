@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import HTTPException
+from psycopg2 import IntegrityError, OperationalError
 
+from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.repositories import consent_repository
 from src.config.log_events import  CONSENT_REGISTERED, CONSENT_REVOKED
 
@@ -32,7 +34,14 @@ def resolve_session(conn, session_uuid: str) -> AuthenticatedUser | None:
     except ValueError:
         return None
 
-    row = consent_repository.get_session_user(conn, normalized_session_uuid)
+    try:
+        row = consent_repository.get_session_user(conn, normalized_session_uuid)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="resolve_session")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="resolve_session")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     if not row:
         return None
@@ -65,7 +74,14 @@ def get_pending_consent(conn, user_id: str) -> list[dict]:
     """
     Returns formatted pending mandatory consent clauses.
     """
-    rows = consent_repository.list_pending_clauses(conn, user_id)
+    try:
+        rows = consent_repository.list_pending_clauses(conn, user_id)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="get_pending_consent")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="get_pending_consent")
+        raise HTTPException(status_code=503, detail="database_unavailable")
     return format_pending_clauses(rows)
 
 
@@ -100,7 +116,14 @@ def validate_mandatory_acceptance(conn, actions: list) -> None:
     if not consent_actions:
         return
 
-    mandatory_clauses = consent_repository.list_current_mandatory_clauses(conn)
+    try:
+        mandatory_clauses = consent_repository.list_current_mandatory_clauses(conn)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="validate_mandatory_acceptance")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="validate_mandatory_acceptance")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     submitted_clause_ids = {
         _get_clause_uuid(action_item)
@@ -130,6 +153,7 @@ def validate_mandatory_acceptance(conn, actions: list) -> None:
         )
 
 
+
 def submit_consent(
     conn,
     user_id: str,
@@ -151,15 +175,22 @@ def submit_consent(
             },
         )
 
-    return consent_repository.insert_consent_event(
-        conn=conn,
-        user_id=user_id,
-        clause_uuid=clause_uuid,
-        policy_version_id=policy_version_id,
-        event_action=EVENT_ACTIONS[action],
-        source_ip=source_ip,
-        user_agent=user_agent,
-    )
+    try:
+        return consent_repository.insert_consent_event(
+            conn=conn,
+            user_id=user_id,
+            clause_uuid=clause_uuid,
+            policy_version_id=policy_version_id,
+            event_action=EVENT_ACTIONS[action],
+            source_ip=source_ip,
+            user_agent=user_agent,
+        )
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="submit_consent")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="submit_consent")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
 
 def submit_consent_batch(
@@ -169,33 +200,42 @@ def submit_consent_batch(
     source_ip: str,
     user_agent: str,
 ) -> list[dict]:
-    validate_mandatory_acceptance(conn, actions)
+    try:
+        validate_mandatory_acceptance(conn, actions)
 
-    for action_item in actions:
-        clause_uuid = _get_clause_uuid(action_item)
-        policy_version_id = _get_policy_version_id(action_item)
-        action = _get_action_value(action_item)
+        for action_item in actions:
+            clause_uuid = _get_clause_uuid(action_item)
+            policy_version_id = _get_policy_version_id(action_item)
+            action = _get_action_value(action_item)
 
-        inserted = submit_consent(
-            conn=conn,
-            user_id=user_id,
-            clause_uuid=clause_uuid,
-            policy_version_id=policy_version_id,
-            action=action,
-            source_ip=source_ip,
-            user_agent=user_agent,
-        )
-
-        if not inserted:
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "code": "invalid_clause_or_policy_version",
-                    "clause_uuid": clause_uuid,
-                    "policy_version_id": policy_version_id,
-                },
+            inserted = submit_consent(
+                conn=conn,
+                user_id=user_id,
+                clause_uuid=clause_uuid,
+                policy_version_id=policy_version_id,
+                action=action,
+                source_ip=source_ip,
+                user_agent=user_agent,
             )
-        event = CONSENT_REGISTERED if action == "CONSENT" else CONSENT_REVOKED
-        log.info(event, user_id=user_id, clause_id=clause_uuid, channel="WEB")
+
+            if not inserted:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "invalid_clause_or_policy_version",
+                        "clause_uuid": clause_uuid,
+                        "policy_version_id": policy_version_id,
+                    },
+                )
+            event = CONSENT_REGISTERED if action == "CONSENT" else CONSENT_REVOKED
+            log.info(event, user_id=user_id, clause_id=clause_uuid, channel="WEB")
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="submit_consent_batch")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="submit_consent_batch")
+        raise HTTPException(status_code=503, detail="database_unavailable")
         
     return get_pending_consent(conn, user_id)

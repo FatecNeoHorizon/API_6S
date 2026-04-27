@@ -240,6 +240,12 @@ The module does not expose raw email values in responses. User-facing payloads r
 
 ---
 
+## Logging
 
+The application uses a structured logging system based on `structlog` and `TimedRotatingFileHandler`.
 
-*Last updated: 04/24/2026*
+Full documentation: [`docs/LOGGING.md`](../docs/LOGGING.md)
+
+---
+
+*Last updated: 04/26/2026*

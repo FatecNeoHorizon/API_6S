@@ -18,10 +18,10 @@ def gz_namer(name: str) -> str:
     return name
 
 def configure_logging() -> None:
-    Path("logs").mkdir(exist_ok=True)
+    Path("/app/logs").mkdir(exist_ok=True)
 
     handler = TimedRotatingFileHandler(
-        filename="logs/app.log",
+        filename="/app/logs/app.log",
         when="midnight",
         backupCount=30,
         encoding="utf-8",

@@ -1,1 +1,1 @@
-from .extract_decfec import *
+"""Load package placeholder."""

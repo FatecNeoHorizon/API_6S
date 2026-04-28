@@ -1,6 +1,7 @@
 import unicodedata
 
-from etl.transform.utils import (
+from src.etl.transform.contract import build_transform_result
+from src.etl.transform.utils import (
     _to_str,
     _to_float,
     _to_date,
@@ -20,6 +21,7 @@ def _to_slug(value: str) -> str | None:
 
 def transform_energy_losses(df):
     df = _strip_columns(df)
+    total_input = len(df)
 
     documents = []
     rejected = []
@@ -58,7 +60,4 @@ def transform_energy_losses(df):
 
         documents.append(doc)
 
-    return {
-        "valid": documents,
-        "rejected": rejected
-    }
+    return build_transform_result(valid=documents, rejected=rejected, total_input=total_input)

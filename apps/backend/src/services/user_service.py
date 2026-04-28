@@ -6,10 +6,12 @@ from cryptography.fernet import Fernet
 
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.settings import Settings
+from src.config.email_hasher import EmailHasher
 from src.database.postgres_connection import get_postgres_connection
 from src.repositories.user_repository import ProfileResult
 from typing import List
 from uuid import UUID
+
 from src.repositories.user_repository import (
     UserProfileNotFoundError,
     UserAlreadyExistsError,
@@ -30,7 +32,7 @@ from src.repositories.user_repository import (
 def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
-    email_hash = _build_email_hash(normalized_email, settings.email_hash_salt)
+    email_hash = EmailHasher.hash(normalized_email)
 
     with get_postgres_connection() as conn:
         if not exists_by_profile_id(conn, payload.profile_id):
@@ -66,11 +68,9 @@ def get_user_by_id_service(user_uuid: UUID) -> UserResult:
         raise UserNotFoundError("Usuário não encontrado.")
     return user
 
-
 def list_users_service() -> List[UserResult]:
     with get_postgres_connection() as conn:
         return list_users(conn)
-
 
 def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
     with get_postgres_connection() as conn:
@@ -82,7 +82,6 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
-
 def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
     with get_postgres_connection() as conn:
         result = set_user_active(conn, user_uuid, active)
@@ -91,18 +90,12 @@ def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
-
 def delete_user_service(user_uuid: UUID) -> None:
     with get_postgres_connection() as conn:
         deleted = delete_user(conn, user_uuid)
         conn.commit()
     if not deleted:
         raise UserNotFoundError("Usuário não encontrado.")
-
-def _build_email_hash(email: str, salt: str) -> str:
-    payload = f"{email}:{salt}".encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
-
 
 def _sanitize_fernet_key(raw_key: str) -> str:
     key = raw_key.strip().strip('"').strip("'")
@@ -114,14 +107,12 @@ def _sanitize_fernet_key(raw_key: str) -> str:
 
     return key
 
-
 def _resolve_email_encryption_key(settings: Settings) -> bytes:
     if settings.email_encryption_key:
         return _sanitize_fernet_key(settings.email_encryption_key).encode("utf-8")
 
     digest = hashlib.sha256(settings.email_hash_salt.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest)
-
 
 def _encrypt_email(email: str, settings: Settings) -> str:
     key = _resolve_email_encryption_key(settings)

@@ -57,8 +57,14 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 # 4.2 PYTHON
-**/__pycache__/            # Python bytecode cache
-*.py[cod]               # Python compiled files
+**/__pycache__/
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+*/*/*/*/__pycache__/
+*/*/*/*/*/__pycache__/
+*.py[cod]
 *$py.class
 .Python
 build/

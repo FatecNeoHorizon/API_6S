@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pathlib import Path
 from src.control import energy_losses_tariff_procedures
-from src.etl.extract.extract_energy_losses import extract_losses
+from src.etl.extract.extract_energy_losses import extract_losses_preview
 from src.config.settings import Settings
 
 router = APIRouter()
@@ -35,4 +35,4 @@ async def get_energy_losses(
 @router.get("/test-energy-losses-file-extraction")
 async def test_energy_losses_file_extraction():
     path = get_latest_xlsx_path()
-    return extract_losses(path)
+    return extract_losses_preview(path, limit=50)

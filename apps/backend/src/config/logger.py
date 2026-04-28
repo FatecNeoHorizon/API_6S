@@ -17,7 +17,6 @@ def gz_rotator(source: str, dest: str) -> None:
 def gz_namer(name: str) -> str:
     return name
 
-
 def configure_logging() -> None:
     Path("logs").mkdir(exist_ok=True)
 
@@ -29,11 +28,23 @@ def configure_logging() -> None:
     )
     handler.rotator = gz_rotator
     handler.namer = gz_namer
+    handler.setFormatter(logging.Formatter("%(message)s"))
 
-    logging.basicConfig(
-        level=logging.INFO,
-        handlers=[handler, logging.StreamHandler()],
-        format="%(message)s",
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
+
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
     )
 
 structlog.configure(

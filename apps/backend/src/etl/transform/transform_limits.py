@@ -1,6 +1,7 @@
 from collections import defaultdict
 
-from etl.transform.utils import (
+from src.etl.transform.contract import build_transform_result
+from src.etl.transform.utils import (
     _to_str,
     _to_int,
     _to_float,
@@ -11,6 +12,7 @@ REQUIRED = ["code", "indicator_type_code", "year"]
 
 def transform_limits(df):
     df = _strip_columns(df)
+    total_input = len(df)
 
     grouped = defaultdict(list)
     rejected = []
@@ -44,7 +46,4 @@ def transform_limits(df):
         for code, summaries in grouped.items()
     ]
 
-    return {
-        "valid": documents,
-        "rejected": rejected
-    }
+    return build_transform_result(valid=documents, rejected=rejected, total_input=total_input)

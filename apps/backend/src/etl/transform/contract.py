@@ -24,21 +24,32 @@ class TransformResult(TypedDict):
     stats: TransformStats
 
 
-def build_transform_result(
-    valid: list[dict[str, Any]],
-    rejected: list[TransformRejection],
-    total_input: int,
-) -> TransformResult:
-    total_valid = len(valid)
-    total_rejected = len(rejected)
+# def build_transform_result(
+#     valid: list[dict[str, Any]],
+#     rejected: list[TransformRejection],
+#     total_input: int,
+# ) -> TransformResult:
+#     total_valid = len(valid)
+#     total_rejected = len(rejected)
 
+#     return {
+#         "contract_version": TRANSFORM_CONTRACT_VERSION,
+#         "valid": valid,
+#         "rejected": rejected,
+#         "stats": {
+#             "total_input": total_input,
+#             "total_valid": total_valid,
+#             "total_rejected": total_rejected,
+#         },
+#     }
+
+def build_transform_result(valid, rejected, total_input):
     return {
-        "contract_version": TRANSFORM_CONTRACT_VERSION,
-        "valid": valid,
+        "docs": valid,
         "rejected": rejected,
         "stats": {
             "total_input": total_input,
-            "total_valid": total_valid,
-            "total_rejected": total_rejected,
-        },
+            "total_valid": len(valid),
+            "total_rejected": len(rejected),
+        }
     }

@@ -15,8 +15,8 @@ def transform_gdb_chunk(chunk, layer_name, geodatabase_id):
 
     for _, row in chunk.iterrows():
         if layer_name == "CONJ":
-            name = _to_str(row.get("NomConjunto"))
-            code = _to_str(row.get("IdeConjunto"))
+            name = _to_str(row.get("NOM"))
+            code = _to_str(row.get("COD_ID"))
 
             doc = {
                 "name": name,

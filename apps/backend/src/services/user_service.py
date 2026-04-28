@@ -4,6 +4,9 @@ import hashlib
 import bcrypt
 from cryptography.fernet import Fernet
 
+from psycopg2 import IntegrityError, OperationalError
+from fastapi import HTTPException
+from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.settings import Settings
 from src.config.email_hasher import EmailHasher
@@ -35,54 +38,109 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     normalized_email = str(payload.email).strip().lower()
     email_hash = EmailHasher.hash(normalized_email)
 
-    with get_pg_connection() as conn:
-        if not exists_by_profile_id(conn, payload.profile_id):
-            raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
-        if exists_by_username(conn, payload.username.strip().upper()):
-            raise UserAlreadyExistsError("Nome de usuário já cadastrado.")
-        if exists_by_email_hash(conn, email_hash):
-            raise UserAlreadyExistsError("E-mail já cadastrado.")
+    try:
+        with get_pg_connection() as conn:
+            if not exists_by_profile_id(conn, payload.profile_id):
+                raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
+            if exists_by_username(conn, payload.username.strip().upper()):
+                raise UserAlreadyExistsError("Nome de usuário já cadastrado.")
+            if exists_by_email_hash(conn, email_hash):
+                raise UserAlreadyExistsError("E-mail já cadastrado.")
 
-        data = {
-            "username": payload.username.strip().upper(),
-            "email_hash": email_hash,
-            "email_enc": _encrypt_email(normalized_email, settings),
-            "password_hash": _hash_password(payload.password),
-            "profile_id": payload.profile_id,
-        }
+            data = {
+                "username": payload.username.strip().upper(),
+                "email_hash": email_hash,
+                "email_enc": _encrypt_email(normalized_email, settings),
+                "password_hash": _hash_password(payload.password),
+                "profile_id": payload.profile_id,
+            }
 
-        return UserCreateResponse(**vars(create_user(conn, data)))
+            result = create_user(conn, data)
+
+        return UserCreateResponse(
+            user_uuid=result.user_uuid,
+            username=result.username,
+            profile_id=result.profile_id,
+            active=result.active,
+            created_at=result.created_at,
+        )
+    except (UserProfileNotFoundError, UserAlreadyExistsError):
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="create_user_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="create_user_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
 def get_user_by_id_service(user_uuid: UUID) -> UserResult:
-    with get_pg_connection() as conn:
-        user = get_user_by_id(conn, user_uuid)
+    try:
+        with get_pg_connection() as conn:
+            user = get_user_by_id(conn, user_uuid)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="get_user_by_id_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="get_user_by_id_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
     if user is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return user
 
 def list_users_service() -> List[UserResult]:
-    with get_pg_connection() as conn:
-        return list_users(conn)
+    try:
+        with get_pg_connection() as conn:
+            return list_users(conn)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="list_users_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="list_users_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
 def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
-    with get_pg_connection() as conn:
-        if not exists_by_profile_id(conn, data["profile_id"]):
-            raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
-        result = update_user(conn, user_uuid, data)
+    try:
+        with get_pg_connection() as conn:
+            if not exists_by_profile_id(conn, data["profile_id"]):
+                raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
+            result = update_user(conn, user_uuid, data)
+    except UserProfileNotFoundError:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="update_user_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="update_user_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
 def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
-    with get_pg_connection() as conn:
-        result = set_user_active(conn, user_uuid, active)
+    try:
+        with get_pg_connection() as conn:
+            result = set_user_active(conn, user_uuid, active)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="set_user_active_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="set_user_active_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
+
 def delete_user_service(user_uuid: UUID) -> None:
-    with get_pg_connection() as conn:
-        deleted = delete_user(conn, user_uuid)
+    try:
+        with get_pg_connection() as conn:
+            deleted = delete_user(conn, user_uuid)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="delete_user_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="delete_user_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")
     if not deleted:
         raise UserNotFoundError("Usuário não encontrado.")
     
@@ -109,9 +167,18 @@ def _encrypt_email(email: str, settings: Settings) -> str:
             "A EMAIL_ENCRYPTION_KEY é inválida. Use uma chave Fernet gerada por cryptography.fernet.Fernet.generate_key()."
         ) from exc
 
+
 def _hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
+
 def list_profiles_service() -> List[ProfileResult]:
-    with get_pg_connection() as conn:
-        return list_profiles(conn)
+    try:
+        with get_pg_connection() as conn:
+            return list_profiles(conn)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="list_profiles_service")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="list_profiles_service")
+        raise HTTPException(status_code=503, detail="database_unavailable")

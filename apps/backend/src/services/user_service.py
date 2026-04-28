@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.settings import Settings
 from src.config.email_hasher import EmailHasher
-from src.database.postgres_connection import get_postgres_connection
+from src.database.postgres import get_pg_connection
 from src.repositories.user_repository import ProfileResult
 from typing import List
 from uuid import UUID
@@ -29,12 +29,13 @@ from src.repositories.user_repository import (
     exists_by_profile_id,
 )
 
+
 def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
     email_hash = EmailHasher.hash(normalized_email)
 
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         if not exists_by_profile_id(conn, payload.profile_id):
             raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
         if exists_by_username(conn, payload.username.strip().upper()):
@@ -50,67 +51,52 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
             "profile_id": payload.profile_id,
         }
 
-        result = create_user(conn, data)
-        conn.commit()
-
-    return UserCreateResponse(
-        user_uuid=result.user_uuid,
-        username=result.username,
-        profile_id=result.profile_id,
-        active=result.active,
-        created_at=result.created_at,
-    )
+        return UserCreateResponse(**vars(create_user(conn, data)))
 
 def get_user_by_id_service(user_uuid: UUID) -> UserResult:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         user = get_user_by_id(conn, user_uuid)
     if user is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return user
 
 def list_users_service() -> List[UserResult]:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         return list_users(conn)
 
 def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         if not exists_by_profile_id(conn, data["profile_id"]):
             raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
         result = update_user(conn, user_uuid, data)
-        conn.commit()
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
 def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         result = set_user_active(conn, user_uuid, active)
-        conn.commit()
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
 def delete_user_service(user_uuid: UUID) -> None:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         deleted = delete_user(conn, user_uuid)
-        conn.commit()
     if not deleted:
         raise UserNotFoundError("Usuário não encontrado.")
-
+    
 def _sanitize_fernet_key(raw_key: str) -> str:
     key = raw_key.strip().strip('"').strip("'")
-
     if key.startswith("b'") and key.endswith("'"):
         return key[2:-1]
     if key.startswith('b"') and key.endswith('"'):
         return key[2:-1]
-
     return key
 
 def _resolve_email_encryption_key(settings: Settings) -> bytes:
     if settings.email_encryption_key:
         return _sanitize_fernet_key(settings.email_encryption_key).encode("utf-8")
-
     digest = hashlib.sha256(settings.email_hash_salt.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest)
 
@@ -127,5 +113,5 @@ def _hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def list_profiles_service() -> List[ProfileResult]:
-    with get_postgres_connection() as conn:
+    with get_pg_connection() as conn:
         return list_profiles(conn)

@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { toast } from "sonner";
-import { getTerms } from "@/api/terms";
+import { createTermsVersion, getAdminTermsVersions } from "@/api/terms";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
@@ -36,6 +36,11 @@ const StatusFilter = {
   scheduled: "scheduled",
   expired: "expired",
 };
+
+const PolicyTypeOptions = [
+  { value: "PRIVACY_POLICY", label: "PRIVACY_POLICY" },
+  { value: "TERMS_OF_USE", label: "TERMS_OF_USE" },
+];
 
 const normalizeTerm = (term) => ({
   policy_version_id: term.policy_version_id,
@@ -60,6 +65,11 @@ const getApiErrorMessage = (error, fallbackMessage) => {
   }
 
   return fallbackMessage;
+};
+
+const toDatetimeLocalString = (date) => {
+  const offsetInMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetInMs).toISOString().slice(0, 16);
 };
 
 const getStatus = (effectiveFrom, allVersionsOfSameType) => {
@@ -141,12 +151,21 @@ export default function TermsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [openRowId, setOpenRowId] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreatingVersion, setIsCreatingVersion] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState({
+    policy_type: "PRIVACY_POLICY",
+    version: "",
+    effective_from: "",
+    content: "",
+  });
 
   const loadTerms = async () => {
     setLoading(true);
     try {
-      const response = await getTerms();
-      const terms = response?.terms ?? response?.data?.terms ?? [];
+      const response = await getAdminTermsVersions();
+      const terms = response?.versions ?? response?.data?.versions ?? [];
       setAllTerms(terms.map(normalizeTerm));
     } catch (error) {
       if (!navigator.onLine || error instanceof TypeError) {
@@ -204,8 +223,90 @@ export default function TermsPage() {
     setCurrentPage(1);
   };
 
+  const handleOpenCreateModal = () => {
+    setCreateForm({
+      policy_type: "PRIVACY_POLICY",
+      version: "",
+      effective_from: "",
+      content: "",
+    });
+    setCreateError("");
+    setShowCreateModal(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    if (isCreatingVersion) return;
+
+    setShowCreateModal(false);
+    setCreateError("");
+  };
+
+  const handleCreateFormChange = (event) => {
+    const { name, value } = event.target;
+    setCreateError("");
+    setCreateForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCreateVersion = async () => {
+    const version = createForm.version.trim();
+    const content = createForm.content.trim();
+    const effectiveFrom = createForm.effective_from;
+    const policyType = createForm.policy_type;
+
+    if (!version || !policyType || !effectiveFrom || !content) {
+      setCreateError("Preencha os campos obrigatórios.");
+      return;
+    }
+
+    const parsedEffectiveFrom = new Date(effectiveFrom);
+
+    if (Number.isNaN(parsedEffectiveFrom.getTime())) {
+      setCreateError("Informe uma data de vigência válida.");
+      return;
+    }
+
+    if (parsedEffectiveFrom <= new Date()) {
+      setCreateError("A data de vigência precisa ser futura.");
+      return;
+    }
+
+    setIsCreatingVersion(true);
+    setCreateError("");
+
+    try {
+      await createTermsVersion({
+        version,
+        policy_type: policyType,
+        content,
+        effective_from: parsedEffectiveFrom.toISOString(),
+      });
+
+      await loadTerms();
+      setCurrentPage(1);
+      setOpenRowId(null);
+      setShowCreateModal(false);
+      toast.success("Nova versão criada com sucesso.");
+    } catch (error) {
+      const status = error?.response?.status || error?.status;
+
+      if (status === 409) {
+        setCreateError(getApiErrorMessage(error, "Já existe uma versão com esse número e tipo."));
+      } else if (status === 422) {
+        setCreateError(getApiErrorMessage(error, "A data de vigência precisa ser futura."));
+      } else {
+        setCreateError(getApiErrorMessage(error, "Não foi possível criar a nova versão. Tente novamente."));
+      }
+    } finally {
+      setIsCreatingVersion(false);
+    }
+  };
+
   const stats = allTerms.reduce(
     (acc, term) => {
+      acc.total += 1;
       const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
       const { label } = getStatus(term.effective_from, sameType);
       if (label === "Vigente") acc.vigentes += 1;
@@ -213,7 +314,7 @@ export default function TermsPage() {
       if (label === "Expirado") acc.expirados += 1;
       return acc;
     },
-    { vigentes: 0, agendados: 0, expirados: 0 }
+    { total: 0, vigentes: 0, agendados: 0, expirados: 0 }
   );
 
   const statusCardClassName = (value) =>
@@ -223,7 +324,23 @@ export default function TermsPage() {
     <div className="flex flex-col gap-6">
 
       {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <Card
+          className={statusCardClassName(StatusFilter.all)}
+          onClick={() => handleStatusCardClick(StatusFilter.all)}
+          role="button"
+          tabIndex={0}
+          aria-pressed={statusFilter === StatusFilter.all}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Termos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+          </CardContent>
+        </Card>
         <Card
           className={statusCardClassName(StatusFilter.current)}
           onClick={() => handleStatusCardClick(StatusFilter.current)}
@@ -309,12 +426,139 @@ export default function TermsPage() {
         <Button
           type="button"
           className="bg-primary text-primary-foreground hover:bg-primary/90"
-          disabled
+          onClick={handleOpenCreateModal}
         >
           <Plus className="mr-2 h-4 w-4" />
           Nova Versão
         </Button>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">Nova Versão</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCloseCreateModal}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Fechar modal de nova versão"
+                  disabled={isCreatingVersion}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">
+                Cadastre uma nova versão de termo com vigência futura.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-policy-type">
+                  Tipo
+                </label>
+                <select
+                  id="create-policy-type"
+                  name="policy_type"
+                  value={createForm.policy_type}
+                  onChange={handleCreateFormChange}
+                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
+                  disabled={isCreatingVersion}
+                >
+                  {PolicyTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-version-number">
+                  Número da versão
+                </label>
+                <Input
+                  id="create-version-number"
+                  name="version"
+                  value={createForm.version}
+                  onChange={handleCreateFormChange}
+                  placeholder="Ex: 1.0.0"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-effective-from">
+                  Data de vigência
+                </label>
+                <Input
+                  id="create-effective-from"
+                  name="effective_from"
+                  type="datetime-local"
+                  value={createForm.effective_from}
+                  onChange={handleCreateFormChange}
+                  min={toDatetimeLocalString(new Date(Date.now() + 60 * 1000))}
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-content">
+                  Conteúdo dos termos
+                </label>
+                <textarea
+                  id="create-content"
+                  name="content"
+                  value={createForm.content}
+                  onChange={handleCreateFormChange}
+                  placeholder="Digite o conteúdo completo da versão"
+                  className="min-h-32 w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              {createError && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {createError}
+                </p>
+              )}
+
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-border text-foreground hover:bg-muted"
+                  onClick={handleCloseCreateModal}
+                  disabled={isCreatingVersion}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={handleCreateVersion}
+                  disabled={isCreatingVersion}
+                >
+                  {isCreatingVersion ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar Versão"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabela */}
       <Card className="border-border bg-card">

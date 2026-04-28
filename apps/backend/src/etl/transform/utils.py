@@ -42,5 +42,7 @@ def _to_date(value) -> str | None:
 
 def _strip_columns(df: pd.DataFrame) -> pd.DataFrame:
     str_cols = df.select_dtypes(include='object').columns
-    df[str_cols] = df[str_cols].apply(lambda col: col.str.strip())
+    df[str_cols] = df[str_cols].apply(
+        lambda col: col.map(lambda value: value.strip() if isinstance(value, str) else value)
+    )
     return df

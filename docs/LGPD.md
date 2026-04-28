@@ -34,21 +34,43 @@ The complete consent history is preserved forever — it is never deleted or upd
 | Right | Implementation |
 |---|---|
 | **Access** | RLS ensures users can only read their own data |
-| **Correction** | UPDATE is allowed on `TB_USER` via `app_role` |
-| **Anonymization / Deletion** | Soft delete via `DELETED_AT` + data anonymization script |
+| **Correction** | UPDATE is allowed on `TB_USER` for controlled fields used by the user CRUD |
+| **Anonymization / Deletion** | Soft delete via `DELETED_AT` in the implemented user CRUD |
 | **Portability** | Data can be exported from the application layer |
 | **Revocation of consent** | New REVOCATION record inserted in `TB_CONSENT_LOG` |
 | **Information** | Policy versions and clauses are stored and versioned |
 
 ### Right to Erasure — How It Works
 
-Physical deletion is never performed on user data. When a user requests erasure:
+Physical deletion is never performed on user data. In the user CRUD currently implemented in the backend, the delete operation is logical only. When a user is removed from the active dataset:
 
-1. Personal data fields are overwritten with anonymized values
-2. `DELETED_AT` is populated with the current timestamp
-3. `ACTIVE` is set to `false`
-4. The user UUID is preserved for referential integrity in audit logs
-5. Audit logs referencing the user are preserved but dissociated from the data subject
+1. `DELETED_AT` is populated with the current timestamp
+2. The user record is excluded from standard list and detail queries
+3. The user UUID is preserved for referential integrity in audit logs and foreign keys
+4. The profile history remains intact for operational traceability
+
+The current CRUD does not overwrite personal fields with anonymized placeholders at delete time. That can be added later as a separate data-masking routine if required by policy.
+
+## User CRUD and LGPD Alignment
+
+The implemented user flow contributes to LGPD compliance in the following ways:
+
+- **Data minimization**: user creation stores only username, email, password hash, encrypted email, and profile association.
+- **Purpose limitation**: the data is used for authentication, access control, and user administration only.
+- **Security**: email is stored as hash plus encrypted value, and passwords are hashed before persistence.
+- **Access control**: user records are tied to profiles, which support role-based permissions.
+- **Traceability**: create, update, activation toggle, and logical delete operations preserve timestamps and database history.
+- **Transparency**: API responses and validation errors are localized for Brazilian Portuguese users.
+
+### User CRUD Scope Covered by LGPD Controls
+
+| Operation | LGPD impact |
+|---|---|
+| `POST /users` | Creates a user with the minimum necessary personal data and secure storage of e-mail/password |
+| `GET /users` and `GET /users/{user_uuid}` | Exposes only operational fields needed by the frontend |
+| `PATCH /users/{user_uuid}` | Allows controlled correction of username and profile association |
+| `PATCH /users/{user_uuid}/active` | Supports account activation/inactivation without exposing sensitive data |
+| `DELETE /users/{user_uuid}` | Performs logical deletion through `DELETED_AT` |
 
 ## Environment Separation
 
@@ -63,9 +85,9 @@ Real data is never used outside production. The `V006__synthetic_seed.sql` migra
 
 | Field | Table | Protection |
 |---|---|---|
-| `EMAIL_ENC` | TB_USER | AES-256 encryption at application layer |
+| `EMAIL_ENC` | TB_USER | Application-layer encryption used to protect the original e-mail value |
 | `EMAIL_HASH` | TB_USER |  Deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup without exposing or decrypting the email |
-| `PASSWORD_HASH` | TB_USER | Argon2id — never stored in plain text |
+| `PASSWORD_HASH` | TB_USER | Bcrypt hash — never stored in plain text |
 | `SOURCE_IP` | TB_LOG, TB_SESSION, TB_AUTH_ATTEMPT, TB_CONSENT_LOG | Masked — only first 3 octets stored |
 | `DETAILS` | TB_LOG | Encrypted JSONB |
 | `TOKEN_HASH` | TB_PASSWORD_RESET | SHA-256 hash of the password reset token — the raw token is never stored |

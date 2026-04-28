@@ -28,8 +28,8 @@ def transform_energy_losses(df):
 
     for _, row in df.iterrows():
 
-        distributor = _to_str(row.get("Distribuidor"))
-        process_date = _to_date(row.get("Data"))
+        distributor = _to_str(row.get("Distribuidora"))
+        process_date = _to_date(row.get("Data do Processo"))
 
         doc = {
             "distributor": distributor,
@@ -38,17 +38,17 @@ def transform_energy_losses(df):
             "uf": _to_str(row.get("UF")),
             "process_date": process_date,
 
-            "tme_brl_mwh": _to_float(row.get("TME")),
-            "basic_network_loss_mwh": _to_float(row.get("Perda Básica")),
-            "technical_loss_mwh": _to_float(row.get("Perda Técnica")),
-            "non_technical_loss_mwh": _to_float(row.get("Perda Não Técnica")),
+            "tme_brl_mwh": _to_float(row.get("TME (R$/MWh)")),
+            "basic_network_loss_mwh": _to_float(row.get("Perdas na Rede Básica (MWh)")),
+            "technical_loss_mwh": _to_float(row.get("Perdas Técnicas (MWh)")),
+            "non_technical_loss_mwh": _to_float(row.get("Perdas Não Técnicas (MWh)")),
 
-            "basic_network_loss_cost_brl": _to_float(row.get("Custo Básico")),
-            "technical_loss_cost_brl": _to_float(row.get("Custo Técnico")),
-            "non_technical_loss_cost_brl": _to_float(row.get("Custo Não Técnico")),
+            "basic_network_loss_cost_brl": _to_float(row.get("Custo Perdas na Rede Básica (R$)")),
+            "technical_loss_cost_brl": _to_float(row.get("Custo Perdas Técnicas (R$)")),
+            "non_technical_loss_cost_brl": _to_float(row.get("Custo Perdas Não Técnicas (R$)")),
 
-            "parcel_b_brl": _to_float(row.get("Parcela B")),
-            "required_revenue_brl": _to_float(row.get("Receita Requerida")),
+            "parcel_b_brl": _to_float(row.get("Parcela B (R$)")),
+            "required_revenue_brl": _to_float(row.get("Receita Requerida (R$)")),
         }
 
         if not distributor or not process_date:

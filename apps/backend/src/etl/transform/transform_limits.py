@@ -18,10 +18,10 @@ def transform_limits(df):
     rejected = []
 
     for _, row in df.iterrows():
-        code = _to_str(row.get("IdeConjUndConsumidoras"))
-        indicator_type_code = _to_str(row.get("SigIndicador"))
-        year = _to_int(row.get("Ano"))
-        limit = _to_float(row.get("VlrLimite"))
+        code = _to_str(row.get(3))
+        indicator_type_code = _to_str(row.get(5))
+        year = _to_int(row.get(6))
+        limit = _to_float(row.get(7))
 
         if not code or not indicator_type_code or year is None:
             rejected.append({

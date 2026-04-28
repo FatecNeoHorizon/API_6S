@@ -1,9 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pathlib import Path
-from src.etl.load import load_decfec
 from src.control import distribution_indices_procedures
-from src.etl.extract.extract_limits import extract_limits
-from src.etl.extract.extract_decfec import extract_decfec
+from src.etl.extract.extract_limits import extract_limits_preview
+from src.etl.extract.extract_decfec import extract_decfec_preview
 from src.config.settings import Settings
 
 router = APIRouter()
@@ -15,18 +14,6 @@ def get_latest_csv_path(pattern: str) -> Path:
     if not candidates:
         raise FileNotFoundError(f"Nenhum arquivo '{pattern}' encontrado no TMP_UPLOAD_PATH.")
     return max(candidates, key=lambda p: p.stat().st_mtime)
-
-@router.get("/process-decfec")
-def process_decfec():
-    try:
-        result = load_decfec()
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    return {
-        "message": "DECFEC processado com sucesso",
-        **result,
-    }
 
 @router.get("/get-dec-fec")
 async def get_dec_fec(
@@ -52,9 +39,9 @@ async def get_dec_fec(
 @router.get("/test-decfec-file-extraction")
 async def test_decfec_file_extraction():
     path = get_latest_csv_path("indicadores-continuidade-coletivos-2020*.csv")
-    return extract_decfec(path)[:50]
+    return extract_decfec_preview(path, limit=50)
 
 @router.get("/test-limits-file-extraction")
 async def test_limits_file_extraction():
     path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")
-    return extract_limits(path)[:50]
+    return extract_limits_preview(path, limit=50)

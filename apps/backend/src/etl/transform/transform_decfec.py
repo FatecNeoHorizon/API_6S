@@ -1,7 +1,17 @@
 import pandas as pd
+from src.etl.transform.contract import build_transform_result
 
 
-def transform_decfec(df: pd.DataFrame) -> pd.DataFrame:
+REQUIRED_COLUMNS = [
+    "SigAgente",
+    "IdeConjUndConsumidoras",
+    "SigIndicador",
+    "AnoIndice",
+    "NumPeriodoIndice",
+]
+
+
+def transform_decfec(df: pd.DataFrame):
     df_work = df.copy(deep=True)
 
     # --- Texto: strip ---
@@ -29,4 +39,20 @@ def transform_decfec(df: pd.DataFrame) -> pd.DataFrame:
             pd.to_numeric(df_work["NumPeriodoIndice"], errors="coerce").fillna(0).astype(int)
         )
 
-    return df_work
+    valid: list[dict] = []
+    rejected: list[dict] = []
+
+    for _, row in df_work.iterrows():
+        row_dict = row.to_dict()
+
+        missing = [column for column in REQUIRED_COLUMNS if not row_dict.get(column)]
+        if missing:
+            rejected.append({
+                "row": row_dict,
+                "reason": f"Missing required fields: {', '.join(missing)}",
+            })
+            continue
+
+        valid.append(row_dict)
+
+    return build_transform_result(valid=valid, rejected=rejected, total_input=len(df_work))

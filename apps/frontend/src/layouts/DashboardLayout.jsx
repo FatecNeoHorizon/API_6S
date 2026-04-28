@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Loader2,
   Users, 
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -31,6 +32,11 @@ const menuItems = [
     label: "Gestão de Usuários", 
     href: "/dashboard/usuarios", 
     icon: Users,
+  },
+  { 
+    label: "Gestão de Termos", 
+    href: "/dashboard/termos", 
+    icon: FileText 
   },
 ];
 

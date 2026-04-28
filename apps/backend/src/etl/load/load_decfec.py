@@ -5,10 +5,12 @@ import json
 import time
 
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 
-from src.config.parameters import get_mongo_settings, get_mongo_uri
-from src.etl.extract_decfec import extract_decfec
+from src.config.settings import Settings
+from src.control.tam_sam_procedures import Tam_sam_procedures
+from src.database.connection import get_client
+from src.etl.extract.extract_decfec import extract_decfec
 
 
 MANDATORY_FIELDS = [
@@ -18,6 +20,7 @@ MANDATORY_FIELDS = [
 ]
 MAX_REJECTION_LOGS_PER_CHUNK = 5
 
+settings = Settings()
 
 def _to_str(value) -> str | None:
     try:
@@ -67,14 +70,9 @@ def load_decfec(
     batch_version = batch_version or datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
     load_id = load_id or str(uuid4())
 
-    mongo_uri = get_mongo_uri()
-    _, _, _, _, db_name = get_mongo_settings()
+    db_name = settings.mongo_db_name
 
-    client = MongoClient(
-        mongo_uri,
-        serverSelectionTimeoutMS=120000,
-        socketTimeoutMS=120000,
-    )
+    client = get_client()
     db = client[db_name]
     collection = db["distribution_indices"]
     load_history = db["load_history"]
@@ -116,6 +114,8 @@ def load_decfec(
     )
 
     try:
+        tam_result = None
+
         for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
             chunk_start_perf = time.perf_counter()
             chunk_rows = len(chunk_df)
@@ -164,6 +164,7 @@ def load_decfec(
                     "load_id":                       load_id,
                 }
 
+                # Natural key used to avoid duplicate measurements across reprocessings.
                 filter_key = {
                     "agent_acronym":        agent_acronym,
                     "consumer_unit_set_id": consumer_unit_set_id,
@@ -172,6 +173,7 @@ def load_decfec(
                     "period":               int(period),
                 }
 
+                # Upsert makes the DECFEC load idempotent for the same natural key.
                 operations.append(UpdateOne(filter_key, {"$set": doc}, upsert=True))
 
             totals["rows_valid"] += len(operations)
@@ -216,6 +218,8 @@ def load_decfec(
         finished_at = datetime.now(timezone.utc)
         final_status = "PARTIAL" if totals["rows_rejected"] > 0 else "SUCCESS"
 
+        tam_result = Tam_sam_procedures(connection=client).calculate_and_persist_tam_total()
+
         load_history.update_one(
             {"load_id": load_id},
             {"$set": {
@@ -230,6 +234,7 @@ def load_decfec(
             load_id=load_id,
             batch_version=batch_version,
             status=final_status,
+            tam_total=tam_result["tam_total"],
             duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
             totals=totals,
         )
@@ -256,7 +261,7 @@ def load_decfec(
         raise
 
     finally:
-        client.close()
+        pass
 
     return {
         "collection": "distribution_indices",
@@ -265,6 +270,10 @@ def load_decfec(
         "source_file": source_file,
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
+        "tam_sam": {
+            "tam_total": tam_result["tam_total"] if tam_result else None,
+            "calculated_on": tam_result["calculated_on"] if tam_result else None,
+        },
         **totals,
     }
 

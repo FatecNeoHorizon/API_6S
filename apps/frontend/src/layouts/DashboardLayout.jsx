@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import {
   BarChart3,
@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   FileArchive,
   Loader2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -29,17 +30,20 @@ const menuItems = [
     href: "/dashboard/estrutura-redes",
     icon: Network,
   },
+  {
+    label: "Gestão de Usuários",
+    href: "/dashboard/usuarios",
+    icon: Users,
+  },
 ];
 
 const allowedExtensions = [".csv", ".xlsx", ".zip"];
 
 const REQUIRED_FILES = [
   "Base de Dados das Perdas de Energia nos Processos Tarifários.xlsx",
-  "dominio-indicadores.csv",
   "EDP_SP_391_2016-12-31_M6_20170707-0903.gdb.zip",
   "indicadores-continuidade-coletivos-2020-2029.csv",
-  "ucat_pj.csv",
-  "ucmt_pj.csv",
+  "indicadores-continuidade-coletivos-limite.csv",
 ];
 const REQUIRED_COUNT = REQUIRED_FILES.length;
 
@@ -58,7 +62,7 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function uploadFileWithProgress(file, onProgress) {
+function uploadFormDataWithProgress(formData, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -78,16 +82,20 @@ function uploadFileWithProgress(file, onProgress) {
           resolve({ message: "Upload concluído" });
         }
       } else {
-        reject(new Error(`Falha no upload: status ${xhr.status}`));
+        try {
+          const errorData = JSON.parse(xhr.responseText);
+          reject({ status: xhr.status, data: errorData });
+        } catch {
+          reject({ status: xhr.status, message: `Falha no upload: status ${xhr.status}` });
+        }
       }
     });
 
-    xhr.addEventListener("error", () => reject(new Error("Erro de rede")));
-    xhr.addEventListener("abort", () => reject(new Error("Upload cancelado")));
+    xhr.addEventListener("error", () => reject({ status: 0, message: "Erro de rede" }));
+    xhr.addEventListener("abort", () => reject({ status: 0, message: "Upload cancelado" }));
 
-    xhr.open("POST", "/api/upload");
-    xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-    xhr.send(file);
+    xhr.open("POST", "http://localhost:8000/upload/");
+    xhr.send(formData);
   });
 }
 
@@ -99,8 +107,9 @@ export default function DashboardLayout() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [appLoadIds, setAppLoadIds] = useState(null);
 
-  // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'done'|'error', progress: 0-100, error: null }]
+  // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]
   const [fileList, setFileList] = useState([]);
 
   const inputRef = useRef(null);
@@ -132,19 +141,21 @@ export default function DashboardLayout() {
     }
 
     if (valid.length > 0) {
-      setFileList((prev) => {
-        // Evitar duplicatas pelo nome
-        const existingNames = new Set(prev.map((f) => f.file.name));
-        const toAdd = valid.filter((v) => !existingNames.has(v.file.name));
-        if (toAdd.length < valid.length) {
-          toast.warning(
-            "Alguns arquivos já foram adicionados e foram ignorados.",
-          );
-        }
-        return [...prev, ...toAdd];
-      });
+      const existingNames = new Set(fileList.map((f) => f.file.name));
+      const toAdd = valid.filter((v) => !existingNames.has(v.file.name));
+      
+      if (toAdd.length < valid.length) {
+        toast.warning(
+          "Alguns arquivos já foram adicionados e foram ignorados.",
+          { id: "duplicate-file-warning" }
+        );
+      }
+      
+      if (toAdd.length > 0) {
+        setFileList([...fileList, ...toAdd]);
+      }
     }
-  }, []);
+  }, [fileList]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -174,68 +185,123 @@ export default function DashboardLayout() {
     setFileList((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateFileEntry = (index, patch) => {
-    setFileList((prev) =>
-      prev.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)),
-    );
+  const startPolling = (fileName, loadId) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/upload/status/${loadId}`);
+        if (!res.ok) throw new Error("Erro ao verificar status");
+        
+        const data = await res.json();
+        
+        if (data.status === "SUCCESS") {
+          clearInterval(interval);
+          setFileList((prev) => prev.map(entry => 
+            entry.file.name === fileName ? { ...entry, status: "done", progress: 100 } : entry
+          ));
+        } else if (data.status === "ERROR") {
+          clearInterval(interval);
+          setFileList((prev) => prev.map(entry => 
+            entry.file.name === fileName ? { ...entry, status: "error", error: data.error_message || "Erro no processamento" } : entry
+          ));
+        }
+        // Se for STARTED ou PROCESSING, continua aguardando
+      } catch (err) {
+        clearInterval(interval);
+        setFileList((prev) => prev.map(entry => 
+          entry.file.name === fileName ? { ...entry, status: "error", error: err.message } : entry
+        ));
+      }
+    }, 2000);
   };
 
   const handleFileUpload = async () => {
     if (fileList.length === 0) return;
     setIsUploading(true);
 
-    const uploads = fileList.map((entry, index) => async () => {
-      updateFileEntry(index, { status: "uploading", progress: 0, error: null });
-      try {
-        await uploadFileWithProgress(entry.file, (pct) => {
-          updateFileEntry(index, { progress: pct });
-        });
-        updateFileEntry(index, { status: "done", progress: 100 });
-      } catch (err) {
-        updateFileEntry(index, { status: "error", error: err.message });
+    const formData = new FormData();
+    
+    setFileList((prev) => prev.map(entry => ({ ...entry, status: "uploading", progress: 0, error: null })));
+
+    fileList.forEach((entry) => {
+      const fileName = entry.file.name;
+      let key = null;
+      if (fileName.includes("Perdas de Energia")) key = "energy_losses";
+      else if (fileName.includes("gdb") || fileName.includes("EDP_SP_391")) key = "gdb";
+      else if (fileName.includes("limite")) key = "indicadores_continuidade_limite";
+      else if (fileName.includes("indicadores-continuidade-coletivos")) key = "indicadores_continuidade";
+      
+      if (key) {
+        formData.append(key, entry.file);
       }
     });
 
-    // Roda todos os uploads em paralelo
-    await Promise.all(uploads.map((fn) => fn()));
+    try {
+      const response = await uploadFormDataWithProgress(formData, (pct) => {
+        setFileList((prev) => prev.map(entry => 
+          (entry.status === "uploading" ? { ...entry, progress: pct } : entry)
+        ));
+      });
 
-    setIsUploading(false);
+      if (response.load_ids) {
+        setAppLoadIds(response.load_ids);
+        
+        setFileList((prev) => prev.map((entry) => {
+          const fileName = entry.file.name;
+          let key = null;
+          if (fileName.includes("Perdas de Energia")) key = "energy_losses";
+          else if (fileName.includes("gdb") || fileName.includes("EDP_SP_391")) key = "gdb";
+          else if (fileName.includes("limite")) key = "indicadores_continuidade_limite";
+          else if (fileName.includes("indicadores-continuidade-coletivos")) key = "indicadores_continuidade";
+          
+          if (key && response.load_ids[key]) {
+             startPolling(entry.file.name, response.load_ids[key]);
+             return { ...entry, status: "processing", progress: 100 };
+          } else {
+             return { ...entry, status: "error", error: "Arquivo não processado pelo servidor" };
+          }
+        }));
+      }
 
-    const finalList = fileList; // snapshot — atualizado via setFileList mas lemos o resultado via state abaixo
-    setTimeout(() => {
-      setFileList((current) => {
-        const doneCount = current.filter((f) => f.status === "done").length;
-        const errCount = current.filter((f) => f.status === "error").length;
+    } catch (err) {
+      let errMsg = "Erro ao enviar arquivos.";
+      if (err.data && err.data.detail) {
+        if (typeof err.data.detail === "string") {
+           errMsg = err.data.detail;
+        } else if (Array.isArray(err.data.detail)) {
+           errMsg = err.data.detail.map(e => e.msg || JSON.stringify(e)).join(", ");
+        }
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      
+      setFileList((prev) => prev.map(entry => ({ ...entry, status: "error", error: errMsg })));
+      setIsUploading(false);
+      toast.error("Erro no envio dos arquivos.");
+    }
+  };
+
+  useEffect(() => {
+    if (isUploading && fileList.length > 0) {
+      const allFinished = fileList.every(f => f.status === "done" || f.status === "error");
+      const hasProcessing = fileList.some(f => f.status === "uploading" || f.status === "processing");
+      
+      if (allFinished && !hasProcessing) {
+        setIsUploading(false);
+        const errCount = fileList.filter((f) => f.status === "error").length;
+        const doneCount = fileList.filter((f) => f.status === "done").length;
+        
         if (errCount === 0) {
-          toast.success(`${doneCount} arquivo(s) enviado(s) com sucesso!`);
-          // ---------------------------------------------------------------
-          // BACKEND: processamento comentado. Para reativar, descomente o bloco abaixo:
-          //
-          // fetch("/process-decfec")
-          //   .then((r) => r.json())
-          //   .then((data) => {
-          //     console.log("Processamento concluído:", data);
-          //     toast.success(data.message || "CSV processado com sucesso!");
-          //   })
-          //   .catch((err) => {
-          //     console.error("Erro ao processar:", err);
-          //     toast.error("Erro ao processar o arquivo no servidor.");
-          //   });
-          // ---------------------------------------------------------------
-
+          toast.success(`${doneCount} arquivo(s) processado(s) com sucesso!`);
           setTimeout(() => {
             setUploadModalOpen(false);
             setFileList([]);
-          }, 1500);
+          }, 2000);
         } else {
-          toast.error(
-            `${errCount} arquivo(s) falharam. Verifique e tente novamente.`,
-          );
+          toast.error(`${errCount} arquivo(s) falharam no processamento.`);
         }
-        return current;
-      });
-    }, 100);
-  };
+      }
+    }
+  }, [fileList, isUploading]);
 
   const allDone =
     fileList.length > 0 && fileList.every((f) => f.status === "done");
@@ -471,6 +537,7 @@ export default function DashboardLayout() {
                     const isDone = entry.status === "done";
                     const isErr = entry.status === "error";
                     const isUp = entry.status === "uploading";
+                    const isProc = entry.status === "processing";
 
                     return (
                       <li
@@ -481,7 +548,7 @@ export default function DashboardLayout() {
                             ? "border-green-500/30 bg-green-500/5"
                             : isErr
                               ? "border-destructive/30 bg-destructive/5"
-                              : isUp
+                              : (isUp || isProc)
                                 ? "border-primary/30 bg-primary/5"
                                 : "border-border bg-muted/20",
                         )}
@@ -494,7 +561,7 @@ export default function DashboardLayout() {
                                 ? "text-green-500"
                                 : isErr
                                   ? "text-destructive"
-                                  : isUp
+                                  : (isUp || isProc)
                                     ? "text-primary"
                                     : "text-muted-foreground",
                             )}
@@ -521,10 +588,10 @@ export default function DashboardLayout() {
                             {isErr && (
                               <AlertCircle className="w-4 h-4 text-destructive" />
                             )}
-                            {isUp && (
+                            {(isUp || isProc) && (
                               <Loader2 className="w-4 h-4 text-primary animate-spin" />
                             )}
-                            {!isUploading && !isDone && (
+                            {!isUploading && !isDone && !isProc && !isUp && (
                               <button
                                 onClick={() => removeFile(index)}
                                 className="ml-1 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -537,11 +604,11 @@ export default function DashboardLayout() {
                         </div>
 
                         {/* Progress bar */}
-                        {(isUp || isDone) && (
+                        {(isUp || isProc || isDone) && (
                           <div className="mt-2">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs text-muted-foreground">
-                                {isDone ? "Concluído" : "Enviando..."}
+                                {isDone ? "Concluído" : isProc ? "Processando..." : "Enviando..."}
                               </span>
                               <span
                                 className={cn(
@@ -549,17 +616,17 @@ export default function DashboardLayout() {
                                   isDone ? "text-green-500" : "text-primary",
                                 )}
                               >
-                                {isDone ? 100 : entry.progress}%
+                                {isDone ? 100 : isProc ? 100 : entry.progress}%
                               </span>
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all duration-300",
-                                  isDone ? "bg-green-500" : "bg-primary",
+                                  isDone ? "bg-green-500" : isProc ? "bg-primary animate-pulse" : "bg-primary",
                                 )}
                                 style={{
-                                  width: `${isDone ? 100 : entry.progress}%`,
+                                  width: `${isDone || isProc ? 100 : entry.progress}%`,
                                 }}
                               />
                             </div>

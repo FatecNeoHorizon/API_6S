@@ -204,21 +204,33 @@ def run_etl(db, load_ids, paths, upload_dir):
 
 def get_upload_status(db: Database, load_id: str) -> dict | None:
     load_history = get_load_history(db, load_id)
+    
     if not load_history:
+        logger.warning(f"[FETCH_STATUS] Nenhum registro encontrado para o load_id: {load_id}")
         return None
     
+    logger.info(f"[FETCH_STATUS] Documento bruto do banco: {load_history}")
+    
+    db_metrics = load_history.get("metrics", {})
+    if not isinstance(db_metrics, dict):
+        db_metrics = {}
+
+    # --- LÓGICA DE CAPTURA DE ERRO ---
+    # Busca na raiz OU dentro de metrics (onde o novo repositório grava)
+    error_msg = load_history.get("error_message") or db_metrics.get("error_message")
+
     response = {
         "load_id": load_id,
-        "status": load_history["status"],
+        "status": load_history.get("status"),
         "metrics": {
-            "total_processed": load_history.get("total_processed"),
-            "total_valid": load_history.get("total_inserted"),
-            "total_rejected": load_history.get("total_rejected"),
-            "chunks_completed": load_history.get("chunks_completed"),
+            # Fallback: se não estiver no 'metrics', tenta na raiz (compatibilidade com antigos)
+            "total_processed": db_metrics.get("total_processed") or load_history.get("total_processed"),
+            "total_valid": db_metrics.get("total_valid") or load_history.get("total_valid"),
+            "total_rejected": db_metrics.get("total_rejected") or load_history.get("total_rejected"),
+            "chunks_completed": db_metrics.get("chunks_completed") or load_history.get("chunks_completed"),
         },
+        "error_message": error_msg
     }
 
-    if load_history["status"] == "ERROR":
-        response["error_message"] = load_history.get("error_message")
-    
+    logger.info(f"[FETCH_STATUS] Resposta final montada: {response}")
     return response

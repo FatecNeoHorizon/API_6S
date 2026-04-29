@@ -121,7 +121,9 @@ def get_policy_version(conn, version_id: str) -> dict | None:
                 VERSION_UUID,
                 VERSION,
                 POLICY_TYPE,
-                EFFECTIVE_FROM
+                CONTENT,
+                EFFECTIVE_FROM,
+                CREATED_AT
             FROM TB_POLICY_VERSION
             WHERE VERSION_UUID = %s
               AND DELETED_AT IS NULL

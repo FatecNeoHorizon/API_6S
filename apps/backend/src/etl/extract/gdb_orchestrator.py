@@ -65,8 +65,6 @@ def run_extraction(db: Database, path: Path, load_id: str):
 
             envelope = build_envelope(batch)
 
-            # 👉 aqui seria envio (fila, storage, etc)
-
             total_processed += len(chunk)
             chunks_completed += 1
 

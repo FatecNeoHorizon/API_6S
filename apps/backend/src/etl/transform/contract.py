@@ -15,14 +15,13 @@ class TransformResult(TypedDict):
     rejected: list[TransformRejection]
     stats: TransformStats
 
-def build_transform_result(valid, rejected, total_input):
+def build_transform_result(valid_docs, rejected_docs, total_input):
     return {
-        "contract_version": TRANSFORM_CONTRACT_VERSION,
-        "valid": valid,
-        "rejected": rejected,
+        "valid": valid_docs,
+        "rejected": rejected_docs,
         "stats": {
-            "total_input": total_input,
-            "total_valid": len(valid),
-            "total_rejected": len(rejected),
+            "total_input": int(total_input),
+            "total_valid": int(len(valid_docs)),
+            "total_rejected": int(len(rejected_docs))
         }
     }

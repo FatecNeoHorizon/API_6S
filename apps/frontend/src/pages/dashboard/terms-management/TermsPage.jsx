@@ -9,6 +9,7 @@ import {
   Clock,
   ChevronDown,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 import {
   Card,
@@ -21,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { toast } from "sonner";
-import { createTermsVersion, getAdminTermsVersions, getVersionClauses } from "@/api/terms";
+import { createTermsVersion, getAdminPolicyVersion, getAdminTermsVersions, getVersionClauses, createClause, getTerms } from "@/api/terms";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
@@ -50,6 +51,7 @@ const normalizeTerm = (term) => ({
   effective_from: term.effective_from,
   created_at: term.created_at,
   clauses: term.clauses ?? [],
+  content: term.content ?? "",
   clause_count: term.clause_count ?? term.clauses?.length ?? 0,
 });
 
@@ -154,6 +156,17 @@ export default function TermsPage() {
   const [openRowId, setOpenRowId] = useState(null);
   const [clausesByVersion, setClausesByVersion] = useState({});
   const [loadingClausesFor, setLoadingClausesFor] = useState(null);
+  const [showAddClauseModal, setShowAddClauseModal] = useState(false);
+  const [addClauseVersionId, setAddClauseVersionId] = useState(null);
+  const [addClauseForm, setAddClauseForm] = useState({
+    code: "",
+    title: "",
+    description: "",
+    mandatory: false,
+    display_order: 1,
+  });
+  const [isAddingClause, setIsAddingClause] = useState(false);
+  const [addClauseError, setAddClauseError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -162,6 +175,21 @@ export default function TermsPage() {
     version: "",
     effective_from: "",
     content: "",
+  });
+  const [showViewContentModal, setShowViewContentModal] = useState(false);
+  const [viewContentTitle, setViewContentTitle] = useState("");
+  const [viewContentText, setViewContentText] = useState("");
+
+  const [showViewClauseModal, setShowViewClauseModal] = useState(false);
+  const [viewClause, setViewClause] = useState(null);
+  const [showTempClauseForm, setShowTempClauseForm] = useState(false);
+  const [tempClauses, setTempClauses] = useState([]);
+  const [tempClauseForm, setTempClauseForm] = useState({
+    code: "",
+    title: "",
+    description: "",
+    mandatory: false,
+    display_order: 1,
   });
 
   const loadTerms = async () => {
@@ -257,6 +285,15 @@ export default function TermsPage() {
       content: "",
     });
     setCreateError("");
+    setTempClauses([]);
+    setShowTempClauseForm(false);
+    setTempClauseForm({
+      code: "",
+      title: "",
+      description: "",
+      mandatory: false,
+      display_order: 1,
+    });
     setShowCreateModal(true);
   };
 
@@ -265,6 +302,8 @@ export default function TermsPage() {
 
     setShowCreateModal(false);
     setCreateError("");
+    setTempClauses([]);
+    setShowTempClauseForm(false);
   };
 
   const handleCreateFormChange = (event) => {
@@ -274,6 +313,65 @@ export default function TermsPage() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const openTempClauseForm = () => {
+    setShowTempClauseForm(true);
+  };
+
+  const closeTempClauseForm = () => {
+    setShowTempClauseForm(false);
+    setTempClauseForm({
+      code: "",
+      title: "",
+      description: "",
+      mandatory: false,
+      display_order: 1,
+    });
+  };
+
+  const handleTempClauseFormChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    let finalValue;
+
+    if (type === "checkbox") {
+      finalValue = checked;
+    } else if (name === "display_order") {
+      finalValue = Number.parseInt(value, 10) || 1;
+    } else {
+      finalValue = value;
+    }
+
+    setTempClauseForm((prev) => ({
+      ...prev,
+      [name]: finalValue,
+    }));
+  };
+
+  const addTempClause = () => {
+    const code = tempClauseForm.code.trim();
+    const title = tempClauseForm.title.trim();
+    const displayOrder = Math.max(1, tempClauseForm.display_order);
+
+    if (!code || !title) {
+      toast.error("Código e título são obrigatórios para a cláusula.");
+      return;
+    }
+
+    setTempClauses((prev) => [
+      ...prev,
+      {
+        ...tempClauseForm,
+        code,
+        title,
+        display_order: displayOrder,
+      },
+    ]);
+    closeTempClauseForm();
+  };
+
+  const removeTempClause = (index) => {
+    setTempClauses((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateVersion = async () => {
@@ -303,18 +401,34 @@ export default function TermsPage() {
     setCreateError("");
 
     try {
-      await createTermsVersion({
+      const versionResponse = await createTermsVersion({
         version,
         policy_type: policyType,
         content,
         effective_from: parsedEffectiveFrom.toISOString(),
       });
 
+      const createdVersionId = versionResponse?.policy_version_id || versionResponse?.data?.policy_version_id;
+
+      if (tempClauses.length > 0 && createdVersionId) {
+        const createClausePromises = tempClauses.map((clause) =>
+          createClause(createdVersionId, {
+            code: clause.code,
+            title: clause.title,
+            description: clause.description || null,
+            mandatory: clause.mandatory,
+            display_order: clause.display_order,
+          })
+        );
+        await Promise.all(createClausePromises);
+      }
+
       await loadTerms();
       setCurrentPage(1);
       setOpenRowId(null);
       setShowCreateModal(false);
-      toast.success("Nova versão criada com sucesso.");
+      setTempClauses([]);
+      toast.success("Nova versão criada com sucesso." + (tempClauses.length > 0 ? " Cláusulas adicionadas." : ""));
     } catch (error) {
       const status = error?.response?.status || error?.status;
 
@@ -328,6 +442,132 @@ export default function TermsPage() {
     } finally {
       setIsCreatingVersion(false);
     }
+  };
+
+  // ---- Add Clause handlers (task 6.4.4) ----
+  const openAddClauseModal = (versionId) => {
+    setAddClauseVersionId(versionId);
+    setAddClauseForm({ code: "", title: "", description: "", mandatory: false, display_order: 1 });
+    setAddClauseError("");
+    setShowAddClauseModal(true);
+  };
+
+  const closeAddClauseModal = () => {
+    if (isAddingClause) return;
+    setShowAddClauseModal(false);
+    setAddClauseError("");
+  };
+
+  const handleAddClauseFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAddClauseError("");
+    setAddClauseForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleAddClauseSubmit = async () => {
+    const { code, title, description, mandatory, display_order } = addClauseForm;
+
+    if (!code.trim() || !title.trim() || !display_order) {
+      setAddClauseError("Preencha código, título e ordem de exibição.");
+      return;
+    }
+
+    const order = Number(display_order);
+    if (Number.isNaN(order) || order < 1) {
+      setAddClauseError("Ordem deve ser um número inteiro maior que zero.");
+      return;
+    }
+
+    setIsAddingClause(true);
+    setAddClauseError("");
+
+    try {
+      await createClause(addClauseVersionId, {
+        code: code.trim(),
+        title: title.trim(),
+        description: description.trim() || null,
+        mandatory: !!mandatory,
+        display_order: order,
+      });
+
+      // reload clauses for this version
+      const response = await getVersionClauses(addClauseVersionId);
+      const clauses = response?.clauses ?? response?.data?.clauses ?? [];
+      setClausesByVersion((prev) => ({ ...prev, [addClauseVersionId]: clauses }));
+
+      // If the version is scheduled, refresh the versions list so clause_count updates
+      try {
+        const term = allTerms.find((t) => t.policy_version_id === addClauseVersionId);
+        if (term && new Date(term.effective_from) > new Date()) {
+          await loadTerms();
+        }
+      } catch (e) {
+        console.warn("Falha ao recarregar versões após adicionar cláusula:", e);
+      }
+
+      setShowAddClauseModal(false);
+      toast.success("Cláusula adicionada com sucesso.");
+    } catch (error) {
+      setAddClauseError(getApiErrorMessage(error, "Erro ao adicionar cláusula. Tente novamente."));
+    } finally {
+      setIsAddingClause(false);
+    }
+  };
+
+  const openViewContentModal = async (term) => {
+    setViewContentTitle(`${term.version} — ${TermType[term.policy_type] || term.policy_type}`);
+
+    let finalContent = "";
+
+    // Try admin endpoint first, but don't abort on failure — fall back to public
+    if (term.policy_version_id) {
+      try {
+        const resp = await getAdminPolicyVersion(term.policy_version_id);
+        const data = resp?.data ?? resp;
+        const content = data?.content ?? data?.data?.content ?? data?.terms?.content;
+
+        if (content) {
+          finalContent = content;
+        }
+      } catch (err) {
+        console.warn("admin policy fetch failed, will try public /terms:", err);
+      }
+    }
+
+    if (!finalContent) {
+      try {
+        const respPublic = await getTerms();
+        const terms = respPublic?.terms ?? respPublic?.data?.terms ?? [];
+        const found = terms.find((t) => t.policy_version_id === term.policy_version_id) || terms.find((t) => t.version === term.version);
+        finalContent = found?.content ?? term.content ?? "";
+      } catch (err) {
+        console.warn("public terms fetch failed:", err);
+        finalContent = term.content ?? "";
+        toast.error(getApiErrorMessage(err, "Não foi possível carregar o conteúdo do termo."));
+      }
+    }
+
+    setViewContentText(finalContent);
+    setShowViewContentModal(true);
+  };
+
+  const closeViewContentModal = () => {
+    setShowViewContentModal(false);
+    setViewContentText("");
+    setViewContentTitle("");
+  };
+
+  const openViewClauseModal = (clause) => {
+    setViewClause(clause);
+    setShowViewClauseModal(true);
+  };
+
+  const closeViewClauseModal = () => {
+    setViewClause(null);
+    setShowViewClauseModal(false);
   };
 
   const stats = allTerms.reduce(
@@ -549,6 +789,60 @@ export default function TermsPage() {
                 />
               </div>
 
+              {/* Cláusulas temporárias */}
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">
+                    Cláusulas ({tempClauses.length})
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={openTempClauseForm}
+                    disabled={isCreatingVersion || showTempClauseForm}
+                    className="border-border text-foreground hover:bg-muted"
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Adicionar
+                  </Button>
+                </div>
+
+                {/* Lista de cláusulas temporárias */}
+                {tempClauses.length > 0 && (
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/30 p-2">
+                    {tempClauses.map((clause, index) => (
+                      <div key={`${clause.code}-${index}`} className="flex items-start justify-between gap-2 rounded border border-border bg-card p-2">
+                        <div className="flex-1 text-sm">
+                          <p className="font-medium text-foreground">{clause.code}</p>
+                          <p className="text-xs text-muted-foreground">{clause.title}</p>
+                          {clause.description && (
+                            <p className="mt-1 text-xs text-muted-foreground">{clause.description}</p>
+                          )}
+                          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Obrigatória: {clause.mandatory ? "Sim" : "Não"}</span>
+                            <span>•</span>
+                            <span>Ordem: {clause.display_order}</span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeTempClause(index)}
+                          disabled={isCreatingVersion}
+                          className="text-destructive hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Formulário temporário agora é exibido em modal sobreposto (ver abaixo) */}
+              </div>
+
               {createError && (
                 <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {createError}
@@ -579,6 +873,316 @@ export default function TermsPage() {
                   ) : (
                     "Salvar Versão"
                   )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showViewContentModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-2xl border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">{viewContentTitle}</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeViewContentModal}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">Conteúdo completo da versão</CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <pre className="whitespace-pre-wrap max-h-96 overflow-auto rounded border border-border bg-muted/10 p-4 text-sm text-foreground">
+                {viewContentText || "(Vazio)"}
+              </pre>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showViewClauseModal && viewClause && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">{viewClause.code} — {viewClause.title}</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeViewClauseModal}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">Descrição da cláusula</CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <p className="whitespace-pre-wrap text-sm text-foreground">{viewClause.description || "(Sem descrição)"}</p>
+              <div className="mt-4 flex justify-end">
+                <Button type="button" onClick={closeViewClauseModal} className="bg-primary text-primary-foreground hover:bg-primary/90">Fechar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showAddClauseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">Adicionar Cláusula</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeAddClauseModal}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Fechar modal de adicionar cláusula"
+                  disabled={isAddingClause}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">
+                Adicione uma nova cláusula para a versão selecionada.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="clause-code">
+                  Código
+                </label>
+                <Input
+                  id="clause-code"
+                  name="code"
+                  value={addClauseForm.code}
+                  onChange={handleAddClauseFormChange}
+                  placeholder="Ex: CLA-001"
+                  className="border-border bg-input text-foreground"
+                  disabled={isAddingClause}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="clause-title">
+                  Título
+                </label>
+                <Input
+                  id="clause-title"
+                  name="title"
+                  value={addClauseForm.title}
+                  onChange={handleAddClauseFormChange}
+                  placeholder="Título da cláusula"
+                  className="border-border bg-input text-foreground"
+                  disabled={isAddingClause}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="clause-description">
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  id="clause-description"
+                  name="description"
+                  value={addClauseForm.description}
+                  onChange={handleAddClauseFormChange}
+                  placeholder="Descrição da cláusula"
+                  className="min-h-24 w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                  disabled={isAddingClause}
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="mandatory"
+                    checked={addClauseForm.mandatory}
+                    onChange={handleAddClauseFormChange}
+                    disabled={isAddingClause}
+                  />
+                  <span className="text-sm text-foreground">Obrigatória</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <label htmlFor="clause-order" className="text-sm text-muted-foreground">Ordem</label>
+                  <Input
+                    id="clause-order"
+                    name="display_order"
+                    type="number"
+                    min={1}
+                    value={addClauseForm.display_order}
+                    onChange={handleAddClauseFormChange}
+                    className="w-24 border-border bg-input text-foreground"
+                    disabled={isAddingClause}
+                  />
+                </div>
+              </div>
+
+              {addClauseError && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {addClauseError}
+                </p>
+              )}
+
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-border text-foreground hover:bg-muted"
+                  onClick={closeAddClauseModal}
+                  disabled={isAddingClause}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={handleAddClauseSubmit}
+                  disabled={isAddingClause}
+                >
+                  {isAddingClause ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar Cláusula"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showTempClauseForm && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground">Nova Cláusula (Versão)</CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeTempClauseForm}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Fechar modal de cláusula temporária"
+                  disabled={isCreatingVersion}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-muted-foreground">
+                Adicione uma cláusula que será incluída na nova versão após salvar.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="temp-modal-clause-code">
+                  Código
+                </label>
+                <Input
+                  id="temp-modal-clause-code"
+                  name="code"
+                  value={tempClauseForm.code}
+                  onChange={handleTempClauseFormChange}
+                  placeholder="Ex: CLA-001"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="temp-modal-clause-title">
+                  Título
+                </label>
+                <Input
+                  id="temp-modal-clause-title"
+                  name="title"
+                  value={tempClauseForm.title}
+                  onChange={handleTempClauseFormChange}
+                  placeholder="Título da cláusula"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="temp-modal-clause-description">
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  id="temp-modal-clause-description"
+                  name="description"
+                  value={tempClauseForm.description}
+                  onChange={handleTempClauseFormChange}
+                  placeholder="Descrição da cláusula"
+                  className="min-h-24 w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="mandatory"
+                    checked={tempClauseForm.mandatory}
+                    onChange={handleTempClauseFormChange}
+                    disabled={isCreatingVersion}
+                  />
+                  <span className="text-sm text-foreground">Obrigatória</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground" htmlFor="temp-modal-clause-order">Ordem</label>
+                  <Input
+                    id="temp-modal-clause-order"
+                    name="display_order"
+                    type="number"
+                    min={1}
+                    value={tempClauseForm.display_order}
+                    onChange={handleTempClauseFormChange}
+                    className="w-24 border-border bg-input text-foreground"
+                    disabled={isCreatingVersion}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-border text-foreground hover:bg-muted"
+                  onClick={closeTempClauseForm}
+                  disabled={isCreatingVersion}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={addTempClause}
+                  disabled={isCreatingVersion}
+                >
+                  Adicionar
                 </Button>
               </div>
             </CardContent>
@@ -693,30 +1297,32 @@ export default function TermsPage() {
                             <td colSpan={5} className="p-0">
                               <div className="border-t border-border bg-muted/20 p-6">
                                 {/* Dados da Versão */}
-                                <div className="mb-6">
-                                  <h3 className="mb-3 text-sm font-semibold text-foreground">Detalhes da Versão</h3>
-                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                    <div>
-                                      <p className="text-xs text-muted-foreground">Tipo</p>
-                                      <p className="text-sm font-medium text-foreground">
-                                        {TermType[term.policy_type] || term.policy_type}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs text-muted-foreground">Versão</p>
-                                      <p className="text-sm font-medium text-foreground">{term.version}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs text-muted-foreground">Data de Vigência</p>
-                                      <p className="text-sm font-medium text-foreground">
-                                        {new Date(term.effective_from).toLocaleDateString("pt-BR", {
-                                          day: "2-digit",
-                                          month: "2-digit",
-                                          year: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
+                                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                                  <div className="flex-1">
+                                    <h3 className="mb-3 text-sm font-semibold text-foreground">Detalhes da Versão</h3>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Tipo</p>
+                                        <p className="text-sm font-medium text-foreground">
+                                          {TermType[term.policy_type] || term.policy_type}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Versão</p>
+                                        <p className="text-sm font-medium text-foreground">{term.version}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Data de Vigência</p>
+                                        <p className="text-sm font-medium text-foreground">
+                                          {new Date(term.effective_from).toLocaleDateString("pt-BR", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -753,26 +1359,37 @@ export default function TermsPage() {
 
                                 {/* Tabela de Cláusulas */}
                                 <div className="mb-4">
-                                  <div className="mb-3 flex items-center justify-between">
+                                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <h3 className="text-sm font-semibold text-foreground">Cláusulas</h3>
-                                    {(() => {
-                                      const today = new Date();
-                                      const effectiveDate = new Date(term.effective_from);
-                                      const canAddClauses = effectiveDate > today;
-                                      return canAddClauses ? (
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          className="bg-primary text-primary-foreground hover:bg-primary/90"
-                                          onClick={() => {
-                                            toast.info("Funcionalidade de adicionar cláusulas será implementada em breve.");
-                                          }}
-                                        >
-                                          <Plus className="mr-1 h-4 w-4" />
-                                          Adicionar Cláusula
-                                        </Button>
-                                      ) : null;
-                                    })()}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => openViewContentModal(term)}
+                                        className="border-border text-foreground hover:bg-muted"
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Visualizar Conteúdo
+                                      </Button>
+
+                                      {(() => {
+                                        const today = new Date();
+                                        const effectiveDate = new Date(term.effective_from);
+                                        const canAddClauses = effectiveDate > today;
+                                        return canAddClauses ? (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                            onClick={() => openAddClauseModal(term.policy_version_id)}
+                                          >
+                                            <Plus className="mr-1 h-4 w-4" />
+                                            Adicionar Cláusula
+                                          </Button>
+                                        ) : null;
+                                      })()}
+                                    </div>
                                   </div>
 
                                   {loadingClausesFor === term.policy_version_id ? (
@@ -786,9 +1403,10 @@ export default function TermsPage() {
                                         <thead>
                                           <tr className="border-b border-border bg-muted/50">
                                             <th className="px-3 py-2 text-left font-medium text-muted-foreground">Código</th>
-                                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Título</th>
-                                            <th className="px-3 py-2 text-center font-medium text-muted-foreground">Obrigatória</th>
-                                            <th className="px-3 py-2 text-center font-medium text-muted-foreground">Ordem</th>
+                                                <th className="px-3 py-2 text-left font-medium text-muted-foreground">Título</th>
+                                                <th className="px-3 py-2 text-center font-medium text-muted-foreground">Obrigatória</th>
+                                                <th className="px-3 py-2 text-center font-medium text-muted-foreground">Ordem</th>
+                                                <th className="px-3 py-2 text-center font-medium text-muted-foreground">Ações</th>
                                           </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
@@ -818,6 +1436,18 @@ export default function TermsPage() {
                                                 )}
                                               </td>
                                               <td className="px-3 py-2 text-center text-sm">{clause.display_order}</td>
+                                              <td className="px-3 py-2 text-center text-sm">
+                                                <Button
+                                                  type="button"
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  onClick={() => openViewClauseModal(clause)}
+                                                  className="text-foreground hover:bg-muted/50"
+                                                  aria-label="Visualizar descrição da cláusula"
+                                                >
+                                                  <Eye className="h-4 w-4" />
+                                                </Button>
+                                              </td>
                                             </tr>
                                           ))}
                                         </tbody>

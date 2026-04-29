@@ -15,28 +15,37 @@ const buildAuthHeaders = () => {
 async function request(path, options = {}) {
   const { headers: requestHeaders, ...requestOptions } = options;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...requestOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...buildAuthHeaders(),
-      ...requestHeaders,
-    },
-  });
+  const url = `${API_BASE_URL}${path}`;
 
-  const contentType = response.headers.get("content-type");
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  try {
+    const response = await fetch(url, {
+      ...requestOptions,
+      headers: {
+        "Content-Type": "application/json",
+        ...buildAuthHeaders(),
+        ...requestHeaders,
+      },
+    });
 
-  if (!response.ok) {
-    const error = new Error(`Erro na API: ${response.status}`);
-    error.status = response.status;
-    error.data = responseBody;
-    throw error;
+    const contentType = response.headers.get("content-type");
+    const responseBody = contentType?.includes("application/json")
+      ? await response.json()
+      : await response.text();
+
+    if (!response.ok) {
+      console.warn("adminClient: resposta não-ok", { url, status: response.status, body: responseBody });
+      const error = new Error(`Erro na API: ${response.status}`);
+      error.status = response.status;
+      error.data = responseBody;
+      throw error;
+    }
+
+    return responseBody;
+  } catch (fetchError) {
+    // Erros de rede / CORS / extension failures podem chegar aqui
+    console.error("adminClient: falha na requisição", { url, options: requestOptions, error: fetchError });
+    throw fetchError;
   }
-
-  return responseBody;
 }
 
 export const adminClient = {

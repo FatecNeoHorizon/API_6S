@@ -20,3 +20,7 @@ export function getVersionClauses(versionId) {
 export function createClause(versionId, payload) {
   return adminClient.post(`/admin/terms/versions/${versionId}/clauses`, payload);
 }
+
+export function getAdminPolicyVersion(versionId) {
+  return adminClient.get(`/admin/terms/versions/${versionId}`);
+}

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pymongo.database import Database
 
 from src.etl.extract.gdb_extractor import extract_gdb_generator
+from src.etl.transform.transform_gdb_chunk import transform_gdb_chunk
 from src.repositories.load_history_repository import (
     insert_load_history,
     update_load_history
@@ -36,57 +37,67 @@ def build_envelope(batch):
         "data": batch
     }
 
-
 def run_extraction(db: Database, path: Path, load_id: str):
     file_key = "gdb_file"
     total_processed = 0
+    total_valid = 0
+    total_rejected = 0
     chunks_completed = 0
 
     try:
+        # 1. Extração (Gerador)
         for chunk, layer_name, source_file in extract_gdb_generator(path):
-
-            if isinstance(chunk, dict):
-                update_load_history(
-                    db,
-                    load_id,
-                    "ERROR",
-                    {"error_message": chunk["error"]}
-                )
+            
+            if isinstance(chunk, dict): 
+                update_load_history(db, load_id, "ERROR", {"error_message": chunk["error"]})
                 continue
 
-            batch = build_batch(
-                load_id,
-                file_key,
-                source_file,
-                layer_name,
-                chunk,
-                chunks_completed
-            )
+            # 2. Transformação
+            transform_result = transform_gdb_chunk(chunk, layer_name, load_id)
 
-            envelope = build_envelope(batch)
+            # 3. Log de Rejeições
+            if transform_result["rejected"]:
+                for rej in transform_result["rejected"]:
+                    logger.warning(
+                        f"[REJECTED] Layer: {layer_name} | Reason: {rej['reason']}"
+                    )
 
-            total_processed += len(chunk)
+            # 4. Acumulação das Métricas
+            stats = transform_result.get("stats", {})
+            total_processed += stats.get("total_input", 0)
+            total_valid     += stats.get("total_valid", 0)
+            total_rejected  += stats.get("total_rejected", 0)
             chunks_completed += 1
 
-            update_load_history(
-                db,
-                load_id,
-                "PROCESSING",
-                {
-                    "total_processed": total_processed,
-                    "chunks_completed": chunks_completed
-                }
-            )
+            # 5. Log e Update de Progresso (Durante o loop)
+            current_metrics = {
+                "total_processed": total_processed,
+                "total_valid": total_valid,
+                "total_rejected": total_rejected,
+                "chunks_completed": chunks_completed
+            }
+            
+            update_load_history(db, load_id, "PROCESSING", current_metrics)
+            # repository.insert_many(transform_result["valid"])
 
-        update_load_history(db, load_id, "SUCCESS")
+        # --- FIM DO LOOP ---
+
+        # 6. Montagem das métricas finais (FORA DO LOOP)
+        final_metrics = {
+            "total_processed": total_processed,
+            "total_valid": total_valid,
+            "total_rejected": total_rejected,
+            "chunks_completed": chunks_completed
+        }
+        
+        logger.info(f"[DONE] Enviando métricas finais: {final_metrics}")
+
+        # 7. Finalização com Sucesso
+        update_load_history(db, load_id, "SUCCESS", final_metrics)
 
     except Exception as e:
-        update_load_history(
-            db,
-            load_id,
-            "ERROR",
-            {"error_message": str(e)}
-        )
+        logger.error(f"[FATAL ERROR] Load {load_id}: {str(e)}")
+        update_load_history(db, load_id, "ERROR", {"error_message": str(e)})
         raise
 
 def extract_gdb_preview(path: Path) -> list[dict]:

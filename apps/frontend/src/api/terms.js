@@ -12,3 +12,11 @@ export function getAdminTermsVersions() {
 export function createTermsVersion(payload) {
   return adminClient.post("/admin/terms/versions", payload);
 }
+
+export function getVersionClauses(versionId) {
+  return adminClient.get(`/admin/terms/versions/${versionId}/clauses`);
+}
+
+export function createClause(versionId, payload) {
+  return adminClient.post(`/admin/terms/versions/${versionId}/clauses`, payload);
+}

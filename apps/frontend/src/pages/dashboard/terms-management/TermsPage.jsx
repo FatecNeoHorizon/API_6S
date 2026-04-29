@@ -8,6 +8,7 @@ import {
   X,
   Clock,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 import {
   Card,
@@ -20,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { toast } from "sonner";
-import { createTermsVersion, getAdminTermsVersions } from "@/api/terms";
+import { createTermsVersion, getAdminTermsVersions, getVersionClauses } from "@/api/terms";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
@@ -151,6 +152,8 @@ export default function TermsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [openRowId, setOpenRowId] = useState(null);
+  const [clausesByVersion, setClausesByVersion] = useState({});
+  const [loadingClausesFor, setLoadingClausesFor] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -214,8 +217,31 @@ export default function TermsPage() {
     setCurrentPage(1);
   };
 
-  const handleToggleRow = (id) => {
-    setOpenRowId((prev) => (prev === id ? null : id));
+  const handleToggleRow = async (versionId) => {
+    // Se a linha está aberta, fecha
+    if (openRowId === versionId) {
+      setOpenRowId(null);
+      return;
+    }
+
+    // Abre a linha e carrega cláusulas se ainda não foram carregadas
+    setOpenRowId(versionId);
+
+    if (!clausesByVersion[versionId]) {
+      setLoadingClausesFor(versionId);
+      try {
+        const response = await getVersionClauses(versionId);
+        const clauses = response?.clauses ?? response?.data?.clauses ?? [];
+        setClausesByVersion((prev) => ({
+          ...prev,
+          [versionId]: clauses,
+        }));
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Erro ao carregar cláusulas. Tente novamente."));
+      } finally {
+        setLoadingClausesFor(null);
+      }
+    }
   };
 
   const handleStatusCardClick = (nextStatus) => {
@@ -661,14 +687,144 @@ export default function TermsPage() {
                           </td>
                         </tr>
 
-                        {/* Expansão — placeholder para 6.4.3 */}
+                        {/* Expansão — detalhes da versão e tabela de cláusulas (Task 6.4.3) */}
                         {isOpen && (
                           <tr key={`${term.policy_version_id}-detail`}>
                             <td colSpan={5} className="p-0">
-                              <div className="p-6 bg-muted/30">
-                                <p className="text-sm text-muted-foreground">
-                                  Detalhes das cláusulas serão implementados na task 6.4.3.
-                                </p>
+                              <div className="border-t border-border bg-muted/20 p-6">
+                                {/* Dados da Versão */}
+                                <div className="mb-6">
+                                  <h3 className="mb-3 text-sm font-semibold text-foreground">Detalhes da Versão</h3>
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Tipo</p>
+                                      <p className="text-sm font-medium text-foreground">
+                                        {TermType[term.policy_type] || term.policy_type}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Versão</p>
+                                      <p className="text-sm font-medium text-foreground">{term.version}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Data de Vigência</p>
+                                      <p className="text-sm font-medium text-foreground">
+                                        {new Date(term.effective_from).toLocaleDateString("pt-BR", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Aviso de Versão em Vigência ou Expirada */}
+                                {(() => {
+                                  const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
+                                  const status = getStatus(term.effective_from, sameType);
+
+                                  if (status.key === StatusFilter.current) {
+                                    return (
+                                      <div className="mb-4 flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                        <p>
+                                          Esta versão está em vigência. Não é possível adicionar ou modificar cláusulas de termos já ativos.
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+
+                                  if (status.key === StatusFilter.expired) {
+                                    return (
+                                      <div className="mb-4 flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                        <p>
+                                          Esta versão está expirada. Não é possível adicionar ou modificar cláusulas de termos expirados.
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+
+                                  return null;
+                                })()}
+
+                                {/* Tabela de Cláusulas */}
+                                <div className="mb-4">
+                                  <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-foreground">Cláusulas</h3>
+                                    {(() => {
+                                      const today = new Date();
+                                      const effectiveDate = new Date(term.effective_from);
+                                      const canAddClauses = effectiveDate > today;
+                                      return canAddClauses ? (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                          onClick={() => {
+                                            toast.info("Funcionalidade de adicionar cláusulas será implementada em breve.");
+                                          }}
+                                        >
+                                          <Plus className="mr-1 h-4 w-4" />
+                                          Adicionar Cláusula
+                                        </Button>
+                                      ) : null;
+                                    })()}
+                                  </div>
+
+                                  {loadingClausesFor === term.policy_version_id ? (
+                                    <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <span>Carregando cláusulas...</span>
+                                    </div>
+                                  ) : (
+                                    <div className="overflow-x-auto rounded-md border border-border bg-card">
+                                      <table className="w-full text-sm">
+                                        <thead>
+                                          <tr className="border-b border-border bg-muted/50">
+                                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Código</th>
+                                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Título</th>
+                                            <th className="px-3 py-2 text-center font-medium text-muted-foreground">Obrigatória</th>
+                                            <th className="px-3 py-2 text-center font-medium text-muted-foreground">Ordem</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                          {(!clausesByVersion[term.policy_version_id] ||
+                                            clausesByVersion[term.policy_version_id].length === 0) && (
+                                            <tr>
+                                              <td colSpan={4} className="py-4 text-center text-muted-foreground">
+                                                Nenhuma cláusula cadastrada.
+                                              </td>
+                                            </tr>
+                                          )}
+                                          {clausesByVersion[term.policy_version_id]?.map((clause) => (
+                                            <tr key={clause.clause_uuid} className="hover:bg-muted/30">
+                                              <td className="px-3 py-2 font-mono text-xs">{clause.code}</td>
+                                              <td className="px-3 py-2">{clause.title}</td>
+                                              <td className="px-3 py-2 text-center">
+                                                {clause.mandatory ? (
+                                                  <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                                                    <Check className="h-3 w-3" />
+                                                    Sim
+                                                  </span>
+                                                ) : (
+                                                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                                    <X className="h-3 w-3" />
+                                                    Não
+                                                  </span>
+                                                )}
+                                              </td>
+                                              <td className="px-3 py-2 text-center text-sm">{clause.display_order}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </td>
                           </tr>

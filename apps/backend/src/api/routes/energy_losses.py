@@ -1,8 +1,18 @@
 from fastapi import APIRouter
+from pathlib import Path
 from src.control import energy_losses_tariff_procedures
-from src.etl.extract import extract_energy_losses
+from src.etl.extract.extract_energy_losses import extract_losses
+from src.config.settings import Settings
 
 router = APIRouter()
+_settings = Settings()
+
+def get_latest_xlsx_path() -> Path:
+    tmp = Path(_settings.tmp_upload_path)
+    candidates = list(tmp.rglob("*.xlsx"))
+    if not candidates:
+        raise FileNotFoundError("Nenhum arquivo .xlsx encontrado no TMP_UPLOAD_PATH.")
+    return max(candidates, key=lambda p: p.stat().st_mtime)
 
 @router.get("/get-energy-losses")
 async def get_energy_losses(
@@ -24,4 +34,5 @@ async def get_energy_losses(
 
 @router.get("/test-energy-losses-file-extraction")
 async def test_energy_losses_file_extraction():
-    return extract_energy_losses.extract_losses()
+    path = get_latest_xlsx_path()
+    return extract_losses(path)

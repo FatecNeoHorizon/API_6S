@@ -1,28 +1,16 @@
 from src.database.connection import get_db
-from src.database.collections.at_network_segments import setup_at_network_segments
-from src.database.collections.consumer_units_pj import setup_consumer_units_pj
-from src.database.collections.distribution_indices import setup_distribution_indices
-from src.database.collections.distribution_transformers import setup_distribution_transformers
-from src.database.collections.domain_indicators import setup_domain_indicators
 from src.database.collections.energy_losses_tariff import setup_energy_losses_tariff
-from src.database.collections.load_history import setup_load_history
-from src.database.collections.mt_network_segments import setup_mt_network_segments
-from src.database.collections.municipalities import setup_municipalities
 from src.database.collections.substations import setup_substations
-from src.database.collections.tam_sam import setup_tam_sam
+from src.database.collections.distribution_transformers import setup_distribution_transformers
+from src.database.collections.conj import setup_conj
+from src.database.collections.distribution_indices import setup_distribution_indices
 
 COLLECTION_SETUPS = [
-    ("at_network_segments",    setup_at_network_segments),
-    ("consumer_units_pj",      setup_consumer_units_pj),
-    ("distribution_indices",   setup_distribution_indices),
+    ("energy_losses_tariff", setup_energy_losses_tariff),
+    ("substations", setup_substations),
     ("distribution_transformers", setup_distribution_transformers),
-    ("domain_indicators",      setup_domain_indicators),
-    ("energy_losses_tariff",   setup_energy_losses_tariff),
-    ("load_history",           setup_load_history),
-    ("mt_network_segments",    setup_mt_network_segments),
-    ("municipalities",         setup_municipalities),
-    ("substations",            setup_substations),
-    ("tam_sam",                setup_tam_sam),
+    ("conj", setup_conj),
+    ("distribution_indices", setup_distribution_indices),
 ]
 
 def setup():

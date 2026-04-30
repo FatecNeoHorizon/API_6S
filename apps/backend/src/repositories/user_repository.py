@@ -187,3 +187,78 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
         ProfileResult(profile_uuid=row[0], profile_name=row[1])
         for row in rows
     ]
+
+def create_password_reset_token(
+    conn: PgConnection,
+    *,
+    user_id: str,
+    token_hash: str,
+    expires_at,
+) -> None:
+    query = """
+        INSERT INTO TB_PASSWORD_RESET (
+            USER_UUID,
+            TOKEN_HASH,
+            EXPIRES_AT,
+            USED_AT
+        )
+        VALUES (%s, %s, %s, NULL)
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id, token_hash, expires_at))
+
+
+def get_valid_password_reset_token(conn: PgConnection, token_hash: str):
+    query = """
+        SELECT
+            pr.RESET_UUID,
+            pr.USER_UUID,
+            u.ACTIVE
+        FROM TB_PASSWORD_RESET pr
+        JOIN TB_USER u
+          ON u.USER_UUID = pr.USER_UUID
+        WHERE pr.TOKEN_HASH = %s
+          AND pr.USED_AT IS NULL
+          AND pr.EXPIRES_AT > NOW()
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (token_hash,))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "reset_uuid": row[0],
+        "user_uuid": row[1],
+        "active": row[2],
+    }
+
+
+def mark_password_reset_token_used(conn: PgConnection, reset_uuid: str) -> None:
+    query = """
+        UPDATE TB_PASSWORD_RESET
+        SET USED_AT = NOW()
+        WHERE RESET_UUID = %s
+          AND USED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(reset_uuid),))
+
+
+def update_user_password(conn: PgConnection, *, user_id: str, password_hash: str) -> None:
+    query = """
+        UPDATE TB_USER
+        SET PASSWORD_HASH = %s,
+            UPDATED_AT = NOW()
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (password_hash, str(user_id)))

@@ -1,4 +1,14 @@
-from pymongo import ASCENDING, GEOSPHERE
+from pymongo import ASCENDING
+
+"""
+Example Document:
+{
+    "_id": "ObjectId('69e3b182218b5f69b67bd0bc')",
+    "code": "SE-001",
+    "distributor_code": "001",
+    "description": "Subestacao Centro"
+}
+"""
 
 def setup_substations(db):
     db.create_collection(
@@ -6,7 +16,7 @@ def setup_substations(db):
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["code", "distributor_code", "geometry", "geodatabase_id"],
+                "required": ["code", "distributor_code"],
                 "properties": {
                     "_id": {"bsonType": "objectId"},
                     "code": {
@@ -20,25 +30,6 @@ def setup_substations(db):
                     "description": {
                         "bsonType": ["string", "null"],
                         "description": "Substation description. Mapped from DESCR."
-                    },
-                    "shape_length": {
-                        "bsonType": ["double", "null"],
-                        "description": "Perimeter length. Mapped from Shape_Length."
-                    },
-                    "shape_area": {
-                        "bsonType": ["double", "null"],
-                        "description": "Area in map units. Mapped from Shape_Area."
-                    },
-                    "geodatabase_id": {
-                        "bsonType": "objectId",
-                        "description": "Reference to the geodatabases collection."
-                    },
-                    "geometry": {
-                        "bsonType": "object",
-                        "required": ["type", "coordinates"],
-                        "properties": {
-                            "type": {"bsonType": "string", "enum": ["MultiPolygon", "Polygon"]}
-                        }
                     }
                 }
             }
@@ -48,7 +39,16 @@ def setup_substations(db):
     )
 
     col = db["substations"]
-    col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
-    col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
+
+    col.create_index(
+        [("code", ASCENDING)],
+        unique=True,
+        name="idx_unique_code",
+        background=True
+    )
+
+    col.create_index(
+        [("distributor_code", ASCENDING)],
+        name="idx_distributor",
+        background=True
+    )

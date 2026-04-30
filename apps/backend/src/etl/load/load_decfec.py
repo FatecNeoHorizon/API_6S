@@ -37,6 +37,19 @@ def _to_float(value) -> float | None:
             return None
     except (TypeError, ValueError):
         pass
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        # The CSV stores decimals with comma and may omit the leading zero.
+        # Examples: ",44" -> "0.44", "1.234,56" -> "1234.56"
+        normalized = normalized.replace(" ", "")
+        if "," in normalized:
+            normalized = normalized.replace(".", "").replace(",", ".")
+        try:
+            return float(normalized)
+        except (ValueError, TypeError):
+            return None
     try:
         return float(value)
     except (ValueError, TypeError):

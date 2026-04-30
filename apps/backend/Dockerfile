@@ -5,7 +5,13 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Instala dependências do sistema necessárias para o python-magic
-RUN apt-get update && apt-get install -y libmagic1
+RUN apt-get update && apt-get install -y libmagic1 \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    gdal-bin \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copia o arquivo de dependências e instala
 COPY requirements.txt .

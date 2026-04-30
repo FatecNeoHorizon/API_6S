@@ -52,10 +52,9 @@ async def process_uploaded_zip(
         if file_key == "gdb":
             extract_dir = upload_dir / "gdb_extracted"
             extract_dir.mkdir()
-            gdb_path = unpack_zip_from_bytes(file_bytes, extract_dir)  # direto da memória
+            gdb_path = unpack_zip_from_bytes(file_bytes, extract_dir)
             paths[file_key] = gdb_path
         else:
-            await save_file(file_bytes, dest_path)  # ← só salva os outros arquivos
             paths[file_key] = dest_path
             
     logger.info(f"[upload_procedures] Arquivos prontos para ETL: {list(paths.keys())}")

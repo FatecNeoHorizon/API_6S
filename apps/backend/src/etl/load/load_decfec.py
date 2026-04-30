@@ -116,7 +116,9 @@ def load_decfec(
     try:
         tam_result = None
 
-        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
+        path = settings.csv_file_path
+        
+        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(path), start=1):
             chunk_start_perf = time.perf_counter()
             chunk_rows = len(chunk_df)
             totals["rows_processed"] += chunk_rows

@@ -17,3 +17,4 @@ bcrypt
 cryptography
 pydantic[email]
 pytest
+PyJWT==2.10.1

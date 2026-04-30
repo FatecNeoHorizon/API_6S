@@ -6,7 +6,7 @@ from src.database.connection import get_db
 from src.services.upload_service import (
     generate_load_id,
     register_upload_start,
-    run_etl_placeholder,
+    run_etl,
     get_load_history
 )
 
@@ -41,7 +41,7 @@ async def upload_files(
 
     load_ids = register_upload_start(db, paths)
 
-    background_tasks.add_task(run_etl_placeholder, db, load_ids, paths, upload_dir)
+    background_tasks.add_task(run_etl, db, load_ids, paths, upload_dir)
 
     logger.info(f"[upload] load_ids {load_ids} registrados. Arquivos: {list(paths.keys())}")
 

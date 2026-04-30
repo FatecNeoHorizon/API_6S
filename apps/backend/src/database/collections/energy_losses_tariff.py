@@ -1,10 +1,34 @@
 from pymongo import ASCENDING
 
+"""
+Example Document:
+[
+   {
+      "_id":{
+         "$oid":"69cc58e000cd5bef24e5de81"
+      },
+      "distributor":"Amazonas Energia",
+      "state":"Amazonas",
+      "uf":"AM",
+      "process_date":"2023-11-01",
+      "tme_brl_mwh":195.17,
+      "basic_network_loss_mwh":95581.132,
+      "technical_loss_mwh":786836.937,
+      "non_technical_loss_mwh":3269260.00001,
+      "basic_network_loss_cost_brl":18655010.1,
+      "technical_loss_cost_brl":153570600.1,
+      "non_technical_loss_cost_brl":638076500.1,
+      "parcel_b_brl":386332500.1,
+      "required_revenue_brl":2847472000.1
+   }
+]
+"""
+
 def setup_energy_losses_tariff(db):
     db.create_collection(
         "energy_losses_tariff",
         validator={
-            "$jsonSchema":{
+            "$jsonSchema": {
                 "bsonType": "object",
                 "required": [
                     "distributor",
@@ -19,20 +43,15 @@ def setup_energy_losses_tariff(db):
                     "technical_loss_cost_brl",
                     "non_technical_loss_cost_brl",
                     "parcel_b_brl",
-                    "required_revenue_brl",
-                    "distributor_slug"
+                    "required_revenue_brl"
                 ],
                 "properties": {
-                    "_id":{
+                    "_id": {
                         "bsonType": "objectId"
                     },
                     "distributor": {
                         "bsonType": "string",
                         "description": "Name of the energy distributor. Mapped from 'Distribuidora'."
-                    },
-                    "distributor_slug": {
-                        "bsonType": "string",
-                        "description": "Distributor identifier slug for joining with other collections. Mapped from 'sigla'."
                     },
                     "state": {
                         "bsonType": "string",
@@ -74,7 +93,6 @@ def setup_energy_losses_tariff(db):
                         "bsonType": "double",
                         "description": "Financial cost of non-technical losses (theft/fraud) in BRL. Mapped from 'Custo Perdas Não Técnicas (R$)'."
                     },
-    
                     "parcel_b_brl": {
                         "bsonType": "double",
                         "description": "Parcel B of the tariff process in BRL — regulatory cost component. Mapped from 'Parcela B (R$)'."
@@ -93,19 +111,22 @@ def setup_energy_losses_tariff(db):
     col = db["energy_losses_tariff"]
 
     col.create_index(
-        [("distributor_slug", ASCENDING),
-            ("process_date", ASCENDING)],
+        [("distributor", ASCENDING),
+         ("process_date", ASCENDING)],
         name="idx_unique_distributor_process",
-        unique=True
+        unique=True,
+        background=True
     )
 
     col.create_index(
         [("uf", ASCENDING),
-            ("process_date", ASCENDING)],
-        name="idx_uf_process_date"
+         ("process_date", ASCENDING)],
+        name="idx_uf_process_date",
+        background=True
     )
 
     col.create_index(
         [("non_technical_loss_cost_brl", ASCENDING)],
-        name="idx_non_technical_loss_cost"
+        name="idx_non_technical_loss_cost",
+        background=True
     )

@@ -187,3 +187,67 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
         ProfileResult(profile_uuid=row[0], profile_name=row[1])
         for row in rows
     ]
+
+def get_valid_first_access_token(conn: PgConnection, token_hash: str):
+    query = """
+        SELECT
+            fat.TOKEN_UUID,
+            fat.USER_ID,
+            u.ACTIVE,
+            p.PROFILE_NAME
+        FROM TB_FIRST_ACCESS_TOKEN fat
+        JOIN TB_USER u
+          ON u.USER_UUID = fat.USER_ID
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE fat.TOKEN_HASH = %s
+          AND fat.USED_AT IS NULL
+          AND fat.EXPIRES_AT > NOW()
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (token_hash,))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "token_uuid": row[0],
+        "user_id": row[1],
+        "active": row[2],
+        "profile_name": row[3],
+    }
+
+
+def mark_first_access_token_used(conn: PgConnection, token_uuid: str) -> None:
+    query = """
+        UPDATE TB_FIRST_ACCESS_TOKEN
+        SET USED_AT = NOW()
+        WHERE TOKEN_UUID = %s
+          AND USED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(token_uuid),))
+
+
+def complete_first_access(
+    conn: PgConnection,
+    *,
+    user_id: str,
+    password_hash: str,
+) -> None:
+    query = """
+        UPDATE TB_USER
+        SET PASSWORD_HASH = %s,
+            FIRST_ACCESS_COMPLETED = TRUE,
+            UPDATED_AT = NOW()
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (password_hash, str(user_id)))

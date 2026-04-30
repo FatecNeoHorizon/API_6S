@@ -86,6 +86,45 @@ The application follows a structured lifespan routine upon startup:
 3. **Data Seeding**: Runs seed.py to ensure core indicators and parameters are present
 4. **Route Registration**: Dynamically loads API endpoints
 
+### User Management Flow (`src/api/routes/users.py`)
+
+The user module is implemented with the same layered approach used by the rest of the backend:
+
+- **Route layer**: exposes the REST contract and maps domain exceptions to HTTP responses.
+- **Service layer**: centralizes business rules such as uniqueness checks, email normalization, password hashing, and soft delete orchestration.
+- **Repository layer**: performs the SQL operations against PostgreSQL.
+- **Schema layer**: validates request and response payloads with Pydantic.
+
+#### Exposed endpoints
+
+| Method | Path | Purpose | Main response |
+|:---|:---|:---|:---|
+| `GET` | `/users/profiles` | Lists available user profiles | `200 OK` with profile list |
+| `GET` | `/users/` | Lists users that are not soft deleted | `200 OK` with user list |
+| `GET` | `/users/{user_uuid}` | Returns one user by UUID | `200 OK` or `404 Not Found` |
+| `POST` | `/users/` | Creates a new user | `201 Created` |
+| `PATCH` | `/users/{user_uuid}` | Updates username and profile | `200 OK` or `404/409` |
+| `PATCH` | `/users/{user_uuid}/active` | Toggles user active status | `200 OK` or `404 Not Found` |
+| `DELETE` | `/users/{user_uuid}` | Performs logical deletion | `204 No Content` or `404 Not Found` |
+
+#### Creation and update flow
+
+1. The frontend sends a validated payload to the API.
+2. Pydantic validates required fields and the application returns errors in pt-BR.
+3. The service normalizes the email, hashes it with a deterministic salt, and encrypts the original value.
+4. The service checks duplicate username and email before persisting.
+5. The repository validates the profile UUID against `TB_PROFILE`.
+6. The record is stored in `TB_USER` with the minimum data needed for access control and recovery.
+
+#### Security and compliance notes
+
+- Passwords are never stored in plain text.
+- E-mail is stored as both hash and encrypted value.
+- User listing and retrieval hide deleted records by default.
+- Update operations are restricted to username and profile association.
+- Deletion is logical, using `DELETED_AT`, preserving traceability and referential integrity.
+- Validation failures are returned with localized messages in Brazilian Portuguese.
+
 ---
 
 ## 🐳 Docker Configuration
@@ -190,8 +229,17 @@ Upload behavior is controlled by backend settings:
 - Load tracking is stored in `load_history`, enabling status polling independent of request lifecycle.
 - Upload temporary folders are managed by context manager and cleaned up automatically.
 
+### User Data Storage Context
+
+The user CRUD implemented in this repository uses PostgreSQL as the sensitive-data store. The relevant tables are:
+
+- `TB_USER`: credentials, profile association, activation flag, soft delete metadata, and audit timestamps.
+- `TB_PROFILE`: profile catalog used to authorize user roles.
+
+The module does not expose raw email values in responses. User-facing payloads return only the fields required by the frontend and operational flows.
+
 ---
 
 
 
-*Last updated: 04/20/2026*
+*Last updated: 04/24/2026*

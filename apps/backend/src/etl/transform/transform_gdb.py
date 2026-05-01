@@ -1,19 +1,13 @@
 import logging
-from typing import Any
-from src.etl.transform.contract import build_transform_result
+from src.etl.contract import build_transform_result
 from src.etl.transform.utils import (
     _to_str,
-    _to_float,
     _strip_columns
 )
 
-# Importando as definições do seu contrato
-# (Assumindo que estão no mesmo arquivo ou módulo de contratos)
-TRANSFORM_CONTRACT_VERSION = "1.0"
-
 logger = logging.getLogger(__name__)
 
-def transform_gdb_chunk(chunk, layer_name: str, geodatabase_id: str) -> dict:
+def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
     layer_name = layer_name.upper().strip()
     total_input = len(chunk)
     chunk = _strip_columns(chunk)
@@ -32,7 +26,9 @@ def transform_gdb_chunk(chunk, layer_name: str, geodatabase_id: str) -> dict:
                 code = _to_str(row.get("COD_ID"))
 
                 if not conj_name or not code:
-                    rejected_docs.append({"row": row, "reason": "Missing NOM or COD_ID in CONJ"})
+                    rejected_docs.append({
+                        "row": row,
+                        "reason": "Missing NOM or COD_ID in CONJ"})
                     continue
 
                 valid_docs.append({
@@ -64,7 +60,6 @@ def transform_gdb_chunk(chunk, layer_name: str, geodatabase_id: str) -> dict:
                 })
 
         except Exception as e:
-            # Esse log agora vai te mostrar exatamente qual erro de código ocorreu
             logger.error(f"Erro no processamento da linha: {str(e)}")
             rejected_docs.append({"row": row, "reason": f"Exception: {str(e)}"})
 

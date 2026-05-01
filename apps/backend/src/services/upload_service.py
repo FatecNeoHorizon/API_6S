@@ -9,7 +9,7 @@ from src.etl.extract.extract_energy_losses import extract_losses
 from src.etl.extract.extract_decfec import extract_decfec
 from src.etl.extract.extract_limits import extract_limits
 from src.etl.extract.gdb_orchestrator import run_extraction
-from src.etl.transform.contract import TRANSFORM_CONTRACT_VERSION
+from src.etl.contract import TRANSFORM_CONTRACT_VERSION
 from src.etl.transform.transform_decfec import transform_decfec
 from src.etl.transform.transform_limits import transform_limits
 from src.etl.transform.transform_energy_losses import transform_energy_losses
@@ -181,7 +181,7 @@ def run_etl(db, load_ids, paths, upload_dir):
                     "PROCESSING",
                     {
                         "total_processed": total_processed,
-                        "total_inserted": total_valid,
+                        "total_valid": total_valid,
                         "total_rejected": total_rejected,
                         "chunks_completed": chunks_completed,
                     },
@@ -223,13 +223,15 @@ def get_upload_status(db: Database, load_id: str) -> dict | None:
         "load_id": load_id,
         "status": load_history.get("status"),
         "metrics": {
-            # Fallback: se não estiver no 'metrics', tenta na raiz (compatibilidade com antigos)
             "total_processed": db_metrics.get("total_processed") or load_history.get("total_processed"),
             "total_valid": db_metrics.get("total_valid") or load_history.get("total_valid"),
-            "total_rejected": db_metrics.get("total_rejected") or load_history.get("total_rejected"),
+            "total_rejected": (
+                db_metrics["total_rejected"]
+                if "total_rejected" in db_metrics
+                else load_history.get("total_rejected")
+            ),
             "chunks_completed": db_metrics.get("chunks_completed") or load_history.get("chunks_completed"),
-        },
-        "error_message": error_msg
+        }
     }
 
     logger.info(f"[FETCH_STATUS] Resposta final montada: {response}")

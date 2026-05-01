@@ -1,67 +1,60 @@
-import unicodedata
-
-from src.services.upload_service import TRANSFORM_CONTRACT_VERSION
-from src.etl.transform.contract import build_transform_result
+import logging
+from src.etl.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
 from src.etl.transform.utils import (
     _to_str,
     _to_float,
     _to_date,
-    _strip_columns
+    _strip_columns,
+    _to_slug
+
 )
-
-def _to_slug(value: str) -> str | None:
-    if not value:
-        return None
-    normalized = unicodedata.normalize('NFD', value)
-    ascii_str = normalized.encode('ascii', 'ignore').decode('ascii')
-    return ascii_str.lower().strip().replace(' ', '-')
-
 
 def transform_energy_losses(df):
     df = _strip_columns(df)
     total_input = len(df)
 
-    documents = []
-    rejected = []
+    valid_docs = []
+    rejected_docs = []
 
     for _, row in df.iterrows():
-        distributor = _to_str(row.get("Distribuidora"))
-        process_date = _to_date(row.get("Data do Processo"))
+        try:
+            distributor = _to_str(row.get("Distribuidora"))
+            process_date = _to_date(row.get("Data do Processo"))
 
-        doc = {
-            "distributor": distributor,
-            "distributor_slug": _to_slug(distributor),
-            "state": _to_str(row.get("Estado")),
-            "uf": _to_str(row.get("UF")),
-            "process_date": process_date,
-            "tme_brl_mwh": _to_float(row.get("TME (R$/MWh)")),
-            "basic_network_loss_mwh": _to_float(row.get("Perdas na Rede Básica (MWh)")),
-            "technical_loss_mwh": _to_float(row.get("Perdas Técnicas (MWh)")),
-            "non_technical_loss_mwh": _to_float(row.get("Perdas Não Técnicas (MWh)")),
-            "basic_network_loss_cost_brl": _to_float(row.get("Custo Perdas na Rede Básica (R$)")),
-            "technical_loss_cost_brl": _to_float(row.get("Custo Perdas Técnicas (R$)")),
-            "non_technical_loss_cost_brl": _to_float(row.get("Custo Perdas Não Técnicas (R$)")),
-            "parcel_b_brl": _to_float(row.get("Parcela B (R$)")),
-            "required_revenue_brl": _to_float(row.get("Receita Requerida (R$)")),
-        }
+            doc = {
+                "distributor": distributor,
+                "distributor_slug": _to_slug(distributor),
+                "state": _to_str(row.get("Estado")),
+                "uf": _to_str(row.get("UF")),
+                "process_date": process_date,
+                "tme_brl_mwh": _to_float(row.get("TME (R$/MWh)")),
+                "basic_network_loss_mwh": _to_float(row.get("Perdas na Rede Básica (MWh)")),
+                "technical_loss_mwh": _to_float(row.get("Perdas Técnicas (MWh)")),
+                "non_technical_loss_mwh": _to_float(row.get("Perdas Não Técnicas (MWh)")),
+                "basic_network_loss_cost_brl": _to_float(row.get("Custo Perdas na Rede Básica (R$)")),
+                "technical_loss_cost_brl": _to_float(row.get("Custo Perdas Técnicas (R$)")),
+                "non_technical_loss_cost_brl": _to_float(row.get("Custo Perdas Não Técnicas (R$)")),
+                "parcel_b_brl": _to_float(row.get("Parcela B (R$)")),
+                "required_revenue_brl": _to_float(row.get("Receita Requerida (R$)")),
+            }
 
-        if not distributor or not process_date:
-            rejected.append({
+            if not distributor or not process_date:
+                rejected_docs.append({
+                    "row": row.to_dict(),
+                    "reason": "Missing distributor or process_date"
+                })
+                continue
+
+            valid_docs.append(doc)
+
+        except Exception as e:
+            logging.error(f"Error processing row: {str(e)}")
+            rejected_docs.append({
                 "row": row.to_dict(),
-                "reason": "Missing distributor or process_date"
+                "reason": f"Exception: {str(e)}"
             })
-            continue
 
-        documents.append(doc)
+    result = build_transform_result(valid_docs, rejected_docs, total_input)
+    result["contract_version"] = TRANSFORM_CONTRACT_VERSION
 
-    # Retorno estruturado conforme exigido pelo _validate_transform_contract
-    return {
-        "contract_version": TRANSFORM_CONTRACT_VERSION,
-        "valid": documents,
-        "rejected": rejected,
-        "stats": {
-            "total_input": total_input,
-            "total_valid": len(documents),
-            "total_rejected": len(rejected)
-        }
-    }
+    return result

@@ -1,50 +1,51 @@
-from collections import defaultdict
-
-from etl.transform.utils import (
+import logging
+from src.etl.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
+from src.etl.transform.utils import (
     _to_str,
     _to_int,
     _to_float,
     _strip_columns
 )
 
-REQUIRED = ["code", "indicator_type_code", "year"]
+logger = logging.getLogger(__name__)
 
-def transform_limits(df):
+def transform_limits(df) -> dict:
     df = _strip_columns(df)
+    total_input = len(df)
+    
+    valid_docs = []
+    rejected_docs = []
 
-    grouped = defaultdict(list)
-    rejected = []
 
     for _, row in df.iterrows():
-        code = _to_str(row.get("IdeConjUndConsumidoras"))
-        indicator_type_code = _to_str(row.get("SigIndicador"))
-        year = _to_int(row.get("Ano"))
-        limit = _to_float(row.get("VlrLimite"))
+        try:
+            code = _to_str(row.get("IdeConjUndConsumidoras"))
+            indicator_type_code = _to_str(row.get("SigIndicador"))
+            year = _to_int(row.get("AnoLimiteQualidade"))
+            limit = _to_float(row.get("VlrLimite"))
 
-        if not code or not indicator_type_code or year is None:
-            rejected.append({
-                "row": row.to_dict(),
-                "reason": "Missing required fields"
+            if not code or not indicator_type_code or year is None or limit is None:
+                rejected_docs.append({
+                    "row": row.to_dict(),
+                    "reason": "Missing required fields (code, indicator, year or limit)"
+                })
+                continue
+
+            valid_docs.append({
+                "code": code,  # 👈 você estava ignorando isso
+                "indicator_type_code": indicator_type_code,
+                "year": year,
+                "limit": limit
             })
-            continue
 
-        summary = {
-            "indicator_type_code": indicator_type_code,
-            "year": year,
-            "limit": limit
-        }
+        except Exception as e:
+            logger.error(f"Erro no processamento da linha: {str(e)}")
+            rejected_docs.append({
+                "row": row.to_dict(),
+                "reason": f"Exception: {str(e)}"
+            })
 
-        grouped[code].append(summary)
+    result = build_transform_result(valid_docs, rejected_docs, total_input)
+    result["contract_version"] = TRANSFORM_CONTRACT_VERSION
 
-    documents = [
-        {
-            "code": code,
-            "annual_summaries": summaries
-        }
-        for code, summaries in grouped.items()
-    ]
-
-    return {
-        "valid": documents,
-        "rejected": rejected
-    }
+    return result

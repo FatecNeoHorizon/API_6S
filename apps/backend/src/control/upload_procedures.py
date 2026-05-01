@@ -1,15 +1,12 @@
 import logging
-import uuid
 import shutil
-import aiofiles
 from pathlib import Path
 from src.config.settings import Settings
 
 from fastapi import UploadFile
-import magic
 
-from src.utils.file_validator import validate_all_files
-from src.utils.unpacker import unpack_zip_from_bytes
+from src.utils.file_validator import validate_and_store_upload
+from src.utils.unpacker import unpack_zip_file
 
 _settings = Settings()
 
@@ -28,35 +25,48 @@ def cleanup_upload_dir(upload_dir: Path) -> None:
         shutil.rmtree(upload_dir)
         logger.info(f"[upload_procedures] Pasta temporária removida: {upload_dir}")
 
-async def save_file(file_bytes: bytes, dest_path: Path) -> None:
-    async with aiofiles.open(dest_path, 'wb') as f:
-        await f.write(file_bytes)
-    logger.info(f"[upload_procedures] Arquivo salvo: {dest_path} ({len(file_bytes)} bytes)")
-
 async def process_uploaded_zip(
         upload_dir: Path,
         files: dict[str, UploadFile | None]
  ) -> tuple[dict[str, Path], list[str]]:
-    
-    validated, erros = await validate_all_files(files)
 
-    if erros:
-        return {}, erros
-    
     paths: dict[str, Path] = {}
+    errors: list[str] = []
 
-    for file_key, (file_bytes, original_filename) in validated.items():
-        dest_path = upload_dir / original_filename
-        await save_file(file_bytes, dest_path)
+    for file_key, upload_file in files.items():
+        if upload_file is None:
+            continue
+
+        dest_path = upload_dir / upload_file.filename
+        saved_path, error = await validate_and_store_upload(upload_file, file_key, dest_path)
+
+        if error:
+            errors.append(error)
+            if dest_path.exists():
+                dest_path.unlink(missing_ok=True)
+            continue
+
+        if saved_path is None:
+            continue
 
         if file_key == "gdb":
-            extract_dir = upload_dir / "gdb_extracted"
-            extract_dir.mkdir()
-            gdb_path = unpack_zip_from_bytes(file_bytes, extract_dir)
-            paths[file_key] = gdb_path
+            try:
+                extract_dir = upload_dir / "gdb_extracted"
+                extract_dir.mkdir(exist_ok=True)
+                gdb_path = unpack_zip_file(saved_path, extract_dir)
+                paths[file_key] = gdb_path
+            except Exception as exc:
+                errors.append(f"'{upload_file.filename}': falha ao extrair GDB ({exc}).")
+                break
         else:
-            paths[file_key] = dest_path
-            
+            paths[file_key] = saved_path
+
+    if not paths and not errors:
+        errors.append("Nenhum arquivo foi enviado. Envie ao menos um arquivo.")
+
+    if errors:
+        cleanup_upload_dir(upload_dir)
+        return {}, errors
+
     logger.info(f"[upload_procedures] Arquivos prontos para ETL: {list(paths.keys())}")
     return paths, []
-

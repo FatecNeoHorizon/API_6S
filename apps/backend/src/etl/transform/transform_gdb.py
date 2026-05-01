@@ -1,64 +1,66 @@
-from etl.transform.utils import (
+import logging
+from src.etl.contract import build_transform_result
+from src.etl.transform.utils import (
     _to_str,
-    _to_float,
     _strip_columns
 )
 
-def transform_gdb_chunk(chunk, layer_name, geodatabase_id):
+logger = logging.getLogger(__name__)
+
+def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
+    layer_name = layer_name.upper().strip()
+    total_input = len(chunk)
     chunk = _strip_columns(chunk)
+    
+    valid_docs = []
+    rejected_docs = []
 
-    docs = []
-    rejected = []
+    if layer_name not in ["CONJ", "SUB"]:
+        return build_transform_result([], [], total_input)
 
-    if "geometry" in chunk.columns:
-        chunk = chunk.drop(columns=["geometry"])
+    for row in chunk.to_dict(orient="records"):
+        try:
+            if layer_name == "CONJ":
+                # Mapeamento para Conjuntos
+                conj_name = _to_str(row.get("NOM")) # Use nomes específicos para evitar confusão
+                code = _to_str(row.get("COD_ID"))
 
-    for _, row in chunk.iterrows():
-        if layer_name == "CONJ":
-            name = _to_str(row.get("NomConjunto"))
-            code = _to_str(row.get("IdeConjunto"))
+                if not conj_name or not code:
+                    rejected_docs.append({
+                        "row": row,
+                        "reason": "Missing NOM or COD_ID in CONJ"})
+                    continue
 
-            doc = {
-                "name": name,
-                "code": code,
-                "status": _to_str(row.get("status")),
-                "shape_length": _to_float(row.get("Shape_Length")),
-                "shape_area": _to_float(row.get("Shape_Area")),
-                "geometry": row.get("geometry_geojson"),
-                "geodatabase_id": geodatabase_id
-            }
-
-            if not name or not code:
-                rejected.append({
-                    "row": row.to_dict(),
-                    "reason": "Missing name or code (CONJ)"
+                valid_docs.append({
+                    "name": conj_name,
+                    "code": code,
+                    "geometry": row.get("geometry_geojson"),
+                    "geodatabase_id": geodatabase_id,
+                    "layer_source": layer_name
                 })
-                continue
 
-            docs.append(doc)
+            elif layer_name == "SUB":
+                # Mapeamento para Subestações baseado no seu LOG real:
+                # Colunas: 'COD_ID', 'DIST', 'DESCR'
+                sub_code = _to_str(row.get("COD_ID")) 
+                sub_dist = _to_str(row.get("DIST"))
+                sub_descr = _to_str(row.get("DESCR"))
 
-        elif layer_name == "SUB":
-            code = _to_str(row.get("CodSub"))
+                if not sub_code:
+                    rejected_docs.append({"row": row, "reason": "Missing COD_ID in SUB"})
+                    continue
 
-            doc = {
-                "code": code,
-                "distributor_code": _to_str(row.get("CodDistribuidora")),
-                "description": _to_str(row.get("NomSub")),
-            }
-
-            if not code:
-                rejected.append({
-                    "row": row.to_dict(),
-                    "reason": "Missing code (SUB)"
+                valid_docs.append({
+                    "code": sub_code,
+                    "distributor_code": sub_dist,
+                    "description": sub_descr,
+                    "geometry": row.get("geometry_geojson"),
+                    "geodatabase_id": geodatabase_id,
+                    "layer_source": layer_name
                 })
-                continue
 
-            docs.append(doc)
+        except Exception as e:
+            logger.error(f"Erro no processamento da linha: {str(e)}")
+            rejected_docs.append({"row": row, "reason": f"Exception: {str(e)}"})
 
-        else:
-            return {"docs": [], "rejected": []}
-
-    return {
-        "docs": docs,
-        "rejected": rejected
-    }
+    return build_transform_result(valid_docs, rejected_docs, total_input)

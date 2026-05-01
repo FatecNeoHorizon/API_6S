@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pymongo.database import Database
 
 from src.etl.extract.gdb_extractor import extract_gdb_generator
-from apps.backend.src.etl.transform.transform_gdb import transform_gdb
+from src.etl.transform.transform_gdb import transform_gdb
 from src.repositories.load_history_repository import (
     insert_load_history,
     update_load_history

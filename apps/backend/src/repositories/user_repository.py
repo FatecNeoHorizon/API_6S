@@ -187,3 +187,153 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
         ProfileResult(profile_uuid=row[0], profile_name=row[1])
         for row in rows
     ]
+
+def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.EMAIL_HASH,
+            u.PASSWORD_HASH,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            p.PROFILE_NAME
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.EMAIL_HASH = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (email_hash,))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "email_hash": row[2],
+        "password_hash": row[3],
+        "active": row[4],
+        "first_access_completed": row[5],
+        "profile_name": row[6],
+    }
+
+
+def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            p.PROFILE_NAME
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.USER_UUID = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "active": row[2],
+        "first_access_completed": row[3],
+        "profile_name": row[4],
+    }
+
+
+def create_user_session(
+    conn: PgConnection,
+    *,
+    user_id: str,
+    source_ip: str,
+    user_agent: str,
+    expires_at,
+):
+    invalidate_query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(invalidate_query, (user_id,))
+
+    insert_query = """
+        INSERT INTO TB_SESSION (
+            USER_ID,
+            SOURCE_IP,
+            USER_AGENT,
+            EXPIRES_AT,
+            INVALIDATED_AT
+        )
+        VALUES (%s, %s, %s, %s, NULL)
+        RETURNING SESSION_UUID
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            insert_query,
+            (
+                user_id,
+                source_ip,
+                user_agent[:255],
+                expires_at,
+            ),
+        )
+        row = cursor.fetchone()
+
+    return str(row[0])
+
+
+def get_active_session_user(conn: PgConnection, session_uuid: str):
+    query = """
+        SELECT
+            s.SESSION_UUID,
+            u.USER_UUID,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            p.PROFILE_NAME
+        FROM TB_SESSION s
+        JOIN TB_USER u
+          ON u.USER_UUID = s.USER_ID
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE s.SESSION_UUID = %s
+          AND s.INVALIDATED_AT IS NULL
+          AND s.EXPIRES_AT > NOW()
+          AND s.DELETED_AT IS NULL
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(session_uuid),))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "session_uuid": row[0],
+        "user_uuid": row[1],
+        "active": row[2],
+        "first_access_completed": row[3],
+        "profile_name": row[4],
+    }

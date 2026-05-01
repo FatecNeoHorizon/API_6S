@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from psycopg2 import IntegrityError, OperationalError
 
+from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.repositories import policy_repository
 
 
@@ -48,7 +50,14 @@ def format_clause(row: dict) -> dict:
 
 
 def get_current_terms(conn) -> dict:
-    rows = policy_repository.list_current_terms(conn)
+    try:
+        rows = policy_repository.list_current_terms(conn)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="get_current_terms")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="get_current_terms")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     versions: dict[str, dict] = {}
 
@@ -87,38 +96,54 @@ def create_policy_version(
     content: str,
     effective_from: datetime,
 ) -> dict:
-    effective_from = normalize_datetime(effective_from)
-    now = datetime.now(timezone.utc)
+    try:
+        effective_from = normalize_datetime(effective_from)
+        now = datetime.now(timezone.utc)
 
-    if effective_from <= now:
-        raise HTTPException(
-            status_code=422,
-            detail="effective_from_must_be_future",
+        if effective_from <= now:
+            raise HTTPException(
+                status_code=422,
+                detail="effective_from_must_be_future",
+            )
+
+        if policy_repository.policy_version_exists(
+            conn,
+            version=version,
+            policy_type=policy_type,
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="policy_version_already_exists",
+            )
+
+        created = policy_repository.create_policy_version(
+            conn=conn,
+            version=version,
+            policy_type=policy_type,
+            content=content,
+            effective_from=effective_from,
         )
-
-    if policy_repository.policy_version_exists(
-        conn,
-        version=version,
-        policy_type=policy_type,
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail="policy_version_already_exists",
-        )
-
-    created = policy_repository.create_policy_version(
-        conn=conn,
-        version=version,
-        policy_type=policy_type,
-        content=content,
-        effective_from=effective_from,
-    )
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="create_policy_version")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="create_policy_version")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     return format_policy_version(created)
 
 
 def list_policy_versions(conn) -> dict:
-    versions = policy_repository.list_policy_versions(conn)
+    try:
+        versions = policy_repository.list_policy_versions(conn)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="list_policy_versions")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="list_policy_versions")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     return {
         "versions": [
@@ -137,53 +162,71 @@ def create_clause(
     mandatory: bool,
     display_order: int,
 ) -> dict:
-    now = datetime.now(timezone.utc)
+    try:
+        now = datetime.now(timezone.utc)
 
-    version = policy_repository.get_policy_version(conn, version_id)
+        version = policy_repository.get_policy_version(conn, version_id)
 
-    if not version:
-        raise HTTPException(
-            status_code=404,
-            detail="policy_version_not_found",
+        if not version:
+            raise HTTPException(
+                status_code=404,
+                detail="policy_version_not_found",
+            )
+
+        effective_from = normalize_datetime(version["effective_from"])
+
+        if effective_from <= now:
+            raise HTTPException(
+                status_code=422,
+                detail="cannot_add_clause_to_effective_version",
+            )
+
+        if policy_repository.clause_code_exists(conn, version_id, code):
+            raise HTTPException(
+                status_code=409,
+                detail="clause_code_already_exists_for_this_version",
+            )
+
+        created = policy_repository.create_clause(
+            conn=conn,
+            version_id=version_id,
+            code=code,
+            title=title,
+            description=description,
+            mandatory=mandatory,
+            display_order=display_order,
         )
-
-    effective_from = normalize_datetime(version["effective_from"])
-
-    if effective_from <= now:
-        raise HTTPException(
-            status_code=422,
-            detail="cannot_add_clause_to_effective_version",
-        )
-
-    if policy_repository.clause_code_exists(conn, version_id, code):
-        raise HTTPException(
-            status_code=409,
-            detail="clause_code_already_exists_for_this_version",
-        )
-
-    created = policy_repository.create_clause(
-        conn=conn,
-        version_id=version_id,
-        code=code,
-        title=title,
-        description=description,
-        mandatory=mandatory,
-        display_order=display_order,
-    )
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="create_clause")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="create_clause")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     return format_clause(created)
 
 
 def list_clauses(conn, version_id: str) -> dict:
-    version = policy_repository.get_policy_version(conn, version_id)
+    try:
+        version = policy_repository.get_policy_version(conn, version_id)
 
-    if not version:
-        raise HTTPException(
-            status_code=404,
-            detail="policy_version_not_found",
-        )
+        if not version:
+            raise HTTPException(
+                status_code=404,
+                detail="policy_version_not_found",
+            )
 
-    clauses = policy_repository.list_clauses(conn, version_id)
+        clauses = policy_repository.list_clauses(conn, version_id)
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="list_clauses")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="list_clauses")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
     return {
         "clauses": [
@@ -191,3 +234,13 @@ def list_clauses(conn, version_id: str) -> dict:
             for clause in clauses
         ]
     }
+
+
+def get_policy_version(conn, version_id: str) -> dict:
+    """Return a full policy version including content."""
+    version = policy_repository.get_policy_version(conn, version_id)
+
+    if not version:
+        raise HTTPException(status_code=404, detail="policy_version_not_found")
+
+    return format_policy_version(version)

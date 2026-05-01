@@ -52,12 +52,35 @@ BACKEND_URL=http://localhost:8000
 
 > Never commit the `.env` file. It is already listed in `.gitignore`.
 
-### 2. Start the services
+### 2. Start the services with profiles
 
 At the project root (`API_6S`):
 ```bash
-docker compose up --build -d
+docker compose --profile full up --build -d
 ```
+
+You can start only the services needed for your task:
+
+```bash
+# Backend development
+docker compose --profile backend up --build -d
+
+# Frontend development
+docker compose --profile frontend up --build -d
+
+# Full stack
+docker compose --profile full up --build -d
+
+# MongoDB admin tools only
+docker compose --profile tools up -d
+```
+
+Profile matrix:
+
+- `backend`: `postgres`, `flyway`, `mongo`, `backend`
+- `frontend`: backend stack + `frontend` (`postgres`, `flyway`, `mongo`, `backend`, `frontend`)
+- `full`: all services
+- `tools`: `mongo`, `mongo-express`
 
 Services started:
 
@@ -65,6 +88,8 @@ Services started:
 - `backend` at `http://localhost:8000`
 - `postgres` at `localhost:5432`
 - `mongo` at `localhost:27017`
+
+For `tools`, `mongo-express` is exposed at `http://localhost:8081`.
 
 The following steps run automatically on first startup:
 
@@ -77,7 +102,7 @@ The following steps run automatically on first startup:
    - `V005` — inserts base seed data
    - `V006` — inserts synthetic fictional data for development
    - `V007` — creates Row Level Security policies
-3. Backend starts only after Flyway completes successfully
+3. Backend starts only after PostgreSQL and MongoDB are healthy, and after Flyway completes successfully
 4. Frontend starts after the backend is available
 
 ### 3. View logs (optional)
@@ -109,10 +134,10 @@ docker compose down -v
 
 ### 5. Restart a single service (optional)
 ```bash
-docker compose up -d --build backend
+docker compose --profile backend up -d --build backend
 ```
 ```bash
-docker compose restart frontend
+docker compose --profile frontend restart frontend
 ```
 
 ### 6. Database structure

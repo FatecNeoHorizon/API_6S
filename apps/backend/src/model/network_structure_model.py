@@ -53,4 +53,3 @@ class SubstationDetail(BaseModel):
     geodatabase_id: Any | None = None
     geometry: dict | None = None
     qtd_transformers: int | None = None
-    qtd_feeders: int | None = None

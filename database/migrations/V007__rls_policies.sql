@@ -35,6 +35,11 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 
+CREATE POLICY policy_select_user_for_auth
+ON TB_USER
+FOR SELECT
+USING (DELETED_AT IS NULL);
+
 CREATE POLICY policy_select_user
 ON TB_USER
 FOR SELECT

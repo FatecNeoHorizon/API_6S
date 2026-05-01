@@ -1,4 +1,4 @@
-from src.etl.transform.transform_gdb_chunk import transform_gdb_chunk
+from apps.backend.src.etl.transform.transform_gdb import transform_gdb
 from pathlib import Path
 import geopandas as gpd
 
@@ -13,7 +13,7 @@ gdf["geometry_geojson"] = gdf["geometry"].apply(
     lambda geom: geom.__geo_interface__ if geom else None
 )
 
-result = transform_gdb_chunk(gdf, layer_name, geodatabase_id)
+result = transform_gdb(gdf, layer_name, geodatabase_id)
 
 docs = result.get("docs", [])
 rejected = result.get("rejected", [])

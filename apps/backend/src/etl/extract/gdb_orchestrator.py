@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pymongo.database import Database
 
 from src.etl.extract.gdb_extractor import extract_gdb_generator
-from src.etl.transform.transform_gdb_chunk import transform_gdb_chunk
+from apps.backend.src.etl.transform.transform_gdb import transform_gdb
 from src.repositories.load_history_repository import (
     insert_load_history,
     update_load_history
@@ -53,7 +53,7 @@ def run_extraction(db: Database, path: Path, load_id: str):
                 continue
 
             # 2. Transformação
-            transform_result = transform_gdb_chunk(chunk, layer_name, load_id)
+            transform_result = transform_gdb(chunk, layer_name, load_id)
 
             # 3. Log de Rejeições
             if transform_result["rejected"]:

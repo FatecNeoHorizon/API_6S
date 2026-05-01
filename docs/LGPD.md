@@ -1,10 +1,10 @@
-# LGPD Compliance Documentation
+# 📋 LGPD Compliance Documentation
 
-## Overview
+## 👁️ Overview
 
 This document describes how the database was designed to comply with Brazil's General Data Protection Law — Lei Geral de Proteção de Dados (LGPD), Federal Law 13.709/2018.
 
-## Applicable Principles (Art. 6, LGPD)
+## ✅ Applicable Principles (Art. 6, LGPD)
 
 | Principle | How It Was Implemented |
 |---|---|
@@ -19,7 +19,7 @@ This document describes how the database was designed to comply with Brazil's Ge
 | **Non-discrimination** | Profiles and permissions are role-based, not individual |
 | **Accountability** | All actions are logged in `TB_LOG` with actor, action, result and timestamp |
 
-## Consent Management (Art. 7 and Art. 8, LGPD)
+## 🤝 Consent Management (Art. 7 and Art. 8, LGPD)
 
 Consent is managed at the clause level — each user can accept or revoke individual clauses independently.
 
@@ -29,7 +29,7 @@ Consent is managed at the clause level — each user can accept or revoke indivi
 
 The complete consent history is preserved forever — it is never deleted or updated. This allows proving at any point in time what the user accepted and when.
 
-## Data Subject Rights (Art. 18, LGPD)
+## 👤 Data Subject Rights (Art. 18, LGPD)
 
 | Right | Implementation |
 |---|---|
@@ -40,7 +40,7 @@ The complete consent history is preserved forever — it is never deleted or upd
 | **Revocation of consent** | New REVOCATION record inserted in `TB_CONSENT_LOG` |
 | **Information** | Policy versions and clauses are stored and versioned |
 
-### Right to Erasure — How It Works
+### 🗑️ Right to Erasure — How It Works
 
 Physical deletion is never performed on user data. In the user CRUD currently implemented in the backend, the delete operation is logical only. When a user is removed from the active dataset:
 
@@ -51,7 +51,7 @@ Physical deletion is never performed on user data. In the user CRUD currently im
 
 The current CRUD does not overwrite personal fields with anonymized placeholders at delete time. That can be added later as a separate data-masking routine if required by policy.
 
-## User CRUD and LGPD Alignment
+## 👥 User CRUD and LGPD Alignment
 
 The implemented user flow contributes to LGPD compliance in the following ways:
 
@@ -62,7 +62,7 @@ The implemented user flow contributes to LGPD compliance in the following ways:
 - **Traceability**: create, update, activation toggle, and logical delete operations preserve timestamps and database history.
 - **Transparency**: API responses and validation errors are localized for Brazilian Portuguese users.
 
-### User CRUD Scope Covered by LGPD Controls
+### 🎯 User CRUD Scope Covered by LGPD Controls
 
 | Operation | LGPD impact |
 |---|---|
@@ -72,7 +72,7 @@ The implemented user flow contributes to LGPD compliance in the following ways:
 | `PATCH /users/{user_uuid}/active` | Supports account activation/inactivation without exposing sensitive data |
 | `DELETE /users/{user_uuid}` | Performs logical deletion through `DELETED_AT` |
 
-## Environment Separation
+## 🌍 Environment Separation
 
 | Environment | Data | Access |
 |---|---|---|
@@ -81,7 +81,7 @@ The implemented user flow contributes to LGPD compliance in the following ways:
 
 Real data is never used outside production. The `V006__synthetic_seed.sql` migration populates the development environment with entirely fictional data generated manually, ensuring no data subject is exposed during development or testing.
 
-## Sensitive Fields and Protection Strategy
+## 🔒 Sensitive Fields and Protection Strategy
 
 | Field | Table | Protection |
 |---|---|---|
@@ -94,7 +94,7 @@ Real data is never used outside production. The `V006__synthetic_seed.sql` migra
 
 Password reset tokens are not stored in plain text. The database stores only `TOKEN_HASH`, which contains the SHA-256 hash of the issued token. This reduces exposure in case of database access while preserving the ability to validate single-use reset requests.
 
-## Audit Trail
+## 📊 Audit Trail
 
 Every action performed on sensitive data is recorded in `TB_LOG` with:
 - Who performed the action (`USER_ID`)
@@ -105,3 +105,20 @@ Every action performed on sensitive data is recorded in `TB_LOG` with:
 - When it happened (`CREATED_AT`)
 
 The log table is append-only — UPDATE and DELETE are blocked at the database level via trigger, ensuring the audit trail cannot be tampered with.
+
+## 🔍 Application-Layer Logging
+
+All HTTP requests and business operations are recorded by a structured logging system built on `structlog` and `TimedRotatingFileHandler`.
+
+Logs are written in JSON format to `logs/app.log`, rotated daily, and compressed to `.gz` after rotation with 30 days of retention.
+
+The logging system enforces LGPD compliance at the application layer:
+- No personal data is ever written to log files — only UUIDs, status codes, durations, and event constants
+- Prohibited fields (`email`, `cpf`, `password`, `name`, `nome`, `senha`) are validated by `scripts/validate_log_privacy.py`
+- Each request is assigned a unique `request_id` for end-to-end traceability without exposing user identity
+
+Full documentation: [`docs/LOGGING.md`](docs/LOGGING.md)
+
+---
+
+*Last updated: 04/26/2026*

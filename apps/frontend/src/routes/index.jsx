@@ -3,6 +3,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";
 import EstruturaRedesPage from "../pages/dashboard/estrutura-redes-page/EstruturaRedesPage";
 import UsuariosPage from "../pages/dashboard/user-management/UsuariosPage";
+import TermsPage from "../pages/dashboard/terms-management/TermsPage";
 
 function NotFoundPage() {
   return (
@@ -19,6 +20,7 @@ export function AppRoutes() {
           <Route path="indicadores" element={<IndicadoresPage />} />
           <Route path="estrutura-redes" element={<EstruturaRedesPage />} />
           <Route path="usuarios" element={<UsuariosPage />} />
+          <Route path="termos" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

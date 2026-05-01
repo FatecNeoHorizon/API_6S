@@ -14,6 +14,7 @@ from src.api.routes import tam_sam
 from src.api.routes import upload
 from src.api.routes import gdb
 from src.api.routes import users
+from src.api.routes import auth
 from src.api.routes import consent
 from src.api.routes import terms
 from src.api.routes import admin_terms
@@ -32,6 +33,7 @@ app.include_router(upload.router)
 app.include_router(gdb.router)
 app.include_router(tam_sam.router)
 app.include_router(users.router)
+app.include_router(auth.router)
 app.include_router(consent.router)
 app.include_router(terms.router)
 app.include_router(admin_terms.router)

@@ -11,6 +11,7 @@ from src.config.settings import Settings
 from src.control.tam_sam_procedures import Tam_sam_procedures
 from src.database.connection import get_client
 from src.etl.extract.extract_decfec import extract_decfec
+from src.services.retraining_service import schedule_retraining
 
 
 MANDATORY_FIELDS = [
@@ -253,6 +254,14 @@ def load_decfec(
             duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
             totals=totals,
         )
+
+        # Optionally schedule model retraining for newly loaded data
+        if settings.model_retrain_on_new_data:
+            try:
+                schedule_retraining(load_id, connection=client)
+                _log_event("decfec_retraining_scheduled", load_id=load_id)
+            except Exception as e:
+                _log_event("decfec_retraining_schedule_failed", load_id=load_id, error=str(e))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)

@@ -1,4 +1,5 @@
 import math
+import unicodedata
 from datetime import datetime, date
 import pandas as pd
 
@@ -46,3 +47,12 @@ def _strip_columns(df: pd.DataFrame) -> pd.DataFrame:
         lambda col: col.map(lambda value: value.strip() if isinstance(value, str) else value)
     )
     return df
+
+
+
+def _to_slug(value: str) -> str | None:
+    if not value:
+        return None
+    normalized = unicodedata.normalize('NFD', value)
+    ascii_str = normalized.encode('ascii', 'ignore').decode('ascii')
+    return ascii_str.lower().strip().replace(' ', '-')

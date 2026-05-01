@@ -18,27 +18,37 @@ def insert_load_history(db: Database, document: dict) -> bool:
         return False
     
 def update_load_history(
-        db: Database, 
-        load_id: str,
-        status: str,
-        extra_fields: dict | None = None
-    ) -> bool:
+    db: Database, 
+    load_id: str,
+    status: str,
+    extra_fields: dict | None = None
+) -> bool:
     
-    update = {
-        "$set":{
-            "status": status,
-            "finished_at": datetime.now(timezone.utc),
-            **(extra_fields or {}),
-        }
+    update_data = {
+        "status": status,
+        "finished_at": datetime.now(timezone.utc)
     }
+    if status == "SUCCESS" or status == "ERROR":
+        update_data["finished_at"] = datetime.now(timezone.utc)
+
+    if extra_fields:
+        for key, value in extra_fields.items():
+            update_data[f"metrics.{key}"] = value
+
+    update = {"$set": update_data}
 
     try:
-        result = db[COLLECTION_NAME].update_one({"load_id": load_id}, update)
-        if result.matched_count == 0:
+        # 1. Capture o objeto de resultado do PyMongo
+        mongo_result = db[COLLECTION_NAME].update_one({"load_id": load_id}, update)
+        
+        # 2. Verifique se algum documento foi encontrado (matched_count)
+        if mongo_result.matched_count == 0:
             logger.warning(f"[load_history_repository] load_id não encontrado: {load_id}")
             return False
+            
         logger.info(f"[load_history_repository] load_id {load_id} atualizado para {status}")
         return True
+        
     except PyMongoError as e:
         logger.error(f"[load_history_repository] Erro ao atualizar: {e}")
         return False

@@ -234,3 +234,13 @@ def list_clauses(conn, version_id: str) -> dict:
             for clause in clauses
         ]
     }
+
+
+def get_policy_version(conn, version_id: str) -> dict:
+    """Return a full policy version including content."""
+    version = policy_repository.get_policy_version(conn, version_id)
+
+    if not version:
+        raise HTTPException(status_code=404, detail="policy_version_not_found")
+
+    return format_policy_version(version)

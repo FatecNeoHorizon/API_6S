@@ -37,6 +37,19 @@ def _to_float(value) -> float | None:
             return None
     except (TypeError, ValueError):
         pass
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        # The CSV stores decimals with comma and may omit the leading zero.
+        # Examples: ",44" -> "0.44", "1.234,56" -> "1234.56"
+        normalized = normalized.replace(" ", "")
+        if "," in normalized:
+            normalized = normalized.replace(".", "").replace(",", ".")
+        try:
+            return float(normalized)
+        except (ValueError, TypeError):
+            return None
     try:
         return float(value)
     except (ValueError, TypeError):
@@ -116,7 +129,9 @@ def load_decfec(
     try:
         tam_result = None
 
-        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
+        path = settings.csv_file_path
+        
+        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(path), start=1):
             chunk_start_perf = time.perf_counter()
             chunk_rows = len(chunk_df)
             totals["rows_processed"] += chunk_rows

@@ -3,7 +3,7 @@ from pathlib import Path
 from src.etl.load import load_decfec
 from src.control import distribution_indices_procedures
 from src.etl.extract.extract_limits import extract_limits
-from src.etl.extract.extract_decfec import extract_decfec
+from src.etl.extract.extract_decfec import extract_decfec, CHUNK_SIZE
 from src.config.settings import Settings
 
 router = APIRouter()
@@ -52,7 +52,14 @@ async def get_dec_fec(
 @router.get("/test-decfec-file-extraction")
 async def test_decfec_file_extraction():
     path = get_latest_csv_path("indicadores-continuidade-coletivos-2020*.csv")
-    return extract_decfec(path)[:50]
+    # Get first chunk and return first 50 rows
+    for chunk_df, source_file in extract_decfec(path):
+        return {
+            "source_file": source_file,
+            "sample": chunk_df.head(50).to_dict(orient='records'),
+            "total_in_chunk": len(chunk_df),
+            "chunk_size_limit": CHUNK_SIZE,
+        }
 
 @router.get("/test-limits-file-extraction")
 async def test_limits_file_extraction():

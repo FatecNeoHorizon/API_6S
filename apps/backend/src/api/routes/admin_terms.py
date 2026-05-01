@@ -10,6 +10,7 @@ from src.services.policy_service import (
     create_policy_version,
     list_clauses,
     list_policy_versions,
+    get_policy_version,
 )
 
 
@@ -72,3 +73,15 @@ def get_clauses(
         set_current_user(conn, admin.user_id)
 
         return list_clauses(conn, str(version_id))
+
+
+
+@router.get("/versions/{version_id}")
+def get_policy_version_route(
+    version_id: UUID,
+    admin: AuthenticatedUser = Depends(require_admin),
+):
+    with get_pg_connection() as conn:
+        set_current_user(conn, admin.user_id)
+
+        return get_policy_version(conn, str(version_id))

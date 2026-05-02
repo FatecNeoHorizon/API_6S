@@ -88,7 +88,9 @@ class Tam_sam_procedures:
             {"$match": {"annual_summaries.year": year}},
             {"$match": {"annual_summaries.indicator_type_code": indicator_type_code}},
             {"$match": {"$expr": {"$gt": ["$annual_summaries.accumulated_value", "$annual_summaries.limit"]}}},
-            {"$project": { "_id": 0, "shape_length": 0, "shape_area": 0, "arat_id": 0, "geodatabase_id": 0, "geometry": 0, "distribution_indices": 0} }
+            {"$project": { "_id": 0, "shape_length": 0, "shape_area": 0, "arat_id": 0, "geodatabase_id": 0, "geometry": 0, "distribution_indices": 0} },
+            {"$sort": {"annual_summaries.accumulated_value": -1}},
+            {"$limit": 10}
         ]
 
         cursor = self.db.conj.aggregate(pipeline, allowDiskUse=True)

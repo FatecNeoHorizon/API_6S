@@ -7,7 +7,7 @@ from src.services.upload_service import (
     generate_load_id,
     register_upload_start,
     run_etl,
-    get_load_history
+    get_upload_status as fetch_upload_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,14 +54,9 @@ async def upload_files(
 @router.get("/status/{load_id}")
 def get_upload_status(load_id: str):
     db = get_db()
-    load_history = get_load_history(db, load_id)
+    status = fetch_upload_status(db, load_id)
     
-    if not load_history:
+    if not status:
         raise HTTPException(status_code=404, detail=f"load_id '{load_id}' não encontrado.")
-    
-    response = {"load_id": load_id, "status": load_history["status"]}
 
-    if load_history["status"] == "ERROR":
-        response["error_message"] = load_history.get("error_message")
-
-    return response
+    return status

@@ -73,7 +73,6 @@ class Tam_sam_procedures:
 
         pipeline = [
             {"$match": {"annual_summaries.year": year}},
-            # {"$match": {"annual_summaries.accumulated_value" : {"$gt": 22}}},
             {"$match": {"$expr": {"$gt": ["$annual_summaries.accumulated_value", "$annual_summaries.limit"]}}},
             {"$group": {"_id": {"conj": "$code"}}},
             {"$count": "sam_total"},
@@ -83,3 +82,17 @@ class Tam_sam_procedures:
         sam_total = int(result[0]["sam_total"]) if result else 0
 
         return sam_total
+
+    def get_sam_top_ten(self, year, indicator_type_code):
+        pipeline = [
+            {"$match": {"annual_summaries.year": year}},
+            {"$match": {"annual_summaries.indicator_type_code": indicator_type_code}},
+            {"$match": {"$expr": {"$gt": ["$annual_summaries.accumulated_value", "$annual_summaries.limit"]}}},
+            {"$project": { "_id": 0, "shape_length": 0, "shape_area": 0, "arat_id": 0, "geodatabase_id": 0, "geometry": 0, "distribution_indices": 0} }
+        ]
+
+        cursor = self.db.conj.aggregate(pipeline, allowDiskUse=True)
+
+        result = cursor.to_list()
+
+        return result

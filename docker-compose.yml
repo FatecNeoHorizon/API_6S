@@ -2,9 +2,13 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres_db
+    profiles:
+      - backend
+      - frontend
+      - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "5432:5432"
     volumes:
@@ -12,22 +16,23 @@ services:
     networks:
       - db_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   flyway:
-    image: flyway/flyway:9-alpine
+    image: flyway/flyway:12.4.0-alpine
+    profiles:
+      - backend
+      - frontend
+      - full
     command: migrate
-    environment:
-      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      FLYWAY_USER: ${POSTGRES_USER}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
     env_file:
-      - .env
+      - envs/.env.postgres.${APP_ENV:-dev}
+      - envs/.env.flyway.${APP_ENV:-dev}
     volumes:
-      - ./database/migrations:/flyway/sql
+      - ./database/migrations:/flyway/migrations
     networks:
       - db_network
     depends_on:
@@ -37,10 +42,14 @@ services:
   mongo:
     image: mongo:8.0
     container_name: mongo_db
+    profiles:
+      - backend
+      - frontend
+      - full
+      - tools
     restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    env_file:
+      - envs/.env.mongo.${APP_ENV:-dev}
     ports:
       - "27017:27017"
     volumes:
@@ -50,14 +59,8 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "mongosh",
-          "--username",
-          "${MONGO_INITDB_ROOT_USERNAME}",
-          "--password",
-          "${MONGO_INITDB_ROOT_PASSWORD}",
-          "--eval",
-          "db.adminCommand('ping')",
+          "CMD-SHELL",
+          "mongosh --username $${MONGO_INITDB_ROOT_USERNAME} --password $${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin --eval \"db.adminCommand('ping')\"",
         ]
       interval: 10s
       timeout: 5s
@@ -66,14 +69,13 @@ services:
   mongo-express:
     image: mongo-express:latest
     container_name: mongo_express
+    profiles:
+      - tools
     restart: always
     ports:
       - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo_db:27017/
-      ME_CONFIG_BASICAUTH: false
+    env_file:
+      - envs/.env.mongo.${APP_ENV:-dev}
     networks:
       - app_network
     depends_on:
@@ -84,35 +86,44 @@ services:
     build:
       context: ./apps/backend
     container_name: fastapi_backend
+    profiles:
+      - backend
+      - frontend
+      - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.postgres.${APP_ENV:-dev}
+      - envs/.env.mongo.${APP_ENV:-dev}
+      - envs/.env.backend.${APP_ENV:-dev}
+      - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "8000:8000"
     volumes:
       - ./apps/backend:/app
       - ./data:/app/data
+      - ./logs:/app/logs
     networks:
       - db_network
       - app_network
-    environment:
-      - CSV_FILE_PATH=/app/data/indicadores-continuidade-coletivos-2020-2029.csv
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       flyway:
         condition: service_completed_successfully
       mongo:
-        condition: service_started
+        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: ./apps/frontend
     container_name: react_frontend
+    profiles:
+      - frontend
+      - full
     restart: always
     env_file:
-      - .env
+      - envs/.env.frontend.${APP_ENV:-dev}
     ports:
       - "5173:5173"
     volumes:

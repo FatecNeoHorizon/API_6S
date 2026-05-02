@@ -1,91 +1,42 @@
-from src.etl.load_decfec import load_decfec
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
-from src.control import distribution_indices_procedures
-from src.control import energy_losses_tariff_procedures
-from src.control import network_structure_procedures
+from src.config.middleware import setup_middleware
+from src.config.validation import format_validation_errors
+from src.config.exception_handlers import (
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
+from src.api.routes import decfec
+from src.api.routes import energy_losses
+from src.api.routes import network_structure
+from src.api.routes import tam_sam
+from src.api.routes import upload
+from src.api.routes import gdb
+from src.api.routes import users
+from src.api.routes import auth
+from src.api.routes import consent
+from src.api.routes import terms
+from src.api.routes import admin_terms
 
-from contextlib import asynccontextmanager
-from src.etl.database import setup
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    setup()
-    from src.model.seed import seed
-    seed()
-    yield
+from src.config.lifespan import lifespan
 
 app = FastAPI(lifespan=lifespan)
 
-# Configurar CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+setup_middleware(app)
 
-@app.get("/process-decfec")
-def process_decfec():
-    try:
-        result = load_decfec()
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+app.include_router(decfec.router)
+app.include_router(energy_losses.router)
+app.include_router(network_structure.router)
+app.include_router(upload.router)
+app.include_router(gdb.router)
+app.include_router(tam_sam.router)
+app.include_router(users.router)
+app.include_router(auth.router)
+app.include_router(consent.router)
+app.include_router(terms.router)
+app.include_router(admin_terms.router)
 
-    return {
-        "message": "DECFEC processado com sucesso",
-        **result,
-    }
-
-
-@app.get("/get-dec-fec")
-async def get_dec_fec(agent_acronym: str | None = None, cnpj_number: str | None = None, consumer_unit_set_id: str | None = None, 
-                      indicator_type_code : str | None = None, year_min: int | None = None, period_min : int | None = None,
-                      year_max: int | None = None, period_max: int | None = None):
-    
-    filterDict = {
-        "agent_acronym" : agent_acronym,
-        "cnpj_number" : cnpj_number,
-        "consumer_unit_set_id" : consumer_unit_set_id,
-        "indicator_type_code" : indicator_type_code,
-        "period" : {"$gte" : period_min,
-                    "$lte" : period_max},
-        "year" : {"$gte" : year_min,
-                  "$lte" : year_max}
-    }
-
-    returnThing = distribution_indices_procedures.Distribution_indices_procedures().getAll(filterDict)
-    return returnThing
-
-@app.get("/get-energy-losses")
-async def get_energy_losses(distributor: str | None = None, distributor_slug: str | None = None, state: str | None = None, 
-                      uf : str | None = None, process_date_min: str | None = None, process_date_max: str | None = None):
-    filterDict = {
-        "distributor" : distributor,
-        "distributor_slug" : distributor_slug,
-        "state" : state,
-        "uf" : uf,
-        "process_date" : {"$gte" : process_date_min,
-                "$lte" : process_date_max},
-    }
-    
-    returnThing = energy_losses_tariff_procedures.Energy_losses_tariff_procedures().getAll(filterDict)
-    return returnThing
-
-@app.get("/network-structure/summary")
-async def get_summary():
-    return network_structure_procedures.NetworkStructureProcedures().get_summary()
-
-@app.get("/network-structure/assets")
-async def get_assets(region: str | None = None, type: str | None = None, status: str | None = None):
-    return network_structure_procedures.NetworkStructureProcedures().get_assets(region, type, status)
-
-@app.get("/network-structure/transformer/{transformer_id}")
-async def get_transformer_detail(transformer_id: str):
-    return network_structure_procedures.NetworkStructureProcedures().get_transformer_detail(transformer_id)
-
-@app.get("/network-structure/substation/{substation_id}")
-async def get_substation_detail(substation_id: str):
-    return network_structure_procedures.NetworkStructureProcedures().get_substation_detail(substation_id)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)

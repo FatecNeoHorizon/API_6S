@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
+from pydantic import TypeAdapter
 
 import pymongo
 
 from src.config.settings import Settings
 from src.database.connection import get_client
+from src.utils.clean_filter import clean_filter, remove_operators_fields
 
 _settings = Settings()
 
@@ -66,3 +68,18 @@ class Tam_sam_procedures:
             doc["calculated_on"] = calculated_on.isoformat().replace("+00:00", "Z")
 
         return doc
+    
+    def get_sam_total(self, year):
+
+        pipeline = [
+            {"$match": {"annual_summaries.year": year}},
+            # {"$match": {"annual_summaries.accumulated_value" : {"$gt": 22}}},
+            {"$match": {"$expr": {"$gt": ["$annual_summaries.accumulated_value", "$annual_summaries.limit"]}}},
+            {"$group": {"_id": {"conj": "$code"}}},
+            {"$count": "sam_total"},
+        ]
+
+        result = list(self.db.conj.aggregate(pipeline, allowDiskUse=True))
+        sam_total = int(result[0]["sam_total"]) if result else 0
+
+        return sam_total

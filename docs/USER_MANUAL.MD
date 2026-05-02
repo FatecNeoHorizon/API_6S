@@ -177,6 +177,23 @@ The `/get-energy-losses` route accepts filters such as:
 /get-energy-losses?uf=SP
 ```
 
+### 6.5 Returning the TAm/SAM calculations
+
+Use the GET `/tam` or `/sam` endpoints under the `/tam-sam` route. The filters accepted in the current code are:
+
+- `year`
+- `indicator_type_code `
+
+**Example:**
+```
+/tam-sam/sam-top-ten?year=2024&indicator_type_code=DEC'
+```
+
+### 6.6 Testing file extraction routines
+
+Use the GET `/test-limits-file-extraction` or `/test-decfec-file-extraction` or `/test-energy-losses-file-extraction` endpoints under the default route. No filters are required but the files to be extracted must be inside the specified folder in the .env file. Additionally, using the upload endpoint already puts those files in the specified folder.
+
+
 ---
 
 ## 7. What Happens in the ETL During Use

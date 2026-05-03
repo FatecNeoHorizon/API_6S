@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
-from src.etl.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
+from src.etl.utils.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
+from src.etl.utils.transform_functions import _to_str, _to_float, _to_int, _to_date
 
 logger = logging.getLogger(__name__)
 
@@ -15,38 +16,43 @@ def transform_decfec(df: pd.DataFrame):
         try:
             row_dict = row.to_dict()
 
-            # Mapeamento e limpeza dos campos
-            sig_agente     = str(row.get("SigAgente")).strip() if row.get("SigAgente") else None
-            code           = str(row.get("IdeConjUndConsumidoras")).strip() if row.get("IdeConjUndConsumidoras") else None
-            sig_indicador  = str(row.get("SigIndicador")).strip() if row.get("SigIndicador") else None
-            ano            = pd.to_numeric(row.get("AnoIndice"), errors="coerce")
-            periodo        = pd.to_numeric(row.get("NumPeriodoIndice"), errors="coerce")
+            agent_acronym              = _to_str(row.get("SigAgente"))
+            cnpj_number                = _to_str(row.get("NumCNPJ"))
+            consumer_unit_set_id       = _to_str(row.get("IdeConjUndConsumidoras"))
+            consumer_unit_set_description = _to_str(row.get("DscConjUndConsumidoras"))
+            indicator_type_code        = _to_str(row.get("SigIndicador"))
+            year                       = _to_int(row.get("AnoIndice"))
+            period                     = _to_int(row.get("NumPeriodoIndice"))
             
             valor_str = str(row.get("VlrIndiceEnviado") or "").strip().replace(",", ".")
             valor     = pd.to_numeric(valor_str, errors="coerce")
 
-            if not sig_agente or not code or not sig_indicador or pd.isna(ano) or pd.isna(periodo):
+            if not agent_acronym or not cnpj_number or not consumer_unit_set_id \
+                    or not consumer_unit_set_description or not indicator_type_code \
+                    or year is None or period is None:
                 rejected_docs.append({
                     "row": row_dict,
-                    "reason": "Missing required fields (mapped)"
+                    "reason": "Missing required fields"
                 })
                 continue
 
-            doc = {
-                "SigAgente": sig_agente,
-                "IdeConjUndConsumidoras": code,
-                "SigIndicador": sig_indicador,
-                "AnoIndice": int(ano),
-                "NumPeriodoIndice": int(periodo),
-                "VlrIndiceEnviado": valor
-            }
+            valid_docs.append({
+                "agent_acronym":               agent_acronym,
+                "cnpj_number":                 cnpj_number,
+                "consumer_unit_set_id":        consumer_unit_set_id,
+                "consumer_unit_set_description": consumer_unit_set_description,
+                "indicator_type_code":         indicator_type_code,
+                "year":                        year,
+                "period":                      period,
+                "value": float(valor) if not pd.isna(valor) else None,
+            })
 
-            valid_docs.append(doc)
-            
         except Exception as e:
             logger.error(f"Error processing row: {str(e)}")
-            rejected_docs.append({"row": row.to_dict(),"reason": f"Exception: {str(e)}"})
+            rejected_docs.append({"row": row.to_dict(), "reason": f"Exception: {str(e)}"})
+
             
-        result = build_transform_result(valid_docs, rejected_docs, total_input)
-        result["contract_version"] = TRANSFORM_CONTRACT_VERSION
+    result = build_transform_result(valid_docs, rejected_docs, total_input)
+    result["contract_version"] = TRANSFORM_CONTRACT_VERSION
+    logger.info(f"Transformer completo: {len(valid_docs)} validos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return result

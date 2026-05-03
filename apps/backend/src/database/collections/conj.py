@@ -43,7 +43,7 @@ def setup_conj(db):
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["name", "code", "geodatabase_id", "geometry"],
+                # "required": ["name", "code", "geodatabase_id", "geometry"],
                 "properties": {
                     "_id": {"bsonType": "objectId"},
                     "name": {
@@ -88,7 +88,7 @@ def setup_conj(db):
                         "description": "Monthly measurements of indicators.",
                         "items": {
                             "bsonType": "object",
-                            "required": ["indicator_type_code", "year", "period"],
+                            # "required": ["indicator_type_code", "year", "period"],
                             "properties": {
                                 "indicator_type_code": {"bsonType": "string"},
                                 "year": {"bsonType": "int"},
@@ -102,7 +102,7 @@ def setup_conj(db):
                         "description": "Annual summary by indicator.",
                         "items": {
                             "bsonType": "object",
-                            "required": ["indicator_type_code", "year", "accumulated_value", "periods_count", "status"],
+                            # "required": ["indicator_type_code", "year", "accumulated_value", "periods_count", "status"],
                             "properties": {
                                 "indicator_type_code": {"bsonType": "string"},
                                 "year": {"bsonType": "int"},

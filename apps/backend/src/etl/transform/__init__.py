@@ -1,2 +1,2 @@
 from .transform_decfec import *
-from ..contract import *
+from ..utils.contract import *

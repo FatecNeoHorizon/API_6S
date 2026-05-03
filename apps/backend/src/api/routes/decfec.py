@@ -38,12 +38,7 @@ async def get_dec_fec(
 
 @router.get("/test-decfec-file-extraction")
 async def test_decfec_file_extraction():
-    path = Path(_settings.csv_file_path)
-    if not path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"CSV file not found at {path}"
-        )
+    path = get_latest_csv_path("indicadores-continuidade-coletivos-2020*.csv")
     return extract_decfec_preview(path, limit=50)
 
 @router.get("/test-limits-file-extraction")

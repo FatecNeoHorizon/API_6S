@@ -6,11 +6,14 @@ Routes for training RandomForest models and generating forecasts for distributio
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+from datetime import datetime, timezone
 import logging
 
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.query_mongo_timeseries import query_indicators_for_unit
-from src.services.retraining_service import schedule_retraining
+from src.etl.load.load_predictions import persist_predictions
+from src.config.settings import Settings
+from src.database.connection import get_client
 
 logger = logging.getLogger(__name__)
 
@@ -23,55 +26,8 @@ async def forecast_unit_timeseries(
     year_end: int = Query(2024, description="End year for training data"),
     indicator_types: Optional[list[str]] = Query(None, description="Indicator types: DEC, FEC, or both"),
     save_models: bool = Query(True, description="Save trained models to disk"),
+
 ):
-    """
-    Generate 12-month forecasts for distribution indicators using RandomForest models.
-    
-    This endpoint:
-    1. Queries MongoDB for DEC/FEC historical data
-    2. Trains RandomForest models (80% train, 20% test split)
-    3. Evaluates with MAE (Mean Absolute Error)
-    4. Generates 12-month forecasts
-    5. Returns metrics, forecasts, and model directory
-    
-    **Parameters:**
-    - `consumer_unit_set_id`: Unique identifier for the consumer unit
-    - `year_start`: Start year for training data (default: 2015)
-    - `year_end`: End year for training data (default: 2024)
-    - `indicator_types`: List of indicators to forecast. Options: ["DEC"], ["FEC"], ["DEC", "FEC"]
-    - `save_models`: Save trained models as .pkl files for later use
-    
-    **Response Example:**
-    ```json
-    {
-        "success": true,
-        "consumer_unit_id": "16648",
-        "metrics": {
-            "DEC": {
-                "mae": 0.1234,
-                "n_train": 115,
-                "n_test": 29,
-                "n_records": 144
-            },
-            "FEC": {
-                "mae": 0.1567,
-                "n_train": 115,
-                "n_test": 29,
-                "n_records": 144
-            }
-        },
-        "forecasts": [
-            {
-                "indicator": "DEC",
-                "date": "2025-01-01",
-                "forecast": 1.2345
-            },
-            ...
-        ],
-        "models_directory": "/tmp/models"
-    }
-    ```
-    """
     try:
         # Normalize indicator types
         if indicator_types is None:
@@ -101,7 +57,47 @@ async def forecast_unit_timeseries(
                 detail=result.get("message", "Forecast failed"),
             )
         
-        return result
+        # Persist predictions to MongoDB if forecasting succeeded
+        persist_metrics = {"inserted": 0, "updated": 0, "rejected": 0}
+        try:
+            settings = Settings()
+            db = get_client()[settings.mongo_db_name]
+            predictions_collection = db["predictions"]
+            
+            # Flatten forecasts to predictions format
+            all_predictions = []
+            for forecast in result.get("forecasts", []):
+
+                pred = {
+                    "consumer_unit_set_id": forecast.get("consumer_unit_id"),
+                    "indicator": forecast.get("indicator"),
+                    "forecast_year": forecast.get("forecast_year"),
+                    "forecast_period": forecast.get("forecast_period"),
+                    "forecast_value": forecast.get("forecast_value"),
+                    "model": "RandomForestRegressor",
+                    "generated_on": datetime.now(timezone.utc),
+                }
+                all_predictions.append(pred)
+            
+            if all_predictions:
+                persist_metrics = persist_predictions(predictions_collection, all_predictions)
+                logger.info(f"[forecast_unit_timeseries] Predictions persisted: {persist_metrics}")
+        except Exception as e:
+            logger.exception("[forecast_unit_timeseries] Failed to persist predictions: %s", e)
+        
+        # Return response with only newly inserted predictions count
+        return {
+            "success": result.get("success"),
+            "consumer_unit_id": result.get("consumer_unit_id"),
+            "metrics": result.get("metrics"),
+            "persistence": {
+                "inserted": persist_metrics.get("inserted", 0),
+                "updated": persist_metrics.get("updated", 0),
+                "rejected": persist_metrics.get("rejected", 0),
+            },
+            "forecasts": result.get("forecasts"),
+            "models_directory": result.get("models_directory"),
+        }
 
     except ValueError as exc:
         raise HTTPException(

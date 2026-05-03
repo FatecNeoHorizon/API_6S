@@ -32,7 +32,13 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      await forgotPassword({ email: email.trim() })
+      const response = await forgotPassword({ email: email.trim() })
+
+      if (response.dev_reset_url) {
+        globalThis.location.assign(response.dev_reset_url)
+        return
+      }
+
       setSuccessMessage("Se o email estiver cadastrado, enviaremos instruções para recuperação de senha.")
     } catch {
       setErrorMessage("Não foi possível enviar o link de recuperação. Tente novamente mais tarde.")

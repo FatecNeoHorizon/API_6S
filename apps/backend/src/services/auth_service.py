@@ -192,6 +192,8 @@ def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:
 
     if settings.app_env != "prod":
         generic_response.dev_reset_token = raw_token
+        frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
+        generic_response.dev_reset_url = f"{frontend_base_url}/reset-password?token={raw_token}"
 
     return generic_response
 

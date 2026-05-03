@@ -10,8 +10,9 @@ def extract_gdb_generator(path: Path, chunk_size: int = 100):
 
     GROUP_1 = ["CONJ", "SUB"]
     GROUP_2 = ["UNTRMT", "UNTRAT"]
+    GROUP_3 = ["UN_TRA_D"]
 
-    ORDERED_LAYERS = GROUP_1 + GROUP_2
+    ORDERED_LAYERS = GROUP_1 + GROUP_2 + GROUP_3
 
     layer_names = [
         layer for layer in ORDERED_LAYERS

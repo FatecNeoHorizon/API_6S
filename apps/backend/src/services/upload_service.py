@@ -17,6 +17,12 @@ from src.etl.extract.gdb_orchestrator import run_extraction
 from src.etl.transform.transform_decfec import transform_decfec
 from src.etl.transform.transform_limits import transform_limits
 from src.etl.transform.transform_energy_losses import transform_energy_losses
+from src.repositories.load_history_repository import (
+    insert_load_history,
+    update_load_history,
+    get_load_history,
+    get_load_history_by_batch,
+)
 
 # Importação dos carregadores
 from src.etl.load.load_energy_losses import load_energy_losses
@@ -60,6 +66,14 @@ LOAD_MAP = {
     "indicadores_continuidade_limite": load_limits,
 }
 
+PROCESSING_ORDER = [
+    "gdb",
+    "energy_losses",
+    "indicadores_continuidade_limite",
+    "indicadores_continuidade",
+]
+
+
 
 def generate_load_id() -> str:
     return uuid.uuid4().hex
@@ -68,10 +82,12 @@ def build_load_document(
         load_id: str,
         file_key: str,
         source_file: str | None = None,
-        batch_version: str | None = None
+        batch_version: str | None = None,
+        batch_id: str | None = None,
     ) -> dict:
     return {
         "load_id": load_id,
+        "batch_id": batch_id,                                          # ← novo
         "collection_name": COLLECTION_MAP.get(file_key, file_key),
         "batch_version": batch_version or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "source_file": source_file,
@@ -90,6 +106,7 @@ def build_load_document(
 def register_upload_start(
         db: Database,
         paths: dict[str, Path],
+        batch_id: str,
     ) -> dict[str, str]:
     registered = {}
     for file_key, file_path in paths.items():
@@ -97,7 +114,8 @@ def register_upload_start(
         document = build_load_document(
             load_id=load_id,
             file_key=file_key,
-            source_file=str(file_path)
+            source_file=str(file_path),
+            batch_id=batch_id,
         )
         success = insert_load_history(db, document)
         if success:
@@ -154,8 +172,12 @@ def _validate_transform_contract(file_key: str, transformed: Any) -> dict[str, A
 
 def run_etl(db, load_ids, paths, upload_dir):
 
+    ordered_keys = [k for k in PROCESSING_ORDER if k in paths]
+    remaining = [k for k in paths if k not in PROCESSING_ORDER]
+    ordered_paths = {k: paths[k] for k in ordered_keys + remaining}
+
     # Aqui, chegam os arquivos do upload. É uma lista com os ids de cada arquivo e seus respectivos caminhos.
-    for file_key, path in paths.items():
+    for file_key, path in ordered_paths.items():
         load_id = load_ids.get(file_key)
 
         # Aqui são chamados os extratores. É passado um file_key para identificar qual extrator deve ser chamado para cada arquivo,
@@ -286,3 +308,47 @@ def get_upload_status(db: Database, load_id: str) -> dict | None:
 
     logger.info(f"[FETCH_STATUS] Resposta final montada: {response}")
     return response
+
+def get_batch_status(db: Database, batch_id: str) -> dict | None:
+    records = get_load_history_by_batch(db, batch_id)
+
+    if not records:
+        return None
+
+    PRIORITY = ["ERROR", "PROCESSING", "STARTED", "SUCCESS_WITH_WARNINGS", "SUCCESS"]
+
+    files = {}
+    statuses = []
+
+    for record in records:
+        file_key = record.get("collection_name")
+        status = record.get("status")
+        statuses.append(status)
+
+        db_metrics = record.get("metrics", {}) or {}
+
+        files[file_key] = {
+            "load_id":   record.get("load_id"),
+            "status":    status,
+            "metrics": {
+                "total_processed":  db_metrics.get("total_processed"),
+                "total_valid":      db_metrics.get("total_valid"),
+                "total_inserted":   db_metrics.get("total_inserted"),
+                "total_updated":    db_metrics.get("total_updated"),
+                "total_rejected":   db_metrics.get("total_rejected"),
+                "chunks_completed": db_metrics.get("chunks_completed"),
+            },
+            "reconciliation": record.get("reconciliation"),
+        }
+
+    # Status do batch = o mais crítico entre os arquivos
+    batch_status = next(
+        (s for s in PRIORITY if s in statuses),
+        "STARTED"
+    )
+
+    return {
+        "batch_id":   batch_id,
+        "status":     batch_status,
+        "files":      files,
+    }

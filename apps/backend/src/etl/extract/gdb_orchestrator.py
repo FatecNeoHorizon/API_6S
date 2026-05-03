@@ -56,6 +56,8 @@ def run_extraction(db: Database, path: Path, load_id: str):
     file_key = "gdb_file"
     total_processed = 0
     total_valid = 0
+    total_inserted = 0
+    total_updated  = 0
     total_rejected = 0
     chunks_completed = 0
 
@@ -98,6 +100,8 @@ def run_extraction(db: Database, path: Path, load_id: str):
             stats = transform_result.get("stats", {})
             total_processed += stats.get("total_input", 0)
             total_valid     += stats.get("total_valid", 0)
+            total_inserted += load_metrics.get("inserted", 0)
+            total_updated  += load_metrics.get("updated", 0)
             total_rejected  += stats.get("total_rejected", 0)
             chunks_completed += 1
 

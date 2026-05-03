@@ -25,10 +25,8 @@ def load_decfec(
     docs = transform_result.get("valid", [])
     logger.info(f"[load_decfec] {len(docs)} documentos recebidos.")
 
-    # 1. Persistência em distribution_indices
     metrics = bulk_persist(collection, docs, FILTER_KEYS)
 
-    # 2. Embute em conj.distribution_indices
     operations = []
     for doc in docs:
         code = doc.get("consumer_unit_set_id")

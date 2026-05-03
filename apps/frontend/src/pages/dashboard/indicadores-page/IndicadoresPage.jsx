@@ -447,14 +447,14 @@ const buildPreviewChartData = (data) => {
             (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
               2,
             ),
-          ) * 2.5
+          ) * 5.5
         : null,
       fec: fecValues.length
         ? parseFloat(
             (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
               2,
             ),
-          ) * 0.1
+          ) * 0.001
         : null,
     }));
 };
@@ -822,7 +822,7 @@ export default function IndicadoresPage() {
       {selectedTab === "dec_fec" ? (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Card className="bg-card border-border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -840,7 +840,7 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
                       {decFecPeriodLabel
-                        ? `Média · ${decFecPeriodLabel}`
+                        ? `${decFecPeriodLabel}`
                         : "Selecione um período"}
                     </span>
                   </div>
@@ -859,7 +859,7 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
                       {decFecPeriodLabel
-                        ? `Média · ${decFecPeriodLabel}`
+                        ? `${decFecPeriodLabel}`
                         : "Selecione um período"}
                     </span>
                   </div>
@@ -1131,7 +1131,7 @@ export default function IndicadoresPage() {
 
           <Card
             className="bg-card border-border lg:row-span-2 flex flex-col"
-            style={{ maxHeight: 520 }}
+            style={{ maxHeight: 875 }}
           >
             <CardHeader className="flex-shrink-0">
               <CardTitle className="text-foreground">
@@ -1141,8 +1141,8 @@ export default function IndicadoresPage() {
                 Ordenado por indicador DEC
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <div className="overflow-auto h-full">
+            <CardContent className="p-0">
+              <div className="overflow-auto max-h-[780px]">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border">

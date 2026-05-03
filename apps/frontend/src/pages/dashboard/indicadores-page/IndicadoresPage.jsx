@@ -494,8 +494,24 @@ export default function IndicadoresPage() {
     setTamTotal(89);
   }
 
-  const fetchSamTotal = async() => {
-    setSamTotal(14);
+  const fetchSamTotal = async(from, to) => {
+
+    const params = new URLSearchParams({year: from.year})
+    const url = `/tam-sam/sam?${params.toString()}`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setSamTotal(null);
+        return;
+      }
+      setSamTotal(data)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
   }
 
   // ── DEC/FEC handlers ─────────────────────────────────────────────────────────
@@ -535,7 +551,7 @@ export default function IndicadoresPage() {
     setMonthRange({ from, to });
     fetchDecFec(from, to);
     fetchTamTotal();
-    fetchSamTotal();
+    fetchSamTotal(from, to);
   };
 
   const handleMonthRangeChange = (range) => {
@@ -545,7 +561,7 @@ export default function IndicadoresPage() {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
       fetchTamTotal();
-      fetchSamTotal();
+      fetchSamTotal(range.from, range.to);
     }
   };
 

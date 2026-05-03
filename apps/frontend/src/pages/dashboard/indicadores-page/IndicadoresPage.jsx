@@ -447,14 +447,14 @@ const buildPreviewChartData = (data) => {
             (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
               2,
             ),
-          ) * 5.5
+          ) * Math.random()
         : null,
       fec: fecValues.length
         ? parseFloat(
             (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
               2,
             ),
-          ) * 0.001
+          ) * Math.random()
         : null,
     }));
 };

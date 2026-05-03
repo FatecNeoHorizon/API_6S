@@ -1,7 +1,9 @@
 import logging
-from src.etl.contract import build_transform_result
-from src.etl.transform.utils import (
+from bson import ObjectId
+from src.etl.utils.contract import build_transform_result
+from src.etl.utils.transform_functions import (
     _to_str,
+    _to_float,
     _strip_columns
 )
 
@@ -15,7 +17,7 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
     valid_docs = []
     rejected_docs = []
 
-    if layer_name not in ["CONJ", "SUB"]:
+    if layer_name not in ["CONJ", "SUB", "UN_TRA_D"]:
         return build_transform_result([], [], total_input)
 
     for row in chunk.to_dict(orient="records"):
@@ -35,13 +37,11 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
                     "name": conj_name,
                     "code": code,
                     "geometry": row.get("geometry_geojson"),
-                    "geodatabase_id": geodatabase_id,
+                    "geodatabase_id": ObjectId(geodatabase_id),  # ← adiciona aqui também
                     "layer_source": layer_name
                 })
 
             elif layer_name == "SUB":
-                # Mapeamento para Subestações baseado no seu LOG real:
-                # Colunas: 'COD_ID', 'DIST', 'DESCR'
                 sub_code = _to_str(row.get("COD_ID")) 
                 sub_dist = _to_str(row.get("DIST"))
                 sub_descr = _to_str(row.get("DESCR"))
@@ -55,8 +55,34 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
                     "distributor_code": sub_dist,
                     "description": sub_descr,
                     "geometry": row.get("geometry_geojson"),
-                    "geodatabase_id": geodatabase_id,
+                    "geodatabase_id": ObjectId(geodatabase_id),
                     "layer_source": layer_name
+                })
+
+            elif layer_name == "UN_TRA_D":
+                code             = _to_str(row.get("COD_ID"))
+                distributor_code = _to_str(row.get("DIST"))
+                description      = _to_str(row.get("DESCR"))
+                status           = _to_str(row.get("SIT_ATIV"))
+                location_area    = _to_str(row.get("ARE_LOC"))
+                nominal_power_kva = _to_float(row.get("POT_NOM"))
+                iron_losses_kw   = _to_float(row.get("PER_FER"))
+                copper_losses_kw = _to_float(row.get("PER_COB"))
+
+                if not code:
+                    rejected_docs.append({"row": row, "reason": "Missing COD_ID in UN_TRA_D"})
+                    continue
+
+                valid_docs.append({
+                    "code":              code,
+                    "distributor_code":  distributor_code,
+                    "description":       description,
+                    "status":            status,
+                    "location_area":     location_area,
+                    "nominal_power_kva": nominal_power_kva,
+                    "iron_losses_kw":    iron_losses_kw,
+                    "copper_losses_kw":  copper_losses_kw,
+                    "layer_source":      layer_name,
                 })
 
         except Exception as e:

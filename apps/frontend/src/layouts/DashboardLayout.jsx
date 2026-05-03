@@ -15,7 +15,6 @@ import {
   FileArchive,
   Loader2,
   Users, 
-  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";

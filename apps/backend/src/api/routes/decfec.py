@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
-from src.etl.load import load_decfec
 from src.control import distribution_indices_procedures
-from src.etl.extract.extract_limits import extract_limits
-from src.etl.extract.extract_decfec import extract_decfec, CHUNK_SIZE
+from src.etl.extract.extract_limits import extract_limits_preview
+from src.etl.extract.extract_decfec import extract_decfec_preview
 from src.config.settings import Settings
 
 router = APIRouter()
@@ -15,18 +14,6 @@ def get_latest_csv_path(pattern: str) -> Path:
     if not candidates:
         raise FileNotFoundError(f"Nenhum arquivo '{pattern}' encontrado no TMP_UPLOAD_PATH.")
     return max(candidates, key=lambda p: p.stat().st_mtime)
-
-@router.get("/process-decfec")
-def process_decfec():
-    try:
-        result = load_decfec()
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    return {
-        "message": "DECFEC processado com sucesso",
-        **result,
-    }
 
 @router.get("/get-dec-fec")
 async def get_dec_fec(
@@ -51,17 +38,22 @@ async def get_dec_fec(
 
 @router.get("/test-decfec-file-extraction")
 async def test_decfec_file_extraction():
-    path = get_latest_csv_path("indicadores-continuidade-coletivos-2020*.csv")
-    # Get first chunk and return first 50 rows
-    for chunk_df, source_file in extract_decfec(path):
-        return {
-            "source_file": source_file,
-            "sample": chunk_df.head(50).to_dict(orient='records'),
-            "total_in_chunk": len(chunk_df),
-            "chunk_size_limit": CHUNK_SIZE,
-        }
+    path = Path(_settings.csv_file_path)
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"CSV file not found at {path}"
+        )
+    return extract_decfec_preview(path, limit=50)
 
 @router.get("/test-limits-file-extraction")
 async def test_limits_file_extraction():
-    path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")
-    return extract_limits(path)[:50]
+    # For limits, check if there's a specific file or fall back to searching in tmp
+    try:
+        path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="No limits CSV file found in TMP_UPLOAD_PATH. Please upload a limits file first."
+        )
+    return extract_limits_preview(path, limit=50)

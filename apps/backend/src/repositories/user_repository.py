@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -468,7 +468,16 @@ def create_user_session(
         )
         row = cursor.fetchone()
 
-    return str(row[0])
+    # Ensure we have a valid UUID
+    if row is None or row[0] is None:
+        raise ValueError("Failed to create session: no UUID returned")
+
+    session_uuid = str(row[0])
+    # Validate UUID format (should be 36 characters)
+    if len(session_uuid) != 36:
+        raise ValueError(f"Invalid session UUID format: {session_uuid}")
+
+    return session_uuid
 
 
 def get_active_session_user(conn: PgConnection, session_uuid: str):
@@ -478,18 +487,17 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
             u.USER_UUID,
             u.ACTIVE,
             u.FIRST_ACCESS_COMPLETED,
-            p.PROFILE_NAME
+            p.PROFILE_NAME,
+            s.INVALIDATED_AT,
+            s.EXPIRES_AT,
+            s.DELETED_AT,
+            u.DELETED_AT as user_deleted_at
         FROM TB_SESSION s
         JOIN TB_USER u
           ON u.USER_UUID = s.USER_ID
         JOIN TB_PROFILE p
           ON p.PROFILE_UUID = u.PROFILE_ID
         WHERE s.SESSION_UUID = %s
-          AND s.INVALIDATED_AT IS NULL
-          AND s.EXPIRES_AT > NOW()
-          AND s.DELETED_AT IS NULL
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
     """
 
     with conn.cursor() as cursor:
@@ -497,6 +505,21 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
         row = cursor.fetchone()
 
     if row is None:
+        return None
+
+    # Check conditions
+    if row[5] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
+        return None
+    
+    if row[6] is not None:  # EXPIRES_AT exists
+        now = datetime.now(timezone.utc)
+        if row[6] <= now:  # Check if expired
+            return None
+    
+    if row[7] is not None:  # DELETED_AT is not NULL → session was soft-deleted
+        return None
+    
+    if row[8] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
         return None
 
     return {

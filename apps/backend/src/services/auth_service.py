@@ -63,6 +63,13 @@ def _create_session_and_token(
         expires_at=expires_at,
     )
 
+    # Ensure session_id is a valid UUID string
+    if not isinstance(session_id, str) or len(session_id) != 36:
+        raise HTTPException(
+            status_code=500,
+            detail="invalid_session_id_generated",
+        )
+
     access_token = create_access_token(
         user_id=user_id,
         session_id=session_id,

@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import LoginPage from "../pages/login/LoginPage";
+import ConsentPage from "../pages/login/ConsentPage";
+import ForgotPasswordPage from "../pages/login/ForgotPasswordPage";
 import PrimeiroAcessoPage from "../pages/login/PrimeiroAcessoPage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";
@@ -18,6 +20,8 @@ export function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/consent" element={<ConsentPage />} />
         <Route path="/first-access" element={<PrimeiroAcessoPage />} />
         <Route path="/primeiro-acesso" element={<Navigate to="/first-access" replace />} />
         <Route path="/" element={<Navigate to="/dashboard/indicadores" replace />} />

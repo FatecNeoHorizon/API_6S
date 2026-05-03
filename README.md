@@ -103,12 +103,19 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 <summary><b>Sprint 1</b></summary>
 
 [View Sprint 1 documentation](docs/SPRINT1.md)
+
+- **Sprint video:** [Watch Sprint 1 demonstration](https://www.youtube.com/watch?v=w10nwgCj9kc)
 </details>
 
 <details>
 <summary><b>Sprint 2</b></summary>
 
 [View Sprint 2 documentation](docs/SPRINT2.md)
+
+- **Sprint video:** Add the Sprint 2 demonstration video link here.
+- **Impact artifacts:**
+  - [Google Colab - Sprint 2 analysis](https://colab.research.google.com/drive/1itbtMpPBJKlcQDCD3ssneQeNRWCSla-S?authuser=3#scrollTo=8msgZwQezrFa)
+  - [Notion - ANEEL Data Analysis, TAM and SAM](https://www.notion.so/An-lise-de-Dados-Aneel-TAM-e-SAM-33ea59aef56d802db726cfc98114223c?source=copy_link)
 </details>
 
 <details>

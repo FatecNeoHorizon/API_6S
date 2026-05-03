@@ -26,6 +26,12 @@
   </a>
 </div>
 
+### Sprint Artifacts
+
+| Artifact | Description |
+|:---------|:------------|
+| [Sprint 1 demonstration video](https://www.youtube.com/watch?v=w10nwgCj9kc) | Video presenting the deliveries completed during Sprint 1. |
+
 ### Sprint Evolution (Burndown)
 
 <img src="../burndown/src/main/resources/static/sprint-1.png" alt="Sprint 1 burndown">

@@ -1,9 +1,31 @@
-import { getAdminSessionToken } from "./adminSession";
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+const SESSION_KEYS = [
+  "session_uuid",
+  "sessionUuid",
+  "access_token",
+  "accessToken",
+  "token",
+];
+
+const getSessionToken = () => {
+  if (!globalThis.window) {
+    return null;
+  }
+
+  for (const key of SESSION_KEYS) {
+    const sessionValue = sessionStorage.getItem(key);
+    const localValue = localStorage.getItem(key);
+
+    if (sessionValue) return sessionValue;
+    if (localValue) return localValue;
+  }
+
+  return null;
+};
+
 const buildAuthHeaders = () => {
-  const adminToken = getAdminSessionToken();
+  const adminToken = getSessionToken();
 
   if (!adminToken) return {};
 

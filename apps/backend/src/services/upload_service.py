@@ -7,6 +7,8 @@ from collections.abc import Iterator
 
 from src.etl.utils.contract import TRANSFORM_CONTRACT_VERSION
 
+from src.etl.reconcile.reconcile import run_reconciliation
+
 # Importação dos extratores
 from src.etl.extract.extract_energy_losses import extract_losses
 from src.etl.extract.extract_decfec import extract_decfec
@@ -123,7 +125,6 @@ def register_upload_start(
         else:
             logger.error(f"[upload_service] Falha ao registrar load_history para '{file_key}'")
     return registered
-
 
 def _validate_transform_contract(file_key: str, transformed: Any) -> dict[str, Any]:
     if not isinstance(transformed, dict):
@@ -258,7 +259,18 @@ def run_etl(db, load_ids, paths, upload_dir):
                     },
                 )
 
-                update_load_history(db, load_id, "SUCCESS")
+                reconciliation = run_reconciliation(db, file_key, load_id)
+
+                final_status = "SUCCESS"
+                if reconciliation.get("status") == "WARNING":
+                    final_status = "SUCCESS_WITH_WARNINGS"
+
+                update_load_history(
+                    db,
+                    load_id,
+                    final_status,
+                    {"reconciliation": reconciliation} if reconciliation else None,
+                )
 
         except Exception as e:
             logger.exception(

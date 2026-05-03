@@ -489,7 +489,21 @@ export default function IndicadoresPage() {
   const [samTotal, setSamTotal] = useState(null);
 
   const fetchTamTotal = async() => {
-    setTamTotal(89);
+    const url = `/tam-sam/tam`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setTamTotal(null);
+        return;
+      }
+      setTamTotal(data.tam_total)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
   }
 
   const fetchSamTotal = async(from, to) => {

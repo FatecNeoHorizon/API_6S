@@ -32,7 +32,7 @@ def transform_limits(df) -> dict:
                 continue
 
             valid_docs.append({
-                "code": code,  # 👈 você estava ignorando isso
+                "code": code,
                 "indicator_type_code": indicator_type_code,
                 "year": year,
                 "limit": limit

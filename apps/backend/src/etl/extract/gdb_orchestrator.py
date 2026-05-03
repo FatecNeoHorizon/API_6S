@@ -17,39 +17,27 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 def build_batch(load_id, file_key, source_file, layer_name, df, chunk_index):
-    """
-    Construir um lote de dados extraídos do GDB.
-    
-    Agrupa informações sobre o carregamento, dados e metadados em um único dicionário
-    que será processado posteriormente nas etapas de transformação e carga.
-    """
     return {
-        "load_id": load_id,                                                      # ID único do carregamento
-        "file_key": file_key,                                                    # Chave/tipo do arquivo
-        "source_file": source_file,                                              # Caminho do arquivo original
-        "layer_name": layer_name,                                                # Nome da layer geográfica
-        "chunk_index": chunk_index,                                              # Índice sequencial do lote
-        "chunk_size": len(df),                                                   # Quantidade de registros
-        "schema": {col: str(dtype) for col, dtype in df.dtypes.items()},        # Tipos de dados das colunas
-        "records": df.to_dict(orient="records"),                                 # Dados convertidos para lista de dicts
-        "geometry_format": "geojson",                                            # Formato dos dados geométricos
-        "extracted_at": datetime.now(timezone.utc)                               # Timestamp da extração
+        "load_id": load_id,
+        "file_key": file_key,
+        "source_file": source_file,
+        "layer_name": layer_name,
+        "chunk_index": chunk_index,
+        "chunk_size": len(df),
+        "schema": {col: str(dtype) for col, dtype in df.dtypes.items()},
+        "records": df.to_dict(orient="records"),
+        "geometry_format": "geojson",
+        "extracted_at": datetime.now(timezone.utc)
     }
 
 
 def build_envelope(batch):
-    """
-    Envolver o lote em um envelope com metadados de processamento.
-    
-    Adiciona informações sobre o estágio, parser e versão para rastreabilidade
-    e auditoria durante todo o pipeline ETL.
-    """
     return {
-        "stage": "extraction",                     # Etapa do pipeline (extração)
-        "parser": "gdb_extractor",                 # Tipo de parser utilizado
-        "parser_version": "1.0",                   # Versão do parser
-        "metadata": {},                            # Metadados adicionais (flexível)
-        "data": batch                              # Dados do lote preparado
+        "stage": "extraction",
+        "parser": "gdb_extractor",
+        "parser_version": "1.0",
+        "metadata": {},
+        "data": batch
     }
 
 def run_extraction(db: Database, path: Path, load_id: str):
@@ -62,7 +50,6 @@ def run_extraction(db: Database, path: Path, load_id: str):
     chunks_completed = 0
 
     try:
-        # 1. Registra o GDB no banco e obtém o geodatabase_id
         geodatabase_doc = {
             "filename": Path(path).name,
             "load_id": load_id,
@@ -72,14 +59,12 @@ def run_extraction(db: Database, path: Path, load_id: str):
         }
         geodatabase_id = str(db["geodatabases"].insert_one(geodatabase_doc).inserted_id)
     
-        # 2. Extração (Gerador)
         for chunk, layer_name, source_file in extract_gdb_generator(path):
             
             if isinstance(chunk, dict):
                 update_load_history(db, load_id, "ERROR", {"error_message": chunk["error"]})
                 continue
 
-            # 3. Transformação
             transform_result = transform_gdb(chunk, layer_name, geodatabase_id)
 
             if transform_result["rejected"]:

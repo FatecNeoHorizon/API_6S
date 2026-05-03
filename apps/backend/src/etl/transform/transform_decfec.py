@@ -16,7 +16,6 @@ def transform_decfec(df: pd.DataFrame):
         try:
             row_dict = row.to_dict()
 
-            # Mapeamento e limpeza dos campos
             agent_acronym              = _to_str(row.get("SigAgente"))
             cnpj_number                = _to_str(row.get("NumCNPJ"))
             consumer_unit_set_id       = _to_str(row.get("IdeConjUndConsumidoras"))

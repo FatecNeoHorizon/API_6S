@@ -8,10 +8,6 @@ RECONCILIATION_CHECKS = {
 }
 
 def _check_indicadores_conjunto(db: Database) -> dict:
-    """
-    Para cada consumer_unit_set_id em distribution_indices,
-    verifica se existe um documento com aquele code em conj.
-    """
     pipeline = [
         {"$group": {"_id": "$consumer_unit_set_id"}},
     ]
@@ -45,10 +41,6 @@ CHECKS_MAP = {
 
 
 def run_reconciliation(db: Database, file_key: str, load_id: str) -> dict:
-    """
-    Executa as checagens de reconciliação para o file_key informado.
-    Retorna o resultado e salva no load_history.
-    """
     checks_to_run = RECONCILIATION_CHECKS.get(file_key, [])
 
     if not checks_to_run:

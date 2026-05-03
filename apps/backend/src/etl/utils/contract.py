@@ -8,7 +8,10 @@ class TransformRejection(TypedDict):
 class TransformStats(TypedDict):
     total_input: int
     total_valid: int
+    total_inserted: int
     total_rejected: int
+   
+    total_updated: int
 class TransformResult(TypedDict):
     contract_version: str
     valid: list[dict[str, Any]]

@@ -298,7 +298,9 @@ def get_valid_first_access_token(conn: PgConnection, token_hash: str):
             fat.TOKEN_UUID,
             fat.USER_ID,
             u.ACTIVE,
-            p.PROFILE_NAME
+            p.PROFILE_NAME,
+            u.USERNAME,
+            u.EMAIL_HASH
         FROM TB_FIRST_ACCESS_TOKEN fat
         JOIN TB_USER u
           ON u.USER_UUID = fat.USER_ID
@@ -323,6 +325,8 @@ def get_valid_first_access_token(conn: PgConnection, token_hash: str):
         "user_id": row[1],
         "active": row[2],
         "profile_name": row[3],
+        "username": row[4],
+        "email_hash": row[5],
     }
 
 

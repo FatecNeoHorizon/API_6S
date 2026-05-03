@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-import hashlib
 import secrets
 
 from fastapi import HTTPException, status
@@ -16,6 +15,7 @@ from src.config.auth_security import (
     hash_token,
     verify_password,
 )
+from src.config.email_hasher import EmailHasher
 from src.config.settings import Settings
 from src.database.postgres import set_current_user
 from src.services.consent_service import get_pending_consent
@@ -36,9 +36,7 @@ settings = Settings()
 
 
 def _build_email_hash(email: str) -> str:
-    normalized_email = email.strip().lower()
-    payload = f"{normalized_email}:{settings.email_hash_salt}".encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    return EmailHasher.hash(email)
 
 
 def _create_session_and_token(
@@ -48,6 +46,7 @@ def _create_session_and_token(
     profile_name: str,
     source_ip: str,
     user_agent: str,
+    username: str | None = None,
 ):
     set_current_user(conn, user_id)
 
@@ -74,6 +73,7 @@ def _create_session_and_token(
         user_id=user_id,
         session_id=session_id,
         profile_name=profile_name,
+        username=username,
     )
 
     pending_clauses = get_pending_consent(conn, user_id)
@@ -126,6 +126,7 @@ def first_access(
         profile_name=token_data["profile_name"],
         source_ip=source_ip,
         user_agent=user_agent,
+        username=token_data["username"],
     )
 
 
@@ -165,6 +166,7 @@ def login(
         profile_name=user["profile_name"],
         source_ip=source_ip,
         user_agent=user_agent,
+        username=user["username"],
     )
 
 

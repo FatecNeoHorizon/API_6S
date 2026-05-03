@@ -18,29 +18,85 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
+import { getSessionToken, clearClientSession, logoutUser } from "@/api/consent";
 
 const menuItems = [
   {
     label: "Indicadores DEC/FEC e Perdas",
     href: "/dashboard/indicadores",
     icon: BarChart3,
+    allowedProfiles: [],
   },
   {
     label: "Estrutura das Redes",
     href: "/dashboard/estrutura-redes",
     icon: Network,
+    allowedProfiles: [],
   },
   {
     label: "Gestão de Usuários",
     href: "/dashboard/usuarios",
     icon: Users,
+    allowedProfiles: ["ADMIN", "MANAGER"],
   },
-  { 
-    label: "Gestão de Termos", 
-    href: "/dashboard/termos", 
-    icon: FileText 
+  {
+    label: "Gestão de Termos",
+    href: "/dashboard/termos",
+    icon: FileText,
+    allowedProfiles: ["ADMIN"],
   },
 ];
+
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(decodeURIComponent(atob(payload).split("").map(function(c) {
+      return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join("")));
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+function getUserDisplayName(token) {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+
+  const candidate = payload.name || payload.preferred_username || payload.username || payload.sub || payload.email;
+  if (typeof candidate === "string" && candidate.trim()) {
+    return candidate;
+  }
+
+  return null;
+}
+
+function getUserInitials(name) {
+  if (!name) return "AD";
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  return initials || "AD";
+}
+
+function getUserProfile(token) {
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.profile === "string" ? payload.profile.toUpperCase() : "";
+}
+
+function canAccessMenuItem(item, userProfile) {
+  if (!item.allowedProfiles || item.allowedProfiles.length === 0) {
+    return true;
+  }
+
+  return item.allowedProfiles.includes(userProfile);
+}
 
 const allowedExtensions = [".csv", ".xlsx", ".zip"];
 
@@ -113,6 +169,18 @@ export default function DashboardLayout() {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [appLoadIds, setAppLoadIds] = useState(null);
+
+  const userDisplayName = getUserDisplayName(getSessionToken()) || "Admin";
+  const userInitials = getUserInitials(userDisplayName);
+  const userProfile = getUserProfile(getSessionToken());
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch {}
+    clearClientSession();
+    window.location.href = "/login";
+  };
 
   // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]
   const [fileList, setFileList] = useState([]);
@@ -358,19 +426,24 @@ export default function DashboardLayout() {
             <ul className="flex flex-col gap-1">
               {menuItems.map((item) => {
                 const isActive = pathname === item.href;
+                const canAccess = canAccessMenuItem(item, userProfile);
+
+                if (!canAccess) return null;
+                
                 return (
                   <li key={item.href}>
                     <Link
                       to={item.href}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        !canAccess && "text-sidebar-foreground/60",
                         isActive
                           ? "bg-sidebar-primary text-sidebar-primary-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )}
                       onClick={() => setSidebarOpen(false)}
                     >
-                      <item.icon className="w-5 h-5" />
+                      {canAccess ? <item.icon className="w-5 h-5" /> : <span className="w-5 h-5" aria-hidden="true" />}
                       {item.label}
                     </Link>
                   </li>
@@ -418,10 +491,10 @@ export default function DashboardLayout() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">AD</span>
+                    <span className="text-sm font-medium text-primary">{userInitials}</span>
                   </div>
                   <span className="hidden sm:block text-sm font-medium text-foreground">
-                    Admin
+                    {userDisplayName}
                   </span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -436,14 +509,16 @@ export default function DashboardLayout() {
                       Meu Perfil
                     </Link>
                     <div className="border-t border-border my-1" />
-                    <Link
-                      to="/"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-muted"
-                      onClick={() => setUserMenuOpen(false)}
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-muted transition-colors text-left"
                     >
                       <LogOut className="w-4 h-4" />
                       Sair
-                    </Link>
+                    </button>
                   </div>
                 )}
               </div>

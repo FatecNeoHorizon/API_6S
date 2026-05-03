@@ -38,6 +38,7 @@ def create_access_token(
     user_id: str,
     session_id: str,
     profile_name: str,
+    username: str | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     # Validate inputs
@@ -60,6 +61,9 @@ def create_access_token(
         "exp": expire,
         "type": "access",
     }
+    
+    if username:
+        payload["username"] = username
 
     return jwt.encode(
         payload,

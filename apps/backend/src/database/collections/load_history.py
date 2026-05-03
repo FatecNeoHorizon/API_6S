@@ -41,8 +41,12 @@ def setup_load_history(db):
                     },
                     "status": {
                         "bsonType": "string",
-                        "enum": ["STARTED", "SUCCESS", "PARTIAL", "ERROR","PROCESSING"],
+                        "enum": ["STARTED", "SUCCESS", "PARTIAL", "ERROR", "PROCESSING", "SUCCESS_WITH_WARNINGS"],  # ← adicionar
                         "description": "Execution status."
+                    },
+                    "batch_id": {
+                        "bsonType": ["string", "null"],
+                        "description": "Groups multiple loads from the same upload."
                     },
                     "total_processed": {
                         "bsonType": ["int", "long", "null"],

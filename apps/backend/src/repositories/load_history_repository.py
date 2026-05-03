@@ -28,12 +28,18 @@ def update_load_history(
         "status": status,
         "finished_at": datetime.now(timezone.utc)
     }
+
+    ROOT_FIELDS = {"reconciliation"}
+
     if status == "SUCCESS" or status == "ERROR":
         update_data["finished_at"] = datetime.now(timezone.utc)
 
     if extra_fields:
         for key, value in extra_fields.items():
-            update_data[f"metrics.{key}"] = value
+            if key in ROOT_FIELDS:
+                update_data[key] = value
+            else:
+                update_data[f"metrics.{key}"] = value
 
     update = {"$set": update_data}
 
@@ -56,6 +62,5 @@ def update_load_history(
 def get_load_history(db: Database, load_id: str) -> dict | None:
     return db[COLLECTION_NAME].find_one({"load_id": load_id})
 
-
 def get_load_history_by_batch(db: Database, batch_id: str) -> list[dict]:
-    return list(db[COLLECTION_NAME].find({"batch_id": batch_id}).sort("started_at", 1))
+    return list(db[COLLECTION_NAME].find({"batch_id": batch_id}))

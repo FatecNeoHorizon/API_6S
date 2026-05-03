@@ -73,6 +73,20 @@ class Settings(BaseSettings):
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
 
+    # Model retraining policy
+    model_retrain_on_new_data: bool = Field(default=False)
+    model_retrain_strategy: str = Field(default="per_load")
+    model_retrain_min_new_records: int = Field(default=1)
+
+    # PostgreSQL Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="postgres")
+    postgres_password: str = Field(default="postgres")
+    postgres_db: str = Field(default="postgres")
+    postgres_sslmode: str = Field(default="prefer")
+
+    # User Security Configuration
     email_hash_salt: str = Field(default="change-me")
     email_encryption_key: Optional[str] = Field(default=None)
 

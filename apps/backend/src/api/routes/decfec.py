@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pathlib import Path
 from src.control import distribution_indices_procedures
 from src.etl.extract.extract_limits import extract_limits_preview
@@ -43,5 +43,12 @@ async def test_decfec_file_extraction():
 
 @router.get("/test-limits-file-extraction")
 async def test_limits_file_extraction():
-    path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")
+    # For limits, check if there's a specific file or fall back to searching in tmp
+    try:
+        path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="No limits CSV file found in TMP_UPLOAD_PATH. Please upload a limits file first."
+        )
     return extract_limits_preview(path, limit=50)

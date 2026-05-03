@@ -174,3 +174,90 @@ async def get_forecast_info(
             status_code=500,
             detail=f"Error fetching metadata: {str(exc)}",
         )
+
+
+@router.post("/retrain")
+async def trigger_manual_retrain(
+    consumer_unit_set_id: str = Query(..., description="Consumer unit ID (e.g., '16648')"),
+    year_start: int = Query(2015, description="Start year for retraining data"),
+    year_end: int = Query(2024, description="End year for retraining data"),
+    indicator_types: Optional[list[str]] = Query(None, description="Indicator types: DEC, FEC, or both"),
+):
+    """
+    Manually trigger model retraining for a consumer unit (async).
+
+    This endpoint trains or retrains RandomForest models for specified indicators
+    and immediately returns. Actual training runs in the background.
+
+    **Parameters:**
+    - `consumer_unit_set_id`: Consumer unit ID
+    - `year_start`: Start year for training data (default: 2015)
+    - `year_end`: End year for training data (default: 2024)
+    - `indicator_types`: List of indicators to retrain (default: ["DEC", "FEC"])
+
+    **Response:**
+    ```json
+    {
+        "success": true,
+        "message": "Retraining scheduled for consumer unit 16648",
+        "consumer_unit_id": "16648",
+        "indicators": ["DEC", "FEC"]
+    }
+    ```
+
+    **Note:** Retraining happens in the background. Check logs or re-query the forecast endpoint
+    to see updated model metrics.
+    """
+    try:
+        # Normalize indicator types
+        if indicator_types is None:
+            indicator_types = ["DEC", "FEC"]
+
+        # Validate indicator types
+        valid_indicators = {"DEC", "FEC"}
+        invalid = set(indicator_types) - valid_indicators
+        if invalid:
+            raise ValueError(
+                f"Invalid indicator types: {invalid}. Valid options: {valid_indicators}"
+            )
+
+        # Train and save models for this consumer unit
+        # Using a synthetic load_id for manual triggers
+        load_id = f"manual_retrain_{consumer_unit_set_id}_{int(__import__('time').time())}"
+
+        procedures = TimeSeriesForecastProcedures()
+        result = procedures.forecast_for_unit(
+            consumer_unit_set_id=consumer_unit_set_id,
+            year_start=year_start,
+            year_end=year_end,
+            indicator_types=indicator_types,
+            save_models=True,
+        )
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=400,
+                detail=result.get("message", "Retraining failed"),
+            )
+
+        logger.info(f"Manual retrain triggered for {consumer_unit_set_id}: {load_id}")
+
+        return {
+            "success": True,
+            "message": f"Retraining completed for consumer unit {consumer_unit_set_id}",
+            "consumer_unit_id": consumer_unit_set_id,
+            "indicators": indicator_types,
+            "metrics": result.get("metrics", {}),
+        }
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        logger.exception(f"Error triggering retrain for {consumer_unit_set_id}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error: {str(exc)}",
+        )

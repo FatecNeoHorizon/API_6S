@@ -219,6 +219,18 @@ export default function DashboardLayout() {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setIsUploading(false);
+
+          if (data.status === "SUCCESS") {
+            toast.success("Todos os arquivos processados com sucesso!");
+            setTimeout(() => {
+              setUploadModalOpen(false);
+              setFileList([]);
+            }, 3000);
+          } else if (data.status === "SUCCESS_WITH_WARNINGS") {
+            toast.warning("Processamento concluído com avisos. Verifique os detalhes dos arquivos.");
+          } else {
+            toast.error("Erro no processamento dos arquivos.");
+          }
         }
       } catch {
         // erro de rede — mantém estado, continua polling

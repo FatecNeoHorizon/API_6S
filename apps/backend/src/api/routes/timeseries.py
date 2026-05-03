@@ -6,9 +6,16 @@ Routes for training RandomForest models and generating forecasts for distributio
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+from datetime import datetime, timezone
+import logging
 
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.query_mongo_timeseries import query_indicators_for_unit
+from src.etl.load.load_predictions import persist_predictions
+from src.config.settings import Settings
+from src.database.connection import get_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/timeseries", tags=["timeseries"])
 
@@ -97,7 +104,45 @@ async def forecast_unit_timeseries(
                 detail=result.get("message", "Forecast failed"),
             )
         
-        return result
+        # Persist predictions to MongoDB if forecasting succeeded
+        persist_metrics = {"inserted": 0, "updated": 0, "rejected": 0}
+        try:
+            settings = Settings()
+            db = get_client()[settings.mongo_db_name]
+            predictions_collection = db["predictions"]
+            
+            # Flatten forecasts to predictions format
+            all_predictions = []
+            for forecast in result.get("forecasts", []):
+                pred = {
+                    "consumer_unit_set_id": forecast.get("consumer_unit_id"),
+                    "indicator": forecast.get("indicator"),
+                    "forecast_date": forecast.get("data"),
+                    "forecast_value": forecast.get("previsao"),
+                    "model": "RandomForestRegressor",
+                    "generated_on": datetime.now(timezone.utc),
+                }
+                all_predictions.append(pred)
+            
+            if all_predictions:
+                persist_metrics = persist_predictions(predictions_collection, all_predictions)
+                logger.info(f"[forecast_unit_timeseries] Predictions persisted: {persist_metrics}")
+        except Exception as e:
+            logger.exception("[forecast_unit_timeseries] Failed to persist predictions: %s", e)
+        
+        # Return response with only newly inserted predictions count
+        return {
+            "success": result.get("success"),
+            "consumer_unit_id": result.get("consumer_unit_id"),
+            "metrics": result.get("metrics"),
+            "persistence": {
+                "inserted": persist_metrics.get("inserted", 0),
+                "updated": persist_metrics.get("updated", 0),
+                "rejected": persist_metrics.get("rejected", 0),
+            },
+            "forecasts": result.get("forecasts"),
+            "models_directory": result.get("models_directory"),
+        }
 
     except ValueError as exc:
         raise HTTPException(

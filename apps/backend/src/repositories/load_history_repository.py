@@ -55,3 +55,6 @@ def update_load_history(
 
 def get_load_history(db: Database, load_id: str) -> dict | None:
     return db[COLLECTION_NAME].find_one({"load_id": load_id})
+
+def get_load_history_by_batch(db: Database, batch_id: str) -> list[dict]:
+    return list(db[COLLECTION_NAME].find({"batch_id": batch_id}))

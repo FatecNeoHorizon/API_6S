@@ -10,7 +10,6 @@ import {
   Upload,
   CheckCircle2,
   AlertCircle,
-  FileText,
   FileSpreadsheet,
   FileArchive,
   Loader2,

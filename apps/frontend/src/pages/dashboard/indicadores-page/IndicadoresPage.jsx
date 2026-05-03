@@ -483,6 +483,21 @@ export default function IndicadoresPage() {
   const [perdasData, setPerdasData] = useState([]);
   const [perdasLoading, setPerdasLoading] = useState(false);
 
+  // TAM/SAM
+  const tamSamPeriodLabel =
+    selectedPeriod ? "2024" : null
+
+  const [tamTotal, setTamTotal] = useState(null);
+  const [samTotal, setSamTotal] = useState(null);
+
+  const fetchTamTotal = async() => {
+    setTamTotal(89);
+  }
+
+  const fetchSamTotal = async() => {
+    setSamTotal(14);
+  }
+
   // ── DEC/FEC handlers ─────────────────────────────────────────────────────────
   const fetchDecFec = async (from, to) => {
     const url = buildDecFecUrl(from, to);
@@ -519,6 +534,8 @@ export default function IndicadoresPage() {
     const to = currentMonth();
     setMonthRange({ from, to });
     fetchDecFec(from, to);
+    fetchTamTotal();
+    fetchSamTotal();
   };
 
   const handleMonthRangeChange = (range) => {
@@ -527,6 +544,8 @@ export default function IndicadoresPage() {
     if (range.from && range.to) {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
+      fetchTamTotal();
+      fetchSamTotal();
     }
   };
 
@@ -777,8 +796,43 @@ export default function IndicadoresPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    TAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {tamSamPeriodLabel ? tamSamPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    SAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : samTotal !== null ? samTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {tamSamPeriodLabel ? tamSamPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             <Card className="bg-card border-border flex-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">

@@ -1,4 +1,20 @@
-from pymongo import ASCENDING,GEOSPHERE
+from pymongo import ASCENDING
+
+"""
+Example Document:
+{
+    "_id": "ObjectId('69e3b182218b5f69b67bd0bf')",
+    "code": "TR-001-A",
+    "distributor_code": "001",
+    "description": "Transformador Centro A",
+    "status": "SM",
+    "location_area": "1",
+    "nominal_power_kva": 500.0,
+    "iron_losses_kw": 45.0,
+    "copper_losses_kw": 60.0,
+    "substation": "SE-001"
+}
+"""
 
 def setup_distribution_transformers(db):
     db.create_collection(
@@ -6,7 +22,7 @@ def setup_distribution_transformers(db):
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["code", "distributor_code", "geometry"],
+                "required": ["code", "distributor_code"],
                 "properties": {
                     "_id": {"bsonType": "objectId"},
                     "code": {
@@ -21,51 +37,18 @@ def setup_distribution_transformers(db):
                         "bsonType": ["string", "null"],
                         "description": "Transformer description. Mapped from DESCR."
                     },
-                    "geodatabase_id": {
-                        "bsonType": "objectId",
-                        "description": "Reference to the geodatabases collection."
-                    },
-                    "connection_phases": {
-                        "bsonType": ["string", "null"],
-                        "enum": ["A", "B", "C", "AB", "AC", "BC", "ABC", "ABCN", None],
-                        "description": "Connected phases. Mapped from FAS_CON."
-                    },
                     "status": {
                         "bsonType": ["string", "null"],
                         "description": "Operational status. Mapped from SIT_ATIV."
-                    },
-                    "unit_type": {
-                        "bsonType": ["string", "null"],
-                        "description": "Unit type code. Mapped from TIP_UNID."
-                    },
-                    "position": {
-                        "bsonType": ["string", "null"],
-                        "description": "Position code. Mapped from POS."
                     },
                     "location_area": {
                         "bsonType": ["string", "null"],
                         "enum": ["1", "2", None],
                         "description": "Location area: 1 = Urban, 2 = Rural. Mapped from ARE_LOC."
                     },
-                    "configuration": {
-                        "bsonType": ["string", "null"],
-                        "description": "Transformer configuration code. Mapped from CONF."
-                    },
-                    "substation": {
-                        "bsonType": ["string", "null"],
-                        "description": "Associated substation (posto). Mapped from POSTO."
-                    },
                     "nominal_power_kva": {
                         "bsonType": ["double", "null"],
                         "description": "Nominal power in kVA. Mapped from POT_NOM."
-                    },
-                    "fuse_capacity": {
-                        "bsonType": ["double", "null"],
-                        "description": "Fuse capacity. Mapped from CAP_ELO."
-                    },
-                    "switch_capacity": {
-                        "bsonType": ["double", "null"],
-                        "description": "Switch capacity. Mapped from CAP_CHA."
                     },
                     "iron_losses_kw": {
                         "bsonType": ["double", "null"],
@@ -75,35 +58,42 @@ def setup_distribution_transformers(db):
                         "bsonType": ["double", "null"],
                         "description": "Copper (load) losses in kW. Mapped from PER_COB."
                     },
-                    "connection_date": {
-                        "bsonType": ["string", "null"],
-                        "description": "Connection date. Mapped from DAT_CON."
-                    },
-                    "geometry": {
-                        "bsonType": "object",
-                        "required": ["type", "coordinates"],
-                        "description": "Transformer location in GeoJSON Point format.",
-                        "properties": {
-                            "type": {"bsonType": "string", "enum": ["Point"]},
-                            "coordinates": {
-                                "bsonType": "array",
-                                "minItems": 2,
-                                "maxItems": 2,
-                                "items": {"bsonType": "double"}
-                            }
-                        }
+                    "substation": {
+                        "bsonType": "string",
+                        "description": "Substation code this transformer belongs to. Foreign key to substations.code. Mapped from ETL."
                     }
                 }
             }
         },
-        validationLevel="moderate",
+        validationLevel="strict",
         validationAction="error"
     )
 
     col = db["distribution_transformers"]
-    col.create_index([("geometry", GEOSPHERE)], name="idx_geo")
-    col.create_index([("code", ASCENDING)], unique=True, name="idx_unique_code")
-    col.create_index([("distributor_code", ASCENDING)], name="idx_distributor")
-    col.create_index([("geodatabase_id", ASCENDING)], name="idx_geodatabase")
-    col.create_index([("location_area", ASCENDING)], name="idx_location_area")
-    col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power")
+
+    col.create_index(
+        [("code", ASCENDING)],
+        unique=True,
+        name="idx_unique_code",
+        background=True
+    )
+
+    col.create_index(
+        [("distributor_code", ASCENDING)],
+        name="idx_distributor",
+        background=True
+    )
+
+    col.create_index(
+        [("location_area", ASCENDING)],
+        name="idx_location_area",
+        background=True
+    )
+
+    col.create_index([("nominal_power_kva", ASCENDING)], name="idx_power", background=True)
+
+    col.create_index(
+        [("substation", ASCENDING)],
+        name="idx_substation",
+        background=True
+    )

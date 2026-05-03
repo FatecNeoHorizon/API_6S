@@ -42,15 +42,15 @@ Stores user profiles for role-based access control (RBAC). Each user is assigned
 ---
 
 ### `TB_USER`
-Stores system users. Email is stored in two fields — one hashed for lookup, one encrypted for storage — following LGPD data minimization principles.
+Stores system users. Email is stored in two fields — one hashed with deterministic SHA-256 using a fixed salt from the `EMAIL_HASH_SALT` environment variable for lookup, and one encrypted for storage — following LGPD data minimization principles. The email field is immutable, so no hash update flow is required.
 
 | Column | Type | Rules |
 |---|---|---|
 | `USER_UUID` | UUID | PK, auto-generated |
 | `USERNAME` | VARCHAR(255) | NOT NULL, UNIQUE |
-| `EMAIL_HASH` | VARCHAR(255) | NOT NULL, UNIQUE — used for lookup |
+| `EMAIL_HASH` | VARCHAR(255) | NOT NULL, UNIQUE — deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup |
 | `EMAIL_ENC` | VARCHAR(255) | NOT NULL — encrypted value |
-| `PASSWORD_HASH` | VARCHAR(255) | NOT NULL — Argon2id |
+| `PASSWORD_HASH` | VARCHAR(255) | NOT NULL — bcrypt hash |
 | `PROFILE_ID` | UUID | FK → TB_PROFILE |
 | `ACTIVE` | BOOLEAN | NOT NULL, DEFAULT true |
 | `CREATED_AT` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() |
@@ -76,13 +76,27 @@ Tracks active user sessions individually. Allows forced logout, active device li
 
 ---
 
+### `TB_PASSWORD_RESET`
+Stores password reset requests using single-use tokens, with expiration control and traceability. The raw reset token is never stored in the database — only `TOKEN_HASH`, which contains the SHA-256 hash of the token.
+
+| Column | Type | Rules |
+|---|---|---|
+| `RESET_UUID` | UUID | PK, auto-generated |
+| `USER_UUID` | UUID | FK → TB_USER, NOT NULL |
+| `TOKEN_HASH` | VARCHAR(64) | NOT NULL, UNIQUE — stores the SHA-256 hash of the reset token, never the token itself |
+| `EXPIRES_AT` | TIMESTAMPTZ | NOT NULL |
+| `USED_AT` | TIMESTAMPTZ | nullable — filled when the token is consumed |
+| `CREATED_AT` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() |
+
+---
+
 ### `TB_AUTH_ATTEMPT`
 Records every authentication attempt. Does not have a FK to `TB_USER` because the attempted email may not exist in the system. Feeds brute force detection logic.
 
 | Column | Type | Rules |
 |---|---|---|
 | `ATTEMPT_UUID` | UUID | PK, auto-generated |
-| `EMAIL_HASH` | VARCHAR(255) | NOT NULL — no UNIQUE, multiple attempts allowed |
+| `EMAIL_HASH` | VARCHAR(255) | NOT NULL — deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`; no UNIQUE, multiple attempts allowed |
 | `SOURCE_IP` | VARCHAR(255) | NOT NULL, masked |
 | `SUCCESS` | BOOLEAN | NOT NULL |
 | `BLOCKED` | BOOLEAN | NOT NULL, DEFAULT false |
@@ -177,7 +191,7 @@ ORDER BY CLAUSE_ID, CREATED_AT DESC;
 ### Roles
 | Role | Permissions |
 |---|---|
-| `app_role` | SELECT, INSERT, UPDATE on operational tables. INSERT only on log tables |
+| `app_role` | SELECT, INSERT, UPDATE on operational tables, including `TB_PASSWORD_RESET`. INSERT only on log tables |
 | `log_role` | INSERT only on `TB_LOG` and `TB_CONSENT_LOG` |
 | `dba_role` | ALL PRIVILEGES — for administration only, never used by the application |
 

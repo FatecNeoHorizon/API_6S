@@ -1,29 +1,33 @@
-from typing import Generator
+from collections.abc import Iterator
 import pandas as pd
-from src.etl.get_decfec_file import get_filepath
-from src.etl.transform.transform_decfec import transform_decfec
+from pathlib import Path
 
-FILTRO_INDICADORES = [
-    'DEC', 'DEC1i', 'DEC1x', 'DECINC', 'DECIND', 'DECINE', 'DECINO',
-    'DECIP', 'DECIPC', 'DECXN', 'DECXNC', 'DECXP', 'DECXPC', 'DECi',
-    'DECx', 'Dec1', 'Dec1r', 'Decr', 'FEC', 'FEC1i', 'FEC1x', 'FECINC',
-    'FECIND', 'FECINE', 'FECINO', 'FECIP', 'FECIPC', 'FECXN', 'FECXNC',
-    'FECXP', 'FECXPC', 'FECi', 'FECx', 'Fec1', 'Fec1r', 'Fecr',
-]
+INDICATORS_FILTER_NEW = ['DEC', "FEC"]
 
 CHUNK_SIZE = 100_000
 
-def extract_decfec() -> Generator[tuple[pd.DataFrame, str], None, None]:
-    source_file = get_filepath()
+def extract_decfec(path: Path) -> Iterator[dict]:
+    """Stream rows from a potentially large CSV as dictionaries.
 
-    for chunk_df in pd.read_csv(
-        source_file,
-        sep=";",
-        encoding="latin-1",
-        low_memory=True,
-        chunksize=CHUNK_SIZE,
-    ):
-        chunk_df = chunk_df[chunk_df["SigIndicador"].isin(FILTRO_INDICADORES)]
-        chunk_df = transform_decfec(chunk_df)
-        chunk_df = chunk_df.drop_duplicates().reset_index(drop=True)
-        yield chunk_df, source_file
+    Reads the CSV in chunks, filters and drops the unwanted column, and
+    yields one record (dict) at a time to avoid high memory usage.
+    """
+    for chunk in pd.read_csv(path, sep=";", encoding="latin-1", chunksize=CHUNK_SIZE):
+        chunk = chunk[chunk['SigIndicador'].isin(INDICATORS_FILTER_NEW)]
+        chunk = chunk.drop(columns=['DatGeracaoConjuntoDados'], errors='ignore')
+        for record in chunk.to_dict(orient='records'):
+            yield record
+
+
+def extract_decfec_preview(path: Path, limit: int = 50) -> list[dict]:
+    """Return a small list of records for preview purposes.
+
+    Consumes the streaming `extract_decfec` generator and returns up to
+    `limit` records as a list (safe for API preview endpoints).
+    """
+    results: list[dict] = []
+    for i, rec in enumerate(extract_decfec(path)):
+        results.append(rec)
+        if i + 1 >= limit:
+            break
+    return results

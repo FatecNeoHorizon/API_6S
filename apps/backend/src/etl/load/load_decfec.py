@@ -1,270 +1,74 @@
-from datetime import datetime, timezone
-from src.etl.get_decfec_file import get_filepath
-from uuid import uuid4
-import json
-import time
-
-import pandas as pd
+import logging
+from pymongo.collection import Collection
 from pymongo import UpdateOne
+from pymongo.errors import BulkWriteError
+from src.etl.utils.bulk_persist import bulk_persist
 
-from src.config.settings import Settings
-from src.database.connection import get_client
-from src.etl.extract.extract_decfec import extract_decfec
+logger = logging.getLogger(__name__)
 
-
-MANDATORY_FIELDS = [
-    "SigAgente", "NumCNPJ", "IdeConjUndConsumidoras",
-    "DscConjUndConsumidoras", "SigIndicador", "AnoIndice",
-    "NumPeriodoIndice", "VlrIndiceEnviado",
+FILTER_KEYS = [
+    "agent_acronym",
+    "consumer_unit_set_id",
+    "indicator_type_code",
+    "year",
+    "period",
 ]
-MAX_REJECTION_LOGS_PER_CHUNK = 5
-
-settings = Settings()
-
-def _to_str(value) -> str | None:
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-    return str(value).strip() or None
-
-
-def _to_float(value) -> float | None:
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return None
-
-
-def _history_totals(totals):
-    return {
-        "total_processed": totals["rows_processed"],
-        "total_inserted": totals["inserted"],
-        "total_updated": totals["updated"],
-        "total_rejected": totals["rows_rejected"],
-        "chunks_completed": totals["chunks_processed"],
-    }
-
-
-def _log_event(event, **payload):
-    log_line = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "event": event,
-        **payload,
-    }
-    print(json.dumps(log_line, default=str, ensure_ascii=True))
 
 
 def load_decfec(
-    batch_version: str | None = None,
-    load_id: str | None = None,
-):
+        transform_result: dict,
+        collection: Collection,
+        conj_collection: Collection
+) -> dict:
+    docs = transform_result.get("valid", [])
+    logger.info(f"[load_decfec] {len(docs)} documentos recebidos.")
 
-    batch_version = batch_version or datetime.now(timezone.utc).strftime("v%Y%m%d_%H%M%S")
-    load_id = load_id or str(uuid4())
+    # 1. Persistência em distribution_indices
+    metrics = bulk_persist(collection, docs, FILTER_KEYS)
 
-    db_name = settings.mongo_db_name
+    # 2. Embute em conj.distribution_indices
+    operations = []
+    for doc in docs:
+        code = doc.get("consumer_unit_set_id")
+        if not code:
+            logger.warning(f"[load_decfec] Documento ignorado para embed por falta de 'consumer_unit_set_id': {doc}")
+            continue
 
-    client = get_client()
-    db = client[db_name]
-    collection = db["distribution_indices"]
-    load_history = db["load_history"]
+        entry = {
+            "indicator_type_code": doc.get("indicator_type_code"),
+            "year":                doc.get("year"),
+            "period":              doc.get("period"),
+            "value":               doc.get("value"),
+        }
 
-    started_at = datetime.now(timezone.utc)
-    start_perf = time.perf_counter()
-
-    totals = {
-        "chunks_processed": 0,
-        "rows_processed": 0,
-        "rows_valid": 0,
-        "rows_rejected": 0,
-        "inserted": 0,
-        "updated": 0,
-        "matched": 0,
-    }
-
-    source_file = get_filepath()
-
-
-    load_history.insert_one({
-        "load_id": load_id,
-        "collection_name": "distribution_indices",
-        "batch_version": batch_version,
-        "source_file": source_file,
-        "started_at": started_at,
-        "finished_at": None,
-        "status": "STARTED",
-        "chunks_total": None,
-        **_history_totals(totals),
-        "error_message": None,
-    })
-
-    _log_event(
-        "decfec_load_started",
-        load_id=load_id,
-        batch_version=batch_version,
-        source_file=source_file,
-    )
-
-    try:
-        for chunk_index, (chunk_df, source_file) in enumerate(extract_decfec(), start=1):
-            chunk_start_perf = time.perf_counter()
-            chunk_rows = len(chunk_df)
-            totals["rows_processed"] += chunk_rows
-
-            operations = []
-            now = datetime.now(timezone.utc)
-            rejected_samples = []
-
-            for row_in_chunk, record in enumerate(chunk_df.to_dict(orient="records"), start=1):
-                agent_acronym        = _to_str(record.get("SigAgente"))
-                consumer_unit_set_id = _to_str(record.get("IdeConjUndConsumidoras"))
-                indicator_type_code  = _to_str(record.get("SigIndicador"))
-                year                 = record.get("AnoIndice")
-                period               = record.get("NumPeriodoIndice")
-
-                missing = []
-                if not agent_acronym:        missing.append("agent_acronym")
-                if not consumer_unit_set_id: missing.append("consumer_unit_set_id")
-                if not indicator_type_code:  missing.append("indicator_type_code")
-                if not year:                 missing.append("year")
-                if not period:               missing.append("period")
-
-                if missing:
-                    totals["rows_rejected"] += 1
-                    if len(rejected_samples) < MAX_REJECTION_LOGS_PER_CHUNK:
-                        rejected_samples.append({
-                            "row_in_chunk": row_in_chunk,
-                            "reason": f"missing_{'_'.join(missing)}",
-                        })
-                    continue
-
-                doc = {
-                    "agent_acronym":                agent_acronym,
-                    "cnpj_number":                  _to_str(record.get("NumCNPJ")),
-                    "consumer_unit_set_id":          consumer_unit_set_id,
-                    "consumer_unit_set_description": _to_str(record.get("DscConjUndConsumidoras")),
-                    "indicator_type_code":           indicator_type_code,
-                    "year":                          int(year),
-                    "period":                        int(period),
-                    "value":                         _to_float(record.get("VlrIndiceEnviado")),
-                    "generation_date":               _to_str(record.get("DatGeracaoConjuntoDados")),
-                    "batch_version":                 batch_version,
-                    "loaded_at":                     now,
-                    "source_file":                   source_file,
-                    "load_id":                       load_id,
-                }
-
-                filter_key = {
-                    "agent_acronym":        agent_acronym,
-                    "consumer_unit_set_id": consumer_unit_set_id,
-                    "indicator_type_code":  indicator_type_code,
-                    "year":                 int(year),
-                    "period":               int(period),
-                }
-
-                operations.append(UpdateOne(filter_key, {"$set": doc}, upsert=True))
-
-            totals["rows_valid"] += len(operations)
-
-            if operations:
-                result = collection.bulk_write(operations, ordered=False)
-                totals["inserted"] += result.upserted_count
-                totals["updated"]  += result.modified_count
-                totals["matched"]  += result.matched_count
-
-            totals["chunks_processed"] += 1
-
-            load_history.update_one(
-                {"load_id": load_id},
-                {"$set": {"status": "STARTED", **_history_totals(totals), "error_message": None}},
+        # Só faz push se ainda não existe entrada com essa chave composta
+        operations.append(
+            UpdateOne(
+                {
+                    "code": code,
+                    "distribution_indices": {
+                        "$not": {
+                            "$elemMatch": {
+                                "indicator_type_code": entry["indicator_type_code"],
+                                "year":               entry["year"],
+                                "period":             entry["period"],
+                            }
+                        }
+                    }
+                },
+                {"$push": {"distribution_indices": entry}},
+                upsert=False
             )
+        )
 
-            chunk_duration_ms = round((time.perf_counter() - chunk_start_perf) * 1000, 2)
-            _log_event(
-                "decfec_chunk_summary",
-                load_id=load_id,
-                batch_version=batch_version,
-                chunk_index=chunk_index,
-                rows_processed=chunk_rows,
-                rows_valid=len(operations),
-                rows_rejected=chunk_rows - len(operations),
-                inserted=totals["inserted"],
-                updated=totals["updated"],
-                duration_ms=chunk_duration_ms,
+    if operations:
+        try:
+            result = conj_collection.bulk_write(operations, ordered=False)
+            logger.info(
+                f"[load_decfec] conj.distribution_indices — "
+                f"matched: {result.matched_count}, modified: {result.modified_count}"
             )
+        except BulkWriteError as e:
+            logger.error(f"[load_decfec] BulkWriteError em conj: {e.details}")
 
-            if rejected_samples:
-                _log_event(
-                    "decfec_chunk_rejections",
-                    load_id=load_id,
-                    batch_version=batch_version,
-                    chunk_index=chunk_index,
-                    sample_size=len(rejected_samples),
-                    samples=rejected_samples,
-                )
-
-        finished_at = datetime.now(timezone.utc)
-        final_status = "PARTIAL" if totals["rows_rejected"] > 0 else "SUCCESS"
-
-        load_history.update_one(
-            {"load_id": load_id},
-            {"$set": {
-                "status": final_status,
-                "finished_at": finished_at,
-                **_history_totals(totals),
-                "error_message": None,
-            }},
-        )
-        _log_event(
-            "decfec_load_finished",
-            load_id=load_id,
-            batch_version=batch_version,
-            status=final_status,
-            duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
-            totals=totals,
-        )
-
-    except Exception as exc:
-        finished_at = datetime.now(timezone.utc)
-        load_history.update_one(
-            {"load_id": load_id},
-            {"$set": {
-                "status": "ERROR",
-                "finished_at": finished_at,
-                **_history_totals(totals),
-                "error_message": str(exc),
-            }},
-        )
-        _log_event(
-            "decfec_load_failed",
-            load_id=load_id,
-            batch_version=batch_version,
-            error=str(exc),
-            duration_ms=round((time.perf_counter() - start_perf) * 1000, 2),
-            totals=totals,
-        )
-        raise
-
-    finally:
-        client.close()
-
-    return {
-        "collection": "distribution_indices",
-        "batch_version": batch_version,
-        "load_id": load_id,
-        "source_file": source_file,
-        "started_at": started_at.isoformat(),
-        "finished_at": finished_at.isoformat(),
-        **totals,
-    }
-
-
-if __name__ == "__main__":
-    load_decfec()
+    return metrics

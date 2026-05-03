@@ -240,6 +240,242 @@ The module does not expose raw email values in responses. User-facing payloads r
 
 ---
 
+## 🔄 ETL Pipeline Architecture
+
+The ETL (Extract, Transform, Load) pipeline processes large datasets from external sources (DECFEC files, GeoDatabase files, energy loss records, continuity indicators) into MongoDB collections. The pipeline is designed with centralized persistence logic, hierarchical collection ordering, and granular progress tracking.
+
+### Pipeline Stages
+
+#### 1. Extract (`src/etl/extract/`)
+Raw data is extracted from uploaded files and streamed in chunks for memory efficiency.
+
+| Extractor | Source | Output | Chunking |
+|:---|:---|:---|:---|
+| `extract_losses` | Energy losses `.xlsx` | Iterator of DataFrames | Configurable size |
+| `extract_decfec` | DECFEC indicators `.csv` | Iterator of DataFrames | Configurable size |
+| `extract_limits` | Continuity limits `.csv` | Iterator of DataFrames | Configurable size |
+| `extract_gdb_generator` | GeoDatabase `.zip` | Iterator of (DataFrame, layer_name, path) | Per-layer streaming |
+| `run_extraction` | GDB orchestration | Calls load functions for CONJ, SUB, UN_TRA_D | Layer-by-layer |
+
+#### 2. Transform (`src/etl/transform/`)
+Extracted data is normalized, validated, and structured according to MongoDB schemas using Pandas.
+
+| Transformer | Input | Output | Validation |
+|:---|:---|:---|:---|
+| `transform_energy_losses` | Energy losses DataFrame | `TransformResult` contract | Required fields validation |
+| `transform_decfec` | DECFEC CSV DataFrame | `TransformResult` contract | Required fields: agent_acronym, consumer_unit_set_id, indicator_type_code, year, period |
+| `transform_limits` | Limits CSV DataFrame | `TransformResult` contract | Required fields: code, indicator_type_code, year |
+| `transform_gdb` | GDB layer DataFrame | `TransformResult` contract per layer | Layer-specific field extraction (CONJ, SUB, UN_TRA_D) |
+
+**Transform Contract** (`src/etl/utils/contract.py`):
+```python
+{
+    "contract_version": "1.0",
+    "valid": [/* valid documents */],
+    "rejected": [{"row": {...}, "reason": "..."}],
+    "stats": {
+        "total_input": int,
+        "total_valid": int,
+        "total_rejected": int
+    }
+}
+```
+
+#### 3. Load (`src/etl/load/`)
+Transformed documents are persisted to MongoDB using centralized bulk operations.
+
+| Load Function | Target Collection | Strategy | Metrics |
+|:---|:---|:---|:---|
+| `load_energy_losses` | `energy_losses_tariff` | Bulk upsert by (distributor_slug, process_date) | inserted, updated, matched, rejected |
+| `load_decfec` | `distribution_indices` + embed in `conj` | Bulk upsert + conditional array push | Primary metrics from bulk_persist |
+| `load_conj` | `conj` | Bulk upsert by code | inserted, updated, matched, rejected |
+| `load_sub` | `substations` | Bulk upsert by code | inserted, updated, matched, rejected |
+| `load_transformers` | `distribution_transformers` | Bulk upsert by code | inserted, updated, matched, rejected |
+| `load_limits` | `conj.annual_summaries` | Conditional array push | updated count, rejected count |
+
+### Centralized Persistence Logic (`src/etl/utils/bulk_persist.py`)
+
+All load functions delegate persistence to a single `bulk_persist()` function:
+
+```python
+def bulk_persist(
+    collection: Collection,
+    docs: list,
+    filter_keys: list[str]
+) -> dict:
+    """
+    Centralized bulk persistence with automatic batching and error handling.
+    
+    Args:
+        collection: MongoDB collection target
+        docs: list of documents to persist
+        filter_keys: fields identifying document uniqueness (upsert criteria)
+    
+    Returns:
+        {"inserted": int, "updated": int, "matched": int, "rejected": int}
+    """
+```
+
+**Features:**
+- Automatic batch processing (default: 1000 docs, configurable via `ETL_BULK_PERSIST_BATCH_SIZE`)
+- UpdateOne operations with `upsert=True` to insert or update atomically
+- `ordered=False` to continue processing despite individual errors
+- BulkWriteError handling to extract partial results
+- Per-batch logging for auditability
+
+### Hierarchical Collection Loading
+
+GDB loading follows a multi-level dependency order to ensure referential integrity:
+
+**Level 1 (Anchors):**
+- CONJ (Conjuntos/Sets)
+- SUB (Substations)
+
+**Level 2 (Level 1 Dependents):**
+- UN_TRA_D (Distribution Transformers) — references SUB via `substation` field
+
+**Execution:**
+1. Extract from GDB zip → GDB extraction phase
+2. Transform CONJ layer → Load into `conj` collection
+3. Transform SUB layer → Load into `substations` collection
+4. Transform UN_TRA_D layer → Load into `distribution_transformers` collection
+5. All layers complete before marking ETL as SUCCESS
+
+**Geodatabase Tracking:**
+- Each GDB upload registers in `geodatabases` collection with:
+  - `load_id`: reference to upload tracking
+  - `filename`: original GDB zip filename
+  - `uploaded_at`: UTC timestamp
+  - `distributor`: (future) distributor context
+  - `reference_year`: (future) data reference year
+
+### Progress Tracking (`src/etl/utils/load_history.py` & `src/repositories/load_history_repository.py`)
+
+Progress is recorded **per collection**, not per chunk, reducing database writes and improving clarity:
+
+**Load History Collection Schema:**
+```javascript
+{
+    "_id": ObjectId,
+    "load_id": "unique-identifier-per-upload",
+    "collection_name": "energy_losses_tariff",  // or conj, substations, distribution_transformers
+    "batch_version": "2026-05-02",
+    "source_file": "/path/to/uploaded/file",
+    "started_at": ISODate("2026-05-02T..."),
+    "finished_at": ISODate("2026-05-02T..."),
+    "status": "PROCESSING",  // STARTED, PROCESSING, SUCCESS, PARTIAL, ERROR
+    "metrics": {
+        "total_processed": 5000,
+        "total_valid": 4850,
+        "total_inserted": 2100,
+        "total_updated": 2750,
+        "total_rejected": 150,
+        "chunks_completed": 5
+    },
+    "error_message": null
+}
+```
+
+**Status Lifecycle:**
+1. `STARTED`: Load history created upon file registration
+2. `PROCESSING`: Status updated after each collection load completes
+3. `SUCCESS`: All collections loaded without errors
+4. `PARTIAL`: Some collections failed, others succeeded
+5. `ERROR`: Complete failure; collection not loaded
+
+**Accumulation Logic:**
+- Metrics are **accumulated across all chunks** for a single collection
+- After all chunks are processed, `load_history` is updated once with final metrics
+- This reduces database writes from ~100/collection to ~1/collection
+- Improves performance and provides cleaner progress visibility
+
+### Service Integration (`src/services/upload_service.py`)
+
+The service orchestrates the complete ETL flow:
+
+1. **Registration**: Generate unique load_id per file, create initial load_history entry with status=STARTED
+2. **Extract**: Call appropriate extractor, get iterator of chunks
+3. **Transform**: For each chunk, apply transformer, validate contract
+4. **Load**: Call collection-specific load function with transform result
+5. **Track**: Accumulate metrics across all chunks
+6. **Update**: After collection completes, update load_history with accumulated metrics and PROCESSING status
+7. **Finalize**: After all collections succeed, update load_history to SUCCESS
+
+**Key Mappings:**
+
+```python
+COLLECTION_MAP = {
+    "energy_losses": "energy_losses_tariff",
+    "gdb": "gdb",  # Special: handled by gdb_orchestrator
+    "indicadores_continuidade": "distribution_indices",
+    "indicadores_continuidade_limite": "conj",
+}
+
+EXTRACTOR_MAP = {
+    "energy_losses": extract_losses,
+    "gdb": run_extraction,  # Orchestrator
+    "indicadores_continuidade": extract_decfec,
+    "indicadores_continuidade_limite": extract_limits,
+}
+
+TRANSFORMER_MAP = {
+    "energy_losses": transform_energy_losses,
+    "indicadores_continuidade": transform_decfec,
+    "indicadores_continuidade_limite": transform_limits,
+}
+
+LOAD_MAP = {
+    "energy_losses": load_energy_losses,
+    "indicadores_continuidade": load_decfec,
+    "indicadores_continuidade_limite": load_limits,
+}
+```
+
+### Error Handling & Resilience
+
+- **Batch-level errors**: BulkWriteError caught; partial results extracted and aggregated
+- **Transformation errors**: Invalid documents rejected; valid documents persist; metrics include rejection count
+- **Collection-level errors**: Load function exception → load_history marked as ERROR with error_message
+- **Resumability**: Each collection is independent; if upload 1 fails, upload 2 can retry separately
+
+### Configuration Parameters
+
+| Parameter | Default | Purpose | Location |
+|:---|:---|:---|:---|
+| `ETL_BULK_PERSIST_BATCH_SIZE` | `1000` | Documents per batch | `.env.backend` |
+| `max_upload_size_mb` | `500` | Maximum file upload size | `src/config/settings.py` |
+| `tmp_upload_path` | `/app/tmp` | Temporary file storage | `src/config/settings.py` |
+
+### Data Flow Diagram
+
+```
+Upload (POST /upload/)
+    ↓
+Validation & File Storage
+    ↓
+Register load_history (STARTED) × N files
+    ↓
+Schedule Async ETL Task
+    ↓
+[For each file_key in paths]:
+    ├─ Extract (streaming chunks)
+    ├─ For each chunk:
+    │   ├─ Transform (validate, normalize)
+    │   ├─ Load (bulk_persist)
+    │   └─ Accumulate metrics
+    ├─ Update load_history (PROCESSING + metrics)
+    ├─ [If GDB: orchestrate CONJ → SUB → UN_TRA_D]
+    └─ [Next file or Finalize]
+    ↓
+Update load_history (SUCCESS/PARTIAL/ERROR) × N files
+    ↓
+Cleanup temporary upload directory
+    ↓
+Response available via GET /upload/status/{load_id}
+```
+
+---
+
 ## Logging
 
 The application uses a structured logging system based on `structlog` and `TimedRotatingFileHandler`.
@@ -248,4 +484,4 @@ Full documentation: [`docs/LOGGING.md`](../docs/LOGGING.md)
 
 ---
 
-*Last updated: 04/26/2026*
+*Last updated: 05/02/2026* — Added complete ETL pipeline architecture documentation

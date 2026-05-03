@@ -1,6 +1,6 @@
 import logging
-from src.etl.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
-from src.etl.transform.utils import (
+from src.etl.utils.contract import build_transform_result, TRANSFORM_CONTRACT_VERSION
+from src.etl.utils.transform_functions import (
     _to_str,
     _to_int,
     _to_float,
@@ -47,5 +47,5 @@ def transform_limits(df) -> dict:
 
     result = build_transform_result(valid_docs, rejected_docs, total_input)
     result["contract_version"] = TRANSFORM_CONTRACT_VERSION
-
+    logger.info(f"Transformer completo: {len(valid_docs)} válidos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return result

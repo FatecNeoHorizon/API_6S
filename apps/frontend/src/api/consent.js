@@ -34,6 +34,19 @@ function getAuthOptions() {
   };
 }
 
+export function saveClientSession(token, { remember = false } = {}) {
+  // Clear old tokens from both storages first
+  for (const key of SESSION_KEYS) {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  }
+
+  // Save the new token to the appropriate storage
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem("access_token", token);
+  storage.setItem("accessToken", token);
+}
+
 export function clearClientSession() {
   for (const key of SESSION_KEYS) {
     sessionStorage.removeItem(key);

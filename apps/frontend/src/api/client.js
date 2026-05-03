@@ -2,24 +2,27 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    method: options?.method ?? "GET",
+    ...(options || {}),
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
+      ...(options?.headers || {}),
     },
   });
 
+  const contentType = response.headers.get("content-type")
+  const responseBody = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
   if (!response.ok) {
-    throw new Error(`Erro na API: ${response.status}`);
+    const error = new Error(`Erro na API: ${response.status}`);
+    error.status = response.status;
+    error.data = responseBody;
+    throw error;
   }
 
-  const contentType = response.headers.get("content-type");
-
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
-  }
-
-  return response.text();
+  return responseBody;
 }
 
 export const apiClient = {

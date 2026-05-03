@@ -56,5 +56,5 @@ def transform_energy_losses(df):
 
     result = build_transform_result(valid_docs, rejected_docs, total_input)
     result["contract_version"] = TRANSFORM_CONTRACT_VERSION
-
+    logging.info(f"Transformer completo: {len(valid_docs)} validos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return result

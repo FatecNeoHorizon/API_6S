@@ -47,5 +47,5 @@ def transform_limits(df) -> dict:
 
     result = build_transform_result(valid_docs, rejected_docs, total_input)
     result["contract_version"] = TRANSFORM_CONTRACT_VERSION
-
+    logger.info(f"Transformer completo: {len(valid_docs)} válidos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return result

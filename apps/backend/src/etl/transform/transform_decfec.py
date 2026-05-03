@@ -55,4 +55,5 @@ def transform_decfec(df: pd.DataFrame):
             
     result = build_transform_result(valid_docs, rejected_docs, total_input)
     result["contract_version"] = TRANSFORM_CONTRACT_VERSION
+    logger.info(f"Transformer completo: {len(valid_docs)} validos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return result

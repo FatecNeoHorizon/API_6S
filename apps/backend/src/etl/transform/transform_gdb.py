@@ -89,4 +89,5 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
             logger.error(f"Erro no processamento da linha: {str(e)}")
             rejected_docs.append({"row": row, "reason": f"Exception: {str(e)}"})
 
+    logger.info(f"Transformer completo para {layer_name}: {len(valid_docs)} válidos, {len(rejected_docs)} rejeitados, do {total_input} total")
     return build_transform_result(valid_docs, rejected_docs, total_input)

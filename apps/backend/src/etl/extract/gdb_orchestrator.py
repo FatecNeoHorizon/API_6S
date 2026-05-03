@@ -80,16 +80,6 @@ def run_extraction(db: Database, path: Path, load_id: str):
             # 3. Transformação
             transform_result = transform_gdb(chunk, layer_name, geodatabase_id)
 
-            # ← adiciona isso temporariamente
-            logger.info(
-                f"[DEBUG] Layer: {layer_name} | "
-                f"valid: {transform_result['stats']['total_valid']} | "
-                f"rejected: {transform_result['stats']['total_rejected']} | "
-                f"primeiro_doc: {transform_result['valid'][0] if transform_result['valid'] else 'NENHUM'} | "
-                f"primeira_rejeicao: {transform_result['rejected'][0] if transform_result['rejected'] else 'NENHUMA'}"
-            )
-
-
             if transform_result["rejected"]:
                 for rej in transform_result["rejected"]:
                     logger.warning(

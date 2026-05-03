@@ -17,7 +17,7 @@ def bulk_persist(
     if not docs:
         logger.warning(f"[bulk_persist] Nenhum documento recebido para '{collection.name}'.")
         return {"inserted": 0, "updated": 0, "matched": 0, "rejected": 0}
-    
+
     batch_size = int(os.getenv("ETL_BULK_PERSIST_BATCH_SIZE", DEFAULT_BATCH_SIZE))
 
     total_inserted = 0

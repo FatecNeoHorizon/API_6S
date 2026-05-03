@@ -23,8 +23,7 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
     for row in chunk.to_dict(orient="records"):
         try:
             if layer_name == "CONJ":
-                # Mapeamento para Conjuntos
-                conj_name = _to_str(row.get("NOM")) # Use nomes específicos para evitar confusão
+                conj_name = _to_str(row.get("NOM"))
                 code = _to_str(row.get("COD_ID"))
 
                 if not conj_name or not code:
@@ -37,7 +36,7 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
                     "name": conj_name,
                     "code": code,
                     "geometry": row.get("geometry_geojson"),
-                    "geodatabase_id": ObjectId(geodatabase_id),  # ← adiciona aqui também
+                    "geodatabase_id": ObjectId(geodatabase_id),
                     "layer_source": layer_name
                 })
 

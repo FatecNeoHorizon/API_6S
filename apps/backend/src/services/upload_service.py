@@ -7,6 +7,8 @@ from collections.abc import Iterator
 
 from src.etl.utils.contract import TRANSFORM_CONTRACT_VERSION
 
+from src.etl.reconcile.reconcile import run_reconciliation
+
 # Importação dos extratores
 from src.etl.extract.extract_energy_losses import extract_losses
 from src.etl.extract.extract_decfec import extract_decfec
@@ -124,7 +126,6 @@ def register_upload_start(
             logger.error(f"[upload_service] Falha ao registrar load_history para '{file_key}'")
     return registered
 
-
 def _validate_transform_contract(file_key: str, transformed: Any) -> dict[str, Any]:
     if not isinstance(transformed, dict):
         raise ValueError(f"[{file_key}] Transform result must be a dict.")
@@ -170,34 +171,28 @@ def _validate_transform_contract(file_key: str, transformed: Any) -> dict[str, A
 
     return transformed
 
+import shutil
+
 def run_etl(db, load_ids, paths, upload_dir):
 
     ordered_keys = [k for k in PROCESSING_ORDER if k in paths]
     remaining = [k for k in paths if k not in PROCESSING_ORDER]
     ordered_paths = {k: paths[k] for k in ordered_keys + remaining}
 
-    # Aqui, chegam os arquivos do upload. É uma lista com os ids de cada arquivo e seus respectivos caminhos.
     for file_key, path in ordered_paths.items():
         load_id = load_ids.get(file_key)
 
-        # Aqui são chamados os extratores. É passado um file_key para identificar qual extrator deve ser chamado para cada arquivo,
-        # o caminho do arquivo e o load_id para atualizar o status no banco.
         extractor = EXTRACTOR_MAP.get(file_key)
         if not extractor:
             continue
         
         try:
-
-            # Aqui, é atualizado o status do load_history.
             update_load_history(db, load_id, "PROCESSING")
 
-            # Se for o gdb, é chamado seu extrator específico.
             if file_key == "gdb":
                 extractor(db, path, load_id)
             
-            # Se não, aqui será definido qual extrator será chamado.
             else:
-                # Aqui se garante que existe un transform para aquele arquivo. Se não tiver, é lançada uma exceção.
                 transformer = TRANSFORMER_MAP.get(file_key)
                 if transformer is None:
                     raise ValueError(f"[{file_key}] Mapeamento de transformador ausente.")
@@ -258,7 +253,18 @@ def run_etl(db, load_ids, paths, upload_dir):
                     },
                 )
 
-                update_load_history(db, load_id, "SUCCESS")
+                reconciliation = run_reconciliation(db, file_key, load_id)
+
+                final_status = "SUCCESS"
+                if reconciliation.get("status") == "WARNING":
+                    final_status = "SUCCESS_WITH_WARNINGS"
+
+                update_load_history(
+                    db,
+                    load_id,
+                    final_status,
+                    {"reconciliation": reconciliation} if reconciliation else None,
+                )
 
         except Exception as e:
             logger.exception(
@@ -274,6 +280,15 @@ def run_etl(db, load_ids, paths, upload_dir):
                 {"error_message": f"[{file_key}] {e.__class__.__name__}: {e}"},
             )
 
+    # Limpeza da pasta temporária após o processamento de todos os arquivos
+    try:
+        upload_path = Path(upload_dir)
+        if upload_path.exists():
+            shutil.rmtree(upload_path)
+            logger.info(f"[run_etl] Pasta temporária removida: {upload_dir}")
+    except Exception as e:
+        logger.warning(f"[run_etl] Falha ao remover pasta temporária '{upload_dir}': {e}")
+        
 def get_upload_status(db: Database, load_id: str) -> dict | None:
     load_history = get_load_history(db, load_id)
     
@@ -303,7 +318,8 @@ def get_upload_status(db: Database, load_id: str) -> dict | None:
                 else load_history.get("total_rejected")
             ),
             "chunks_completed": db_metrics.get("chunks_completed") or load_history.get("chunks_completed"),
-        }
+        },
+        "reconciliation": load_history.get("reconciliation"),  # ← adicionar
     }
 
     logger.info(f"[FETCH_STATUS] Resposta final montada: {response}")

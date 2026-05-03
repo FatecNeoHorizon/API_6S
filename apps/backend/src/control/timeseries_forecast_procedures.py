@@ -277,6 +277,70 @@ class TimeSeriesForecastProcedures:
                 "message": f"Forecast generation failed: {str(exc)}",
             }
     
+    def generate_forecasts_for_persistence(
+        self,
+        model,
+        consumer_unit_set_id: str,
+        indicator_type_code: str,
+        year_start: int,
+        year_end: int,
+        n_lags: int = 12,
+    ) -> dict:
+        """
+        Generate forecasts formatted for MongoDB persistence.
+        
+        Returns list of documents with structure:
+        {
+            "consumer_unit_set_id": str,
+            "indicator": str,
+            "forecast_date": str (YYYY-MM-DD),
+            "forecast_value": float,
+            "model": str,
+            "generated_on": datetime
+        }
+        """
+        forecast_months = _settings.model_forecast_months
+        
+        # Get forecast result using existing method
+        forecast_result = self.generate_forecasts(
+            model=model,
+            consumer_unit_set_id=consumer_unit_set_id,
+            indicator_type_code=indicator_type_code,
+            year_start=year_start,
+            year_end=year_end,
+            n_lags=n_lags,
+            forecast_months=forecast_months,
+        )
+        
+        if not forecast_result["success"]:
+            return {
+                "success": False,
+                "predictions": [],
+                "message": forecast_result["message"],
+            }
+        
+        forecasts = forecast_result["forecasts"]
+        now = datetime.now(timezone.utc)
+        
+        # Transform to persistence format
+        predictions = []
+        for forecast in forecasts:
+            prediction = {
+                "consumer_unit_set_id": consumer_unit_set_id,
+                "indicator": indicator_type_code,
+                "forecast_date": forecast["data"],  # Already in YYYY-MM-DD format
+                "forecast_value": forecast["previsao"],
+                "model": "RandomForestRegressor",
+                "generated_on": now,
+            }
+            predictions.append(prediction)
+        
+        return {
+            "success": True,
+            "predictions": predictions,
+            "message": f"Generated {len(predictions)} predictions for persistence",
+        }
+    
     def forecast_for_unit(
         self,
         consumer_unit_set_id: str,
@@ -359,6 +423,7 @@ class TimeSeriesForecastProcedures:
                 indicator_type_code=indicator,
                 year_start=year_start,
                 year_end=year_end,
+                forecast_months=_settings.model_forecast_months,
             )
             
             if not forecast_result["success"]:

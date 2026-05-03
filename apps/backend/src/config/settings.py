@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
 
+    # File Upload Settings
+    csv_file_path: str = Field(default="/app/data/indicadores-continuidade-coletivos-2020-2029.csv")
     max_upload_size_mb: int = Field(default=500)
     tmp_upload_path: str = Field(default="tmp/uploads")
 

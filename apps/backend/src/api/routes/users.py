@@ -1,6 +1,6 @@
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from typing import List
 from uuid import UUID
 
@@ -52,9 +52,11 @@ def get_user(user_uuid: UUID):
 
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreateRequest):
+def create_user(payload: UserCreateRequest, request: Request):
     try:
-        result = create_user_service(payload)
+        source_ip = request.client.host if request.client else "0.0.0.0"
+        user_agent = request.headers.get("user-agent", "")
+        result = create_user_service(payload, source_ip=source_ip, user_agent=user_agent)
         log.info(USER_CREATED, user_id=str(result.user_uuid), profile_id=str(result.profile_id))
         return result
     except UserAlreadyExistsError as exc:

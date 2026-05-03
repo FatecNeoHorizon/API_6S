@@ -20,8 +20,7 @@ from src.etl.transform.transform_energy_losses import transform_energy_losses
 from src.repositories.load_history_repository import (
     insert_load_history,
     update_load_history,
-    get_load_history,
-    get_load_history_by_batch,
+    get_load_history
 )
 
 # Importação dos carregadores

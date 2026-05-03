@@ -28,12 +28,18 @@ def update_load_history(
         "status": status,
         "finished_at": datetime.now(timezone.utc)
     }
+
+    ROOT_FIELDS = {"reconciliation"}
+
     if status == "SUCCESS" or status == "ERROR":
         update_data["finished_at"] = datetime.now(timezone.utc)
 
     if extra_fields:
         for key, value in extra_fields.items():
-            update_data[f"metrics.{key}"] = value
+            if key in ROOT_FIELDS:
+                update_data[key] = value
+            else:
+                update_data[f"metrics.{key}"] = value
 
     update = {"$set": update_data}
 

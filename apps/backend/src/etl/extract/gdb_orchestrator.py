@@ -115,12 +115,12 @@ def run_extraction(db: Database, path: Path, load_id: str):
             update_load_history(db, load_id, "PROCESSING", current_metrics)
             
         final_metrics = {
-            "total_processed": total_processed,
-            "total_valid": total_valid,
-            "total_rejected": total_rejected,
+            "total_processed":  total_processed,
+            "total_valid":      total_valid,
+            "total_rejected":   total_rejected,
             "chunks_completed": chunks_completed,
-            "total_inserted": total_inserted,
-            "total_updated": total_updated
+            "total_inserted":   total_inserted,
+            "total_updated":    total_updated,
         }
 
         logger.info(f"[DONE] Enviando métricas finais: {final_metrics}")

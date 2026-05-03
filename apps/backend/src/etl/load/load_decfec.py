@@ -1,3 +1,4 @@
+import os
 import logging
 from pymongo.collection import Collection
 from pymongo import UpdateOne
@@ -5,6 +6,8 @@ from pymongo.errors import BulkWriteError
 from src.etl.utils.bulk_persist import bulk_persist
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BATCH_SIZE = 1000
 
 FILTER_KEYS = [
     "agent_acronym",
@@ -40,7 +43,6 @@ def load_decfec(
             "value":               doc.get("value"),
         }
 
-        # Só faz push se ainda não existe entrada com essa chave composta
         operations.append(
             UpdateOne(
                 {
@@ -61,12 +63,15 @@ def load_decfec(
         )
 
     if operations:
+        batch_size = int(os.getenv("ETL_BULK_PERSIST_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         try:
-            result = conj_collection.bulk_write(operations, ordered=False)
-            logger.info(
-                f"[load_decfec] conj.distribution_indices — "
-                f"matched: {result.matched_count}, modified: {result.modified_count}"
-            )
+            for i in range(0, len(operations), batch_size):
+                batch = operations[i:i + batch_size]
+                result = conj_collection.bulk_write(batch, ordered=False)
+                logger.info(
+                    f"[load_decfec] conj.distribution_indices batch {i//batch_size + 1} — "
+                    f"matched: {result.matched_count}, modified: {result.modified_count}"
+                )
         except BulkWriteError as e:
             logger.error(f"[load_decfec] BulkWriteError em conj: {e.details}")
 

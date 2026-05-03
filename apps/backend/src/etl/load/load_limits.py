@@ -1,9 +1,12 @@
+import os
 import logging
 from pymongo.collection import Collection
 from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BATCH_SIZE = 1000
 
 def load_limits(
     transform_result: dict,
@@ -13,6 +16,7 @@ def load_limits(
     logger.info(f"[load_limits] {len(docs)} documentos recebidos.")
 
     operations = []
+
     for doc in docs:
         code                = doc.get("code")
         indicator_type_code = doc.get("indicator_type_code")
@@ -32,7 +36,6 @@ def load_limits(
             "criticality":         None,
         }
 
-        # Só faz push se ainda não existe entrada com essa chave composta
         operations.append(
             UpdateOne(
                 {
@@ -55,16 +58,19 @@ def load_limits(
     total_rejected = 0
 
     if operations:
+        batch_size = int(os.getenv("ETL_BULK_PERSIST_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         try:
-            result = conj_collection.bulk_write(operations, ordered=False)
-            total_modified = result.modified_count
-            logger.info(
-                f"[load_limits] conj.annual_summaries — "
-                f"matched: {result.matched_count}, modified: {result.modified_count}"
-            )
+            for i in range(0, len(operations), batch_size):
+                batch = operations[i:i + batch_size]
+                result = conj_collection.bulk_write(batch, ordered=False)
+                total_modified += result.modified_count
+                logger.info(
+                    f"[load_limits] conj.annual_summaries batch {i//batch_size + 1} — "
+                    f"matched: {result.matched_count}, modified: {result.modified_count}"
+                )
         except BulkWriteError as e:
-            total_rejected = len(e.details.get("writeErrors", []))
-            total_modified = e.details.get("nModified", 0)
+            total_rejected += len(e.details.get("writeErrors", []))
+            total_modified += e.details.get("nModified", 0)
             logger.error(f"[load_limits] BulkWriteError em conj: {e.details}")
 
     metrics = {

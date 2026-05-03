@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import LoginPage from "../pages/dashboard/login/LoginPage";
+import LoginPage from "../pages/login/LoginPage";
 import PrimeiroAcessoPage from "../pages/login/PrimeiroAcessoPage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";

@@ -15,6 +15,7 @@ import {
 import PropTypes from "prop-types"
 import { toast } from "sonner"
 
+import { firstAccess } from "@/api/auth"
 import { getPendingConsent, submitConsent } from "@/api/consent"
 import { getTerms } from "@/api/terms"
 import { Button } from "@/components/ui/button"
@@ -63,6 +64,8 @@ function PasswordStep({
   setPassword,
   setConfirmPassword,
   onSubmit,
+  submitting,
+  tokenMissing,
 }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -150,9 +153,9 @@ function PasswordStep({
       <Button
         type="submit"
         className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90"
-        disabled={!allRequirementsMet || !passwordsMatch}
+        disabled={!allRequirementsMet || !passwordsMatch || submitting || tokenMissing}
       >
-        Continuar
+        {submitting ? "Validando..." : "Continuar"}
       </Button>
     </form>
   )
@@ -176,6 +179,8 @@ PasswordStep.propTypes = {
   setPassword: PropTypes.func.isRequired,
   setConfirmPassword: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
+  submitting: PropTypes.bool.isRequired,
+  tokenMissing: PropTypes.bool.isRequired,
 }
 
 function ConsentStep({
@@ -185,6 +190,7 @@ function ConsentStep({
   expandedVersionIds,
   allClauses,
   allClausesAccepted,
+  consentToken,
   loadingTerms,
   loadError,
   submittingConsent,
@@ -382,6 +388,7 @@ ConsentStep.propTypes = {
   expandedVersionIds: PropTypes.instanceOf(Set).isRequired,
   allClauses: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   allClausesAccepted: PropTypes.bool.isRequired,
+  consentToken: PropTypes.string.isRequired,
   loadingTerms: PropTypes.bool.isRequired,
   loadError: PropTypes.string.isRequired,
   submittingConsent: PropTypes.bool.isRequired,
@@ -402,7 +409,7 @@ export default function PrimeiroAcessoPage() {
     searchParams.get("access_token") ||
     searchParams.get("accessToken") ||
     ""
-  const [consentToken, setConsentToken] = useState(() => emailLinkToken)
+  const [consentToken, setConsentToken] = useState("")
   const [step, setStep] = useState("senha")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -415,15 +422,8 @@ export default function PrimeiroAcessoPage() {
   const [loadingTerms, setLoadingTerms] = useState(true)
   const [loadError, setLoadError] = useState("")
   const [submittingConsent, setSubmittingConsent] = useState(false)
-
-  useEffect(() => {
-    if (!emailLinkToken) {
-      return
-    }
-
-    sessionStorage.setItem("session_uuid", emailLinkToken)
-    setConsentToken(emailLinkToken)
-  }, [emailLinkToken])
+  const [submittingFirstAccess, setSubmittingFirstAccess] = useState(false)
+  const tokenMissing = !emailLinkToken
 
   const passwordRequirements = [
     { label: "Minimo 8 caracteres", valid: password.length >= 8 },
@@ -442,7 +442,9 @@ export default function PrimeiroAcessoPage() {
   )
   const allClausesAccepted =
     allClauses.length > 0 &&
-    allClauses.every((clause) => selectedClauseIds.has(String(clause.clause_uuid)))
+    allClauses
+      .filter((clause) => clause.mandatory)
+      .every((clause) => selectedClauseIds.has(String(clause.clause_uuid)))
 
   async function fetchTermsAndConsentData() {
     try {
@@ -476,10 +478,39 @@ export default function PrimeiroAcessoPage() {
     setExpandedVersionIds(new Set([String(terms[0].policy_version_id)]))
   }, [terms])
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault()
-    if (allRequirementsMet && passwordsMatch) {
+
+    if (tokenMissing) {
+      toast.error("Abra o link de primeiro acesso enviado por e-mail.")
+      return
+    }
+
+    if (!allRequirementsMet || !passwordsMatch || submittingFirstAccess) {
+      return
+    }
+
+    try {
+      setSubmittingFirstAccess(true)
+
+      const response = await firstAccess({
+        token: emailLinkToken,
+        new_password: password,
+      })
+
+      const accessToken = response.access_token
+
+      sessionStorage.setItem("access_token", accessToken)
+      sessionStorage.setItem("token", accessToken)
+      sessionStorage.setItem("session_uuid", accessToken)
+
+      setConsentToken(accessToken)
+      setPendingClauses(response.pending_clauses || [])
       setStep("termos")
+    } catch {
+      toast.error("Não foi possível concluir o primeiro acesso.")
+    } finally {
+      setSubmittingFirstAccess(false)
     }
   }
 
@@ -577,7 +608,7 @@ export default function PrimeiroAcessoPage() {
         </CardHeader>
 
         <CardContent>
-          {!consentToken && (
+          {tokenMissing && (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
               Este fluxo precisa ser aberto pelo link de primeiro acesso enviado por e-mail.
             </div>
@@ -597,6 +628,8 @@ export default function PrimeiroAcessoPage() {
               setPassword={setPassword}
               setConfirmPassword={setConfirmPassword}
               onSubmit={handlePasswordSubmit}
+              submitting={submittingFirstAccess}
+              tokenMissing={tokenMissing}
             />
           ) : (
             <ConsentStep
@@ -606,6 +639,7 @@ export default function PrimeiroAcessoPage() {
               expandedVersionIds={expandedVersionIds}
               allClauses={allClauses}
               allClausesAccepted={allClausesAccepted}
+              consentToken={consentToken}
               loadingTerms={loadingTerms}
               loadError={loadError}
               submittingConsent={submittingConsent}

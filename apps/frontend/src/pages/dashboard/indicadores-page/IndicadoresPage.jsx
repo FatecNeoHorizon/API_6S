@@ -484,8 +484,6 @@ export default function IndicadoresPage() {
   const [perdasLoading, setPerdasLoading] = useState(false);
 
   // TAM/SAM
-  const tamSamPeriodLabel =
-    selectedPeriod ? "2024" : null
 
   const [tamTotal, setTamTotal] = useState(null);
   const [samTotal, setSamTotal] = useState(null);
@@ -825,7 +823,7 @@ export default function IndicadoresPage() {
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {tamSamPeriodLabel ? tamSamPeriodLabel : "Selecione um período"}
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
                     </span>
                   </div>
                 </CardContent>
@@ -843,7 +841,7 @@ export default function IndicadoresPage() {
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {tamSamPeriodLabel ? tamSamPeriodLabel : "Selecione um período"}
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
                     </span>
                   </div>
                 </CardContent>

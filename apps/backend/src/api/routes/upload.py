@@ -8,6 +8,7 @@ from src.services.upload_service import (
     register_upload_start,
     run_etl,
     get_upload_status as fetch_upload_status,
+    get_batch_status as fetch_batch_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,15 +32,15 @@ async def upload_files(
     }
 
     db = get_db()
-    upload_id = generate_load_id()  # ← só para a pasta temp
-    upload_dir = create_upload_dir(upload_id)
+    batch_id  = generate_load_id()
+    upload_dir = create_upload_dir(batch_id)
 
     paths, errors = await process_uploaded_zip(upload_dir, files)
 
     if errors:
         raise HTTPException(status_code=422, detail=errors)
 
-    load_ids = register_upload_start(db, paths)
+    load_ids = register_upload_start(db, paths, batch_id)
 
     background_tasks.add_task(run_etl, db, load_ids, paths, upload_dir)
 
@@ -47,9 +48,20 @@ async def upload_files(
 
     return {
         "status": "STARTED",
+        "batch_id": batch_id, 
         "arquivos_recebidos": list(paths.keys()),
             "load_ids": load_ids,
         }
+
+@router.get("/batch/{batch_id}")
+def get_batch_status_endpoint(batch_id: str):
+    db = get_db()
+    result = fetch_batch_status(db, batch_id)
+
+    if not result:
+        raise HTTPException(status_code=404, detail=f"batch_id '{batch_id}' não encontrado.")
+
+    return result
 
 @router.get("/status/{load_id}")
 def get_upload_status(load_id: str):
@@ -60,3 +72,4 @@ def get_upload_status(load_id: str):
         raise HTTPException(status_code=404, detail=f"load_id '{load_id}' não encontrado.")
 
     return status
+

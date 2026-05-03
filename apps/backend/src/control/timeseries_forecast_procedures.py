@@ -205,7 +205,7 @@ class TimeSeriesForecastProcedures:
         Returns:
             Dictionary with keys:
                 - success (bool)
-                - forecasts (list[dict]): List of {data, previsao}
+                - forecasts (list[dict]): List of {forecast_year, forecast_period, forecast_value}
                 - message (str)
         """
         try:
@@ -245,24 +245,25 @@ class TimeSeriesForecastProcedures:
                     "message": "No valid historical data",
                 }
             
-            historico = list(df_valid["VlrIndiceEnviado"].values)
+            history = list(df_valid["VlrIndiceEnviado"].values)
             last_date = df_valid["data"].iloc[-1]
             
             # Generate forecasts
             forecasts = []
             for m in range(1, forecast_months + 1):
-                nova_data = pd.Timestamp(last_date) + pd.DateOffset(months=m)
-                lags = historico[-n_lags:][::-1]
+                new_date = pd.Timestamp(last_date) + pd.DateOffset(months=m)
+                lags = history[-n_lags:][::-1]
                 pred = model.predict(
                     pd.DataFrame([lags], columns=lag_cols)
                 )[0]
                 
                 forecasts.append({
-                    "data": nova_data.strftime("%Y-%m-%d"),
-                    "previsao": float(pred),
+                    "forecast_year": int(new_date.year),
+                    "forecast_period": int(new_date.month),
+                    "forecast_value": float(pred),
                 })
                 
-                historico.append(pred)
+                history.append(pred)
             
             return {
                 "success": True,
@@ -286,19 +287,6 @@ class TimeSeriesForecastProcedures:
         year_end: int,
         n_lags: int = 12,
     ) -> dict:
-        """
-        Generate forecasts formatted for MongoDB persistence.
-        
-        Returns list of documents with structure:
-        {
-            "consumer_unit_set_id": str,
-            "indicator": str,
-            "forecast_date": str (YYYY-MM-DD),
-            "forecast_value": float,
-            "model": str,
-            "generated_on": datetime
-        }
-        """
         forecast_months = _settings.model_forecast_months
         
         # Get forecast result using existing method
@@ -328,8 +316,9 @@ class TimeSeriesForecastProcedures:
             prediction = {
                 "consumer_unit_set_id": consumer_unit_set_id,
                 "indicator": indicator_type_code,
-                "forecast_date": forecast["data"],  # Already in YYYY-MM-DD format
-                "forecast_value": forecast["previsao"],
+                "forecast_year": forecast["forecast_year"],
+                "forecast_period": forecast["forecast_period"],
+                "forecast_value": forecast["forecast_value"],
                 "model": "RandomForestRegressor",
                 "generated_on": now,
             }

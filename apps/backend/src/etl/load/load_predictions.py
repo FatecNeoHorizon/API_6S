@@ -6,7 +6,7 @@ from pymongo.errors import BulkWriteError
 
 logger = logging.getLogger(__name__)
 
-FILTER_KEYS = ["consumer_unit_set_id", "indicator", "forecast_date"]
+FILTER_KEYS = ["consumer_unit_set_id", "indicator", "forecast_year", "forecast_period"]
 
 
 def persist_predictions(
@@ -46,12 +46,6 @@ def persist_predictions(
                 logger.warning(f"[persist_predictions] Document rejected (missing filter keys): {doc}")
                 total_rejected += 1
                 continue
-            
-            # Ensure generated_on is ISO timestamp
-            if isinstance(doc.get("generated_on"), str):
-                doc["generated_on"] = datetime.fromisoformat(doc["generated_on"])
-            elif doc.get("generated_on") is None:
-                doc["generated_on"] = datetime.now(timezone.utc)
             
             operations.append(
                 UpdateOne(filter_doc, {"$set": doc}, upsert=True)

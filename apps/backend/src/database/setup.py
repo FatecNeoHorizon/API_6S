@@ -24,7 +24,7 @@ def setup():
     collections_exist = db.list_collection_names()
 
     for collection_name, setup_fn in COLLECTION_SETUPS:
-        if collection_name not in collections_exist:
+        if collection_name == "predictions" or collection_name not in collections_exist:
             setup_fn(db)
 
     return db

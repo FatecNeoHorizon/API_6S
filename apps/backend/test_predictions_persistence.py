@@ -48,7 +48,8 @@ async def test_predictions_persistence():
     test_doc = {
         "consumer_unit_set_id": "TEST_16648",
         "indicator": "DEC",
-        "forecast_date": "2025-01-15",
+        "forecast_year": 2025,
+        "forecast_period": 1,
         "forecast_value": 1.2345,
         "model": "RandomForestRegressor",
         "generated_on": datetime.utcnow(),
@@ -84,7 +85,8 @@ async def test_predictions_persistence():
             {
                 "consumer_unit_set_id": "TEST_16648",
                 "indicator": "DEC",
-                "forecast_date": "2025-01-15"
+                "forecast_year": 2025,
+                "forecast_period": 1
             },
             {"$set": test_doc},
             upsert=True

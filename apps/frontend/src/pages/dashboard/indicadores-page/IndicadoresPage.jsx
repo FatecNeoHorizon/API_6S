@@ -483,6 +483,49 @@ export default function IndicadoresPage() {
   const [perdasData, setPerdasData] = useState([]);
   const [perdasLoading, setPerdasLoading] = useState(false);
 
+  // TAM/SAM
+
+  const [tamTotal, setTamTotal] = useState(null);
+  const [samTotal, setSamTotal] = useState(null);
+
+  const fetchTamTotal = async() => {
+    const url = `/tam-sam/tam`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setTamTotal(null);
+        return;
+      }
+      setTamTotal(data.tam_total)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  }
+
+  const fetchSamTotal = async(from, to) => {
+
+    const params = new URLSearchParams({year: from.year})
+    const url = `/tam-sam/sam?${params.toString()}`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setSamTotal(null);
+        return;
+      }
+      setSamTotal(data)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  }
+
   // ── DEC/FEC handlers ─────────────────────────────────────────────────────────
   const fetchDecFec = async (from, to) => {
     const url = buildDecFecUrl(from, to);
@@ -519,6 +562,8 @@ export default function IndicadoresPage() {
     const to = currentMonth();
     setMonthRange({ from, to });
     fetchDecFec(from, to);
+    fetchTamTotal();
+    fetchSamTotal(from, to);
   };
 
   const handleMonthRangeChange = (range) => {
@@ -527,6 +572,8 @@ export default function IndicadoresPage() {
     if (range.from && range.to) {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
+      fetchTamTotal();
+      fetchSamTotal(range.from, range.to);
     }
   };
 
@@ -777,8 +824,43 @@ export default function IndicadoresPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    TAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    SAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : samTotal !== null ? samTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             <Card className="bg-card border-border flex-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">

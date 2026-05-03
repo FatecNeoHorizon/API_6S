@@ -13,7 +13,10 @@ pandas
 openpyxl
 geopandas
 pyogrio
+structlog
+python-json-logger
 bcrypt
 cryptography
 pydantic[email]
 pytest
+PyJWT==2.10.1

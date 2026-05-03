@@ -27,7 +27,7 @@ def load_limits(
             "year":                year,
             "limit":               limit,
             "accumulated_value":   None,
-            "periods_count":       0,
+            "periods_count":       1,
             "status":              "partial",
             "criticality":         None,
         }

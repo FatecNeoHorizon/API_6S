@@ -118,7 +118,9 @@ def run_extraction(db: Database, path: Path, load_id: str):
             "total_processed": total_processed,
             "total_valid": total_valid,
             "total_rejected": total_rejected,
-            "chunks_completed": chunks_completed
+            "chunks_completed": chunks_completed,
+            "total_inserted": total_inserted,
+            "total_updated": total_updated
         }
 
         logger.info(f"[DONE] Enviando métricas finais: {final_metrics}")

@@ -117,6 +117,7 @@ class ForgotPasswordRequest(BaseModel):
 class ForgotPasswordResponse(BaseModel):
     detail: str
     dev_reset_token: str | None = None
+    dev_reset_url: str | None = None
 
 
 class ResetPasswordRequest(BaseModel):

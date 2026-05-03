@@ -104,7 +104,9 @@ export default function ConsentPage() {
   )
   const allClausesAccepted =
     allClauses.length > 0 &&
-    allClauses.every((clause) => selectedClauseIds.has(String(clause.clause_uuid)))
+    allClauses
+      .filter((clause) => clause.mandatory)
+      .every((clause) => selectedClauseIds.has(String(clause.clause_uuid)))
 
   useEffect(() => {
     if (terms.length === 0) {

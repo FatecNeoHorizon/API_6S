@@ -22,7 +22,7 @@ def setup_distribution_transformers(db):
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["code", "distributor_code", "substation"],
+                "required": ["code", "distributor_code"],
                 "properties": {
                     "_id": {"bsonType": "objectId"},
                     "code": {

@@ -4,6 +4,8 @@ from src.database.collections.substations import setup_substations
 from src.database.collections.distribution_transformers import setup_distribution_transformers
 from src.database.collections.conj import setup_conj
 from src.database.collections.distribution_indices import setup_distribution_indices
+from src.database.collections.load_history import setup_load_history
+from src.database.collections.geodatabases import setup_geodatabases
 
 COLLECTION_SETUPS = [
     ("energy_losses_tariff", setup_energy_losses_tariff),
@@ -11,6 +13,8 @@ COLLECTION_SETUPS = [
     ("distribution_transformers", setup_distribution_transformers),
     ("conj", setup_conj),
     ("distribution_indices", setup_distribution_indices),
+    ("load_history", setup_load_history),
+    ("geodatabases", setup_geodatabases),
 ]
 
 def setup():

@@ -39,7 +39,7 @@ async def upload_files(
     if errors:
         raise HTTPException(status_code=422, detail=errors)
 
-    load_ids = register_upload_start(db, paths)
+    load_ids = register_upload_start(db, paths, "2036")
 
     background_tasks.add_task(run_etl, db, load_ids, paths, upload_dir)
 

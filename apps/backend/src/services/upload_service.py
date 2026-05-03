@@ -5,14 +5,24 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Iterator
 
+from src.etl.utils.contract import TRANSFORM_CONTRACT_VERSION
+
+# Importação dos extratores
 from src.etl.extract.extract_energy_losses import extract_losses
 from src.etl.extract.extract_decfec import extract_decfec
 from src.etl.extract.extract_limits import extract_limits
 from src.etl.extract.gdb_orchestrator import run_extraction
-from src.etl.contract import TRANSFORM_CONTRACT_VERSION
+
+# Importação dos transformadores
 from src.etl.transform.transform_decfec import transform_decfec
 from src.etl.transform.transform_limits import transform_limits
 from src.etl.transform.transform_energy_losses import transform_energy_losses
+
+# Importação dos carregadores
+from src.etl.load.load_energy_losses import load_energy_losses
+from src.etl.load.load_decfec import load_decfec
+from src.etl.load.load_limits import load_limits
+
 
 from pymongo.database import Database
 
@@ -25,7 +35,7 @@ from src.repositories.load_history_repository import (
 logger = logging.getLogger(__name__)
 
 COLLECTION_MAP = {
-    "energy_losses": "losses",
+    "energy_losses": "energy_losses_tariff",
     "gdb": "gdb",
     "indicadores_continuidade": "distribution_indices",
     "indicadores_continuidade_limite": "conj",
@@ -43,6 +53,13 @@ TRANSFORMER_MAP = {
     "indicadores_continuidade": transform_decfec,
     "indicadores_continuidade_limite": transform_limits,
 }
+
+LOAD_MAP = {
+    "energy_losses": load_energy_losses,
+    "indicadores_continuidade": load_decfec,
+    "indicadores_continuidade_limite": load_limits,
+}
+
 
 def generate_load_id() -> str:
     return uuid.uuid4().hex
@@ -136,28 +153,49 @@ def _validate_transform_contract(file_key: str, transformed: Any) -> dict[str, A
     return transformed
 
 def run_etl(db, load_ids, paths, upload_dir):
+
+    # Aqui, chegam os arquivos do upload. É uma lista com os ids de cada arquivo e seus respectivos caminhos.
     for file_key, path in paths.items():
         load_id = load_ids.get(file_key)
+
+        # Aqui são chamados os extratores. É passado um file_key para identificar qual extrator deve ser chamado para cada arquivo,
+        # o caminho do arquivo e o load_id para atualizar o status no banco.
         extractor = EXTRACTOR_MAP.get(file_key)
         if not extractor:
             continue
+        
         try:
+
+            # Aqui, é atualizado o status do load_history.
             update_load_history(db, load_id, "PROCESSING")
+
+            # Se for o gdb, é chamado seu extrator específico.
             if file_key == "gdb":
                 extractor(db, path, load_id)
+            
+            # Se não, aqui será definido qual extrator será chamado.
             else:
+                # Aqui se garante que existe un transform para aquele arquivo. Se não tiver, é lançada uma exceção.
                 transformer = TRANSFORMER_MAP.get(file_key)
                 if transformer is None:
-                    raise ValueError(f"[{file_key}] Missing transformer mapping.")
+                    raise ValueError(f"[{file_key}] Mapeamento de transformador ausente.")
 
+                load = LOAD_MAP.get(file_key)
+                if load is None:
+                    raise ValueError(f"[{file_key}] Mapeamento de carregador ausente.")
+                
                 result = extractor(path)
                 if not isinstance(result, Iterator):
-                    raise ValueError(f"[{file_key}] Extractor must return an iterator of chunks.")
-
-                chunks_completed = 0
+                    raise ValueError(f"[{file_key}] O extrator deve retornar um iterador de chunks.")
+                
                 total_processed = 0
                 total_valid = 0
+                total_inserted = 0
                 total_rejected = 0
+                total_updated = 0   
+                chunks_completed = 0
+
+                collection_name = COLLECTION_MAP.get(file_key)
 
                 for extracted_chunk in result:
                     chunk_df = extracted_chunk[0] if isinstance(extracted_chunk, tuple) else extracted_chunk
@@ -171,7 +209,16 @@ def run_etl(db, load_ids, paths, upload_dir):
                     contract = _validate_transform_contract(file_key, transformed)
                     stats = contract["stats"]
 
+                    if file_key == "indicadores_continuidade":
+                        load_metrics = load(contract, db[collection_name], db["conj"])
+                    elif file_key == "indicadores_continuidade_limite":
+                        load_metrics = load(contract, db["conj"])
+                    else:
+                        load_metrics = load(contract, db[collection_name])
+
                     total_valid += stats["total_valid"]
+                    total_inserted += load_metrics["inserted"]
+                    total_updated  += load_metrics["updated"]
                     total_rejected += stats["total_rejected"]
                     chunks_completed += 1
 
@@ -182,12 +229,15 @@ def run_etl(db, load_ids, paths, upload_dir):
                     {
                         "total_processed": total_processed,
                         "total_valid": total_valid,
+                        "total_inserted": total_inserted,
+                        "total_updated": total_updated,
                         "total_rejected": total_rejected,
                         "chunks_completed": chunks_completed,
                     },
                 )
 
                 update_load_history(db, load_id, "SUCCESS")
+
         except Exception as e:
             logger.exception(
                 "[upload_service] ETL falhou para file_key='%s', load_id='%s', path='%s'",

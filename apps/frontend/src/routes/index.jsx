@@ -1,4 +1,6 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import LoginPage from "../pages/login/LoginPage";
+import PrimeiroAcessoPage from "../pages/login/PrimeiroAcessoPage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";
 import EstruturaRedesPage from "../pages/dashboard/estrutura-redes-page/EstruturaRedesPage";
@@ -15,6 +17,9 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/first-access" element={<PrimeiroAcessoPage />} />
+        <Route path="/primeiro-acesso" element={<Navigate to="/first-access" replace />} />
         <Route path="/" element={<Navigate to="/dashboard/indicadores" replace />} />
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route path="indicadores" element={<IndicadoresPage />} />

@@ -171,22 +171,55 @@ This section documents backend API endpoints for developers, including upload pr
         - `indicadores_continuidade_limite` (`.csv`)
     - Response payload:
         - `status`: upload execution state initialization (`STARTED`)
+        - `batch_id`: unique identifier for the batch upload session
         - `arquivos_recebidos`: list of successfully validated file keys
         - `load_ids`: dictionary mapping `file_key -> load_id`
 
-- `GET /upload/status/{load_id}`
+- `GET /upload/batch/{batch_id}`
+    - Returns aggregated status and reconciliation results for all loads within a batch.
+    - Returns `404` when `batch_id` does not exist.
+    - Response includes individual load statuses, metrics, and reconciliation warnings.
+
+- `GET /upload/status/{load_id}` *(Legacy endpoint)*
     - Returns load execution status from `load_history`.
     - Returns `404` when `load_id` does not exist.
     - When status is `ERROR`, includes `error_message`.
+    - When status is `SUCCESS_WITH_WARNINGS`, includes `reconciliation` object with validation results.
 
 ### Processing Flow
 
-1. **Temporary File Management**: To ensure system security and cleanliness, each upload operates within an isolated temporary directory (`tmp/uploads/{upload_id}`). This directory is created at the beginning of the process and **automatically destroyed** at the end, even in case of failures, through an asynchronous context manager.
-2. Each provided file is validated and read in memory.
-3. Valid files are persisted to disk inside the temporary folder.
-4. For `gbd`, ZIP content is extracted into a dedicated directory, and the `.gdb` path is used for ETL input.
-5. A `load_history` document is created per accepted file (`file_key`).
-6. **Asynchronous Task Scheduling**: A background task is scheduled to execute ETL processing. This allows the API to return an immediate response to the client (`202 Accepted`) while the data processing occurs independently in a dedicated worker.
+1. **Batch Initialization**: Each upload receives a unique `batch_id` that groups all files in that submission for unified tracking and monitoring.
+2. **Temporary File Management**: To ensure system security and cleanliness, each upload operates within an isolated temporary directory (`tmp/uploads/{batch_id}`). This directory is created at the beginning of the process and **automatically destroyed** at the end, even in case of failures.
+3. Each provided file is validated and read in memory.
+4. Valid files are persisted to disk inside the temporary folder.
+5. For `gdb`, ZIP content is extracted into a dedicated directory, and the `.gdb` path is used for ETL input.
+6. A `load_history` document is created per accepted file (`file_key`), linked to the batch via `batch_id`.
+7. **Asynchronous Task Scheduling**: A background task is scheduled to execute ETL processing. This allows the API to return an immediate response to the client (`202 Accepted`) while the data processing occurs independently in a dedicated worker.
+
+### ETL Pipeline Completion & Reconciliation
+
+After all files in a batch have been processed through the Extract, Transform, and Load phases:
+
+1. **Data Reconciliation**: The system executes post-ETL validation checks to ensure data integrity:
+   - Validates relationships between loaded datasets (e.g., `indicadores_continuidade` codes must exist in `distribution_indices`).
+   - Aggregates validation results per file type.
+   - Determines overall status: `OK` (no issues) or `WARNING` (issues detected).
+
+2. **Status Determination**:
+   - `SUCCESS`: All files loaded successfully with no validation issues.
+   - `SUCCESS_WITH_WARNINGS`: All files loaded, but reconciliation detected inconsistencies.
+   - `PARTIAL`: Some files succeeded, others failed.
+   - `ERROR`: Critical failure during processing.
+
+3. **Temporary Directory Cleanup**:
+   - After all ETL operations complete (success or failure), the temporary directory is automatically removed.
+   - Cleanup is non-blocking and does not affect the upload result.
+   - Cleanup failures are logged as warnings and do not cause the upload to fail.
+
+4. **Load History Update**:
+   - Each load record is updated with final metrics (total processed, valid, rejected, inserted, updated).
+   - For file types with reconciliation checks, the `reconciliation` object is stored at the root level of the load history document.
+   - The `batch_id` links all individual load records, enabling batch-level status queries.
 
 ### Validation Rules
 
@@ -222,12 +255,17 @@ Upload behavior is controlled by backend settings:
 
 - `max_upload_size_mb`: maximum accepted upload size per file
 - `tmp_upload_path`: base path for temporary upload folders
+- `ETL_BULK_PERSIST_BATCH_SIZE`: batch size for bulk database operations (default: `1000` records per batch)
 
 ### Operational Notes for Developers
 
-- The current asynchronous worker function is a placeholder and marks load status as `SUCCESS` after scheduling flow execution.
-- Load tracking is stored in `load_history`, enabling status polling independent of request lifecycle.
-- Upload temporary folders are managed by context manager and cleaned up automatically.
+- Each batch upload receives a unique `batch_id` for unified tracking across all files in that submission.
+- Load tracking is stored in `load_history` with a reference to `batch_id`, enabling both individual and batch-level status polling.
+- Upload temporary folders are automatically removed after ETL completion, regardless of outcome.
+- The `SUCCESS_WITH_WARNINGS` status indicates that while data was successfully loaded, reconciliation checks detected potential data quality issues that require review.
+- Reconciliation results are included in the load status response (`GET /upload/status/{load_id}`) when present, allowing clients to inspect validation warnings.
+- Bulk write operations are executed in configurable batches to prevent memory exhaustion with large datasets.
+- Error details from failed bulk operations are logged with line-by-line tracking for debugging.
 
 ### User Data Storage Context
 
@@ -248,4 +286,4 @@ Full documentation: [`docs/LOGGING.md`](../docs/LOGGING.md)
 
 ---
 
-*Last updated: 04/26/2026*
+*Last updated: 05/03/2026*

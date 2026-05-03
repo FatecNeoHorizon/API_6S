@@ -14,6 +14,7 @@ FILTER_KEYS = [
     "period",
 ]
 
+
 def load_decfec(
         transform_result: dict,
         collection: Collection,

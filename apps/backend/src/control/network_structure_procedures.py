@@ -78,14 +78,11 @@ class NetworkStructureProcedures():
             alerts=qtd_alert
         )
 
-    def get_assets(self, region=None, type=None, status=None) -> List[NetworkAsset]:
+    def get_assets(self, region=None, type=None, status=None, search=None, page=1, page_size=10) -> dict:
         transformer_filter = {}
-        substations_filter = {}
 
         if region:
             transformer_filter["location_area"] = region
-        if status:
-            transformer_filter["status"] = status
 
         projection = {
             "code": 1,
@@ -98,11 +95,9 @@ class NetworkStructureProcedures():
         }
 
         result = []
-    
+
         if type is None or type == "transformer":
-            transformers = self.db["distribution_transformers"].find(
-                transformer_filter, projection
-            )
+            transformers = self.db["distribution_transformers"].find(transformer_filter, projection)
             for t in transformers:
                 result.append(NetworkAsset(
                     type="transformer",
@@ -114,8 +109,9 @@ class NetworkStructureProcedures():
                     load_kw=(t.get("iron_losses_kw") or 0) + (t.get("copper_losses_kw") or 0),
                     coordinates=t.get("geometry", {}).get("coordinates")
                 ))
+
         if type is None or type == "substation":
-            substations = self.db["substations"].find(substations_filter, projection)
+            substations = self.db["substations"].find({}, projection)
             for s in substations:
                 result.append(NetworkAsset(
                     type="substation",
@@ -128,7 +124,20 @@ class NetworkStructureProcedures():
                     coordinates=None
                 ))
 
-        return result
+        if status:
+            result = [a for a in result if a.status == status]
+
+        if search:
+            q = search.strip().lower()
+            result = [
+                a for a in result
+                if (a.description and q in a.description.lower())
+                or (a.code and q in a.code.lower())
+            ]
+
+        total = len(result)
+        start = (page - 1) * page_size
+        return {"total": total, "page": page, "page_size": page_size, "data": result[start:start + page_size]}
     
     def get_transformer_detail(self, transformer_id) -> NetworkTransformerDetail:
         transformer = self.db["distribution_transformers"].find_one(

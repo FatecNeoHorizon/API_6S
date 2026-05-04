@@ -67,7 +67,6 @@ def get_batch_status_endpoint(batch_id: str):
 def get_upload_status(load_id: str):
     db = get_db()
     status = fetch_upload_status(db, load_id)
-
     if not status:
         raise HTTPException(status_code=404, detail=f"load_id '{load_id}' não encontrado.")
 

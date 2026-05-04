@@ -86,10 +86,14 @@ share/python-wheels/
 MANIFEST
 
 # 4.3 NODE / FRONTEND
-node_modules/           # npm dependencies
-jspm_packages/          # JSPM packages
-.npm                    # npm cache
-.pnpm-debug.log*        # pnpm logs
+# npm dependencies
+node_modules/
+# JSPM packages
+jspm_packages/
+# npm cache
+.npm
+# pnpm logs
+.pnpm-debug.log*
 
 ################################################################################
 # 5. DEPENDÊNCIAS E LOCK FILES (NOTA: git track normal, mas inclusos para referência)

@@ -8,6 +8,32 @@ from src.config.settings import Settings
 router = APIRouter()
 _settings = Settings()
 
+def build_year_period_filter(year_min, period_min, year_max, period_max):
+    if not all(v is not None for v in (year_min, period_min, year_max, period_max)):
+        return {
+            "period": {"$gte": period_min, "$lte": period_max},
+            "year": {"$gte": year_min, "$lte": year_max},
+        }
+
+    start = (year_min, period_min)
+    end = (year_max, period_max)
+    if start > end:
+        year_min, period_min, year_max, period_max = year_max, period_max, year_min, period_min
+
+    if year_min == year_max:
+        return {
+            "year": year_min,
+            "period": {"$gte": period_min, "$lte": period_max},
+        }
+
+    return {
+        "$or": [
+            {"year": year_min, "period": {"$gte": period_min}},
+            {"year": {"$gt": year_min, "$lt": year_max}},
+            {"year": year_max, "period": {"$lte": period_max}},
+        ]
+    }
+
 def get_latest_csv_path(pattern: str) -> Path:
     tmp = Path(_settings.tmp_upload_path)
     candidates = list(tmp.rglob(pattern))
@@ -31,9 +57,8 @@ async def get_dec_fec(
         "cnpj_number": cnpj_number,
         "consumer_unit_set_id": consumer_unit_set_id,
         "indicator_type_code": indicator_type_code,
-        "period": {"$gte": period_min, "$lte": period_max},
-        "year": {"$gte": year_min, "$lte": year_max},
     }
+    filter_dict.update(build_year_period_filter(year_min, period_min, year_max, period_max))
     return distribution_indices_procedures.Distribution_indices_procedures().getAll(filter_dict)
 
 @router.get("/test-decfec-file-extraction")

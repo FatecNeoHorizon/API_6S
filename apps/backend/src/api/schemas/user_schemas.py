@@ -42,6 +42,8 @@ class UserCreateResponse(UserBase):
     active: bool
     first_access_completed: bool = False
     created_at: datetime
+    dev_first_access_token: str | None = None
+    dev_first_access_url: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -117,6 +119,7 @@ class ForgotPasswordRequest(BaseModel):
 class ForgotPasswordResponse(BaseModel):
     detail: str
     dev_reset_token: str | None = None
+    dev_reset_url: str | None = None
 
 
 class ResetPasswordRequest(BaseModel):

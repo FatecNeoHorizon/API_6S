@@ -89,7 +89,8 @@ def build_load_document(
     ) -> dict:
     return {
         "load_id": load_id,
-        "batch_id": batch_id,                                          # ← novo
+        "batch_id": batch_id,
+        "file_key": file_key,
         "collection_name": COLLECTION_MAP.get(file_key, file_key),
         "batch_version": batch_version or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "source_file": source_file,
@@ -179,115 +180,116 @@ def run_etl(db, load_ids, paths, upload_dir):
     remaining = [k for k in paths if k not in PROCESSING_ORDER]
     ordered_paths = {k: paths[k] for k in ordered_keys + remaining}
 
-    for file_key, path in ordered_paths.items():
-        load_id = load_ids.get(file_key)
-
-        extractor = EXTRACTOR_MAP.get(file_key)
-        if not extractor:
-            continue
-        
-        try:
-            update_load_history(db, load_id, "PROCESSING")
-
-            if file_key == "gdb":
-                extractor(db, path, load_id)
-            
-            else:
-                transformer = TRANSFORMER_MAP.get(file_key)
-                if transformer is None:
-                    raise ValueError(f"[{file_key}] Mapeamento de transformador ausente.")
-
-                load = LOAD_MAP.get(file_key)
-                if load is None:
-                    raise ValueError(f"[{file_key}] Mapeamento de carregador ausente.")
-                
-                result = extractor(path)
-                if not isinstance(result, Iterator):
-                    raise ValueError(f"[{file_key}] O extrator deve retornar um iterador de chunks.")
-                
-                total_processed = 0
-                total_valid = 0
-                total_inserted = 0
-                total_rejected = 0
-                total_updated = 0   
-                chunks_completed = 0
-
-                collection_name = COLLECTION_MAP.get(file_key)
-
-                for extracted_chunk in result:
-                    chunk_df = extracted_chunk[0] if isinstance(extracted_chunk, tuple) else extracted_chunk
-                    chunk_size = len(chunk_df) if hasattr(chunk_df, "__len__") else 0
-                    total_processed += chunk_size
-
-                    if chunk_size == 0:
-                        continue
-
-                    transformed = transformer(chunk_df)
-                    contract = _validate_transform_contract(file_key, transformed)
-                    stats = contract["stats"]
-
-                    if file_key == "indicadores_continuidade":
-                        load_metrics = load(contract, db[collection_name], db["conj"])
-                    elif file_key == "indicadores_continuidade_limite":
-                        load_metrics = load(contract, db["conj"])
-                    else:
-                        load_metrics = load(contract, db[collection_name])
-
-                    total_valid += stats["total_valid"]
-                    total_inserted += load_metrics["inserted"]
-                    total_updated  += load_metrics["updated"]
-                    total_rejected += stats["total_rejected"]
-                    chunks_completed += 1
-
-                update_load_history(
-                    db,
-                    load_id,
-                    "PROCESSING",
-                    {
-                        "total_processed": total_processed,
-                        "total_valid": total_valid,
-                        "total_inserted": total_inserted,
-                        "total_updated": total_updated,
-                        "total_rejected": total_rejected,
-                        "chunks_completed": chunks_completed,
-                    },
-                )
-
-                reconciliation = run_reconciliation(db, file_key, load_id)
-
-                final_status = "SUCCESS"
-                if reconciliation.get("status") == "WARNING":
-                    final_status = "SUCCESS_WITH_WARNINGS"
-
-                update_load_history(
-                    db,
-                    load_id,
-                    final_status,
-                    {"reconciliation": reconciliation} if reconciliation else None,
-                )
-
-        except Exception as e:
-            logger.exception(
-                "[upload_service] ETL falhou para file_key='%s', load_id='%s', path='%s'",
-                file_key,
-                load_id,
-                path,
-            )
-            update_load_history(
-                db,
-                load_id,
-                "ERROR",
-                {"error_message": f"[{file_key}] {e.__class__.__name__}: {e}"},
-            )
-
-    # Limpeza da pasta temporária após o processamento de todos os arquivos
     try:
-        upload_path = Path(upload_dir)
-        if upload_path.exists():
-            shutil.rmtree(upload_path)
-            logger.info(f"[run_etl] Pasta temporária removida: {upload_dir}")
-    except Exception as e:
-        logger.warning(f"[run_etl] Falha ao remover pasta temporária '{upload_dir}': {e}")
+        for file_key, path in ordered_paths.items():
+            load_id = load_ids.get(file_key)
+
+            extractor = EXTRACTOR_MAP.get(file_key)
+            if not extractor:
+                continue
+
+            try:
+                update_load_history(db, load_id, "PROCESSING")
+
+                if file_key == "gdb":
+                    extractor(db, path, load_id)
+
+                else:
+                    transformer = TRANSFORMER_MAP.get(file_key)
+                    if transformer is None:
+                        raise ValueError(f"[{file_key}] Mapeamento de transformador ausente.")
+
+                    load = LOAD_MAP.get(file_key)
+                    if load is None:
+                        raise ValueError(f"[{file_key}] Mapeamento de carregador ausente.")
+
+                    result = extractor(path)
+                    if not isinstance(result, Iterator):
+                        raise ValueError(f"[{file_key}] O extrator deve retornar um iterador de chunks.")
+
+                    total_processed = 0
+                    total_valid = 0
+                    total_inserted = 0
+                    total_rejected = 0
+                    total_updated = 0
+                    chunks_completed = 0
+
+                    collection_name = COLLECTION_MAP.get(file_key)
+
+                    for extracted_chunk in result:
+                        chunk_df = extracted_chunk[0] if isinstance(extracted_chunk, tuple) else extracted_chunk
+                        chunk_size = len(chunk_df) if hasattr(chunk_df, "__len__") else 0
+                        total_processed += chunk_size
+
+                        if chunk_size == 0:
+                            continue
+
+                        transformed = transformer(chunk_df)
+                        contract = _validate_transform_contract(file_key, transformed)
+                        stats = contract["stats"]
+
+                        if file_key == "indicadores_continuidade":
+                            load_metrics = load(contract, db[collection_name], db["conj"])
+                        elif file_key == "indicadores_continuidade_limite":
+                            load_metrics = load(contract, db["conj"])
+                        else:
+                            load_metrics = load(contract, db[collection_name])
+
+                        total_valid += stats["total_valid"]
+                        total_inserted += load_metrics["inserted"]
+                        total_updated += load_metrics["updated"]
+                        total_rejected += stats["total_rejected"]
+                        chunks_completed += 1
+
+                    update_load_history(
+                        db,
+                        load_id,
+                        "PROCESSING",
+                        {
+                            "total_processed": total_processed,
+                            "total_valid": total_valid,
+                            "total_inserted": total_inserted,
+                            "total_updated": total_updated,
+                            "total_rejected": total_rejected,
+                            "chunks_completed": chunks_completed,
+                        },
+                    )
+
+                    reconciliation = run_reconciliation(db, file_key, load_id)
+
+                    final_status = "SUCCESS"
+                    if reconciliation.get("status") == "WARNING":
+                        final_status = "SUCCESS_WITH_WARNINGS"
+
+                    update_load_history(
+                        db,
+                        load_id,
+                        final_status,
+                        {"reconciliation": reconciliation} if reconciliation else None,
+                    )
+
+            except Exception as e:
+                logger.exception(
+                    "[upload_service] ETL falhou para file_key='%s', load_id='%s', path='%s'",
+                    file_key,
+                    load_id,
+                    path,
+                )
+                update_load_history(
+                    db,
+                    load_id,
+                    "ERROR",
+                    {"error_message": f"[{file_key}] {e.__class__.__name__}: {e}"},
+                )
+
+    finally:
+        try:
+            upload_path = Path(upload_dir)
+            if upload_path.exists():
+                shutil.rmtree(upload_path)
+                logger.info("[run_etl] Pasta temporária removida: %s", upload_dir)
+        except Exception as e:
+            logger.warning("[run_etl] Falha ao remover pasta temporária '%s': %s", upload_dir, e)
         
 def get_upload_status(db: Database, load_id: str) -> dict | None:
     load_history = get_load_history(db, load_id)
@@ -337,7 +339,7 @@ def get_batch_status(db: Database, batch_id: str) -> dict | None:
     statuses = []
 
     for record in records:
-        file_key = record.get("collection_name")
+        file_key = record.get("file_key") or record.get("collection_name")
         status = record.get("status")
         statuses.append(status)
 

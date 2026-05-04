@@ -1,4 +1,4 @@
-from apps.backend.src.etl.transform.transform_gdb import transform_gdb
+from src.etl.transform.transform_gdb import transform_gdb
 from pathlib import Path
 import geopandas as gpd
 

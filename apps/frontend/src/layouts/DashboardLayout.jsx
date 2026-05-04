@@ -10,11 +10,12 @@ import {
   Upload,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  FileText,
   FileSpreadsheet,
   FileArchive,
   Loader2,
   Users, 
-  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -30,16 +31,6 @@ const menuItems = [
     href: "/dashboard/estrutura-redes",
     icon: Network,
   },
-  {
-    label: "Gestão de Usuários",
-    href: "/dashboard/usuarios",
-    icon: Users,
-  },
-  { 
-    label: "Gestão de Termos", 
-    href: "/dashboard/termos", 
-    icon: FileText 
-  },
 ];
 
 const allowedExtensions = [".csv", ".xlsx", ".zip"];
@@ -52,7 +43,6 @@ const REQUIRED_FILES = [
 ];
 const REQUIRED_COUNT = REQUIRED_FILES.length;
 
-// Status por arquivo: idle | uploading | done | error
 function getFileIcon(name) {
   const ext = "." + name.split(".").pop().toLowerCase();
   if (ext === ".csv") return FileText;
@@ -65,6 +55,14 @@ function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileNameToKey(fileName) {
+  if (fileName.includes("Perdas de Energia")) return "energy_losses";
+  if (fileName.includes("gdb") || fileName.includes("EDP_SP_391")) return "gdb";
+  if (fileName.includes("limite")) return "indicadores_continuidade_limite";
+  if (fileName.includes("indicadores-continuidade-coletivos")) return "indicadores_continuidade";
+  return null;
 }
 
 function uploadFormDataWithProgress(formData, onProgress) {
@@ -81,15 +79,13 @@ function uploadFormDataWithProgress(formData, onProgress) {
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          const data = JSON.parse(xhr.responseText);
-          resolve(data);
+          resolve(JSON.parse(xhr.responseText));
         } catch {
           resolve({ message: "Upload concluído" });
         }
       } else {
         try {
-          const errorData = JSON.parse(xhr.responseText);
-          reject({ status: xhr.status, data: errorData });
+          reject({ status: xhr.status, data: JSON.parse(xhr.responseText) });
         } catch {
           reject({ status: xhr.status, message: `Falha no upload: status ${xhr.status}` });
         }
@@ -112,55 +108,54 @@ export default function DashboardLayout() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [appLoadIds, setAppLoadIds] = useState(null);
-
-  // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]
   const [fileList, setFileList] = useState([]);
-
-  const inputRef = useRef(null);
+  const [batchId, setBatchId] = useState(null);
+  const pollingRef = useRef(null);
 
   const resetModal = () => {
     if (isUploading) return;
+    if (pollingRef.current) clearInterval(pollingRef.current);
     setUploadModalOpen(false);
     setFileList([]);
     setDragActive(false);
+    setBatchId(null);
   };
 
-  const validateAndAddFiles = useCallback((newFiles) => {
-    const invalid = [];
-    const valid = [];
+  const validateAndAddFiles = useCallback(
+    (newFiles) => {
+      const invalid = [];
+      const valid = [];
 
-    Array.from(newFiles).forEach((file) => {
-      const ext = "." + file.name.split(".").pop().toLowerCase();
-      if (allowedExtensions.includes(ext)) {
-        valid.push({ file, status: "idle", progress: 0, error: null });
-      } else {
-        invalid.push(file.name);
-      }
-    });
+      Array.from(newFiles).forEach((file) => {
+        const ext = "." + file.name.split(".").pop().toLowerCase();
+        if (allowedExtensions.includes(ext)) {
+          valid.push({ file, status: "idle", progress: 0, error: null, reconciliation: null });
+        } else {
+          invalid.push(file.name);
+        }
+      });
 
-    if (invalid.length > 0) {
-      toast.error(
-        `${invalid.length} arquivo(s) com extensão inválida: ${invalid.join(", ")}. Apenas .csv, .xlsx e .zip são permitidos.`,
-      );
-    }
-
-    if (valid.length > 0) {
-      const existingNames = new Set(fileList.map((f) => f.file.name));
-      const toAdd = valid.filter((v) => !existingNames.has(v.file.name));
-      
-      if (toAdd.length < valid.length) {
-        toast.warning(
-          "Alguns arquivos já foram adicionados e foram ignorados.",
-          { id: "duplicate-file-warning" }
+      if (invalid.length > 0) {
+        toast.error(
+          `${invalid.length} arquivo(s) com extensão inválida: ${invalid.join(", ")}. Apenas .csv, .xlsx e .zip são permitidos.`,
         );
       }
-      
-      if (toAdd.length > 0) {
-        setFileList([...fileList, ...toAdd]);
+
+      if (valid.length > 0) {
+        setFileList((prev) => {
+          const existingNames = new Set(prev.map((f) => f.file.name));
+          const toAdd = valid.filter((v) => !existingNames.has(v.file.name));
+          if (toAdd.length < valid.length) {
+            toast.warning("Alguns arquivos já foram adicionados e foram ignorados.", {
+              id: "duplicate-file-warning",
+            });
+          }
+          return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+        });
       }
-    }
-  }, [fileList]);
+    },
+    [],
+  );
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -181,7 +176,6 @@ export default function DashboardLayout() {
   const handleInputChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       validateAndAddFiles(e.target.files);
-      // Limpa o input para permitir selecionar o mesmo arquivo de novo
       e.target.value = "";
     }
   };
@@ -190,130 +184,125 @@ export default function DashboardLayout() {
     setFileList((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const startPolling = (fileName, loadId) => {
-    const interval = setInterval(async () => {
+  const startBatchPolling = useCallback((id) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+
+    pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/upload/status/${loadId}`);
-        if (!res.ok) throw new Error("Erro ao verificar status");
-        
+        const res = await fetch(`http://localhost:8000/upload/batch/${id}`);
+        if (!res.ok) return; // falha de rede — mantém estado, continua polling
+
         const data = await res.json();
-        
-        if (data.status === "SUCCESS") {
-          clearInterval(interval);
-          setFileList((prev) => prev.map(entry => 
-            entry.file.name === fileName ? { ...entry, status: "done", progress: 100 } : entry
-          ));
-        } else if (data.status === "ERROR") {
-          clearInterval(interval);
-          setFileList((prev) => prev.map(entry => 
-            entry.file.name === fileName ? { ...entry, status: "error", error: data.error_message || "Erro no processamento" } : entry
-          ));
+
+        setFileList((prev) =>
+          prev.map((entry) => {
+            const key = fileNameToKey(entry.file.name);
+            if (!key || !data.files?.[key]) return entry;
+
+            const fileData = data.files[key];
+            const invalid =
+              fileData.reconciliation?.results?.indicadores_conjunto?.invalid ?? 0;
+
+            switch (fileData.status) {
+              case "SUCCESS":
+                return { ...entry, status: "done", progress: 100, reconciliation: null };
+              case "SUCCESS_WITH_WARNINGS":
+                return { ...entry, status: "warning", progress: 100, reconciliation: { invalid } };
+              case "ERROR":
+                return { ...entry, status: "error", error: "Erro no processamento", reconciliation: null };
+              default:
+                return entry;
+            }
+          })
+        );
+
+        if (["SUCCESS", "SUCCESS_WITH_WARNINGS", "ERROR"].includes(data.status)) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setIsUploading(false);
+
+          if (data.status === "SUCCESS") {
+            toast.success("Todos os arquivos processados com sucesso!");
+            setTimeout(() => {
+              setUploadModalOpen(false);
+              setFileList([]);
+            }, 3000);
+          } else if (data.status === "SUCCESS_WITH_WARNINGS") {
+            toast.warning("Processamento concluído com avisos. Verifique os detalhes dos arquivos.");
+          } else {
+            toast.error("Erro no processamento dos arquivos.");
+          }
         }
-        // Se for STARTED ou PROCESSING, continua aguardando
-      } catch (err) {
-        clearInterval(interval);
-        setFileList((prev) => prev.map(entry => 
-          entry.file.name === fileName ? { ...entry, status: "error", error: err.message } : entry
-        ));
+      } catch {
+        // erro de rede — mantém estado, continua polling
       }
-    }, 2000);
-  };
+    }, 5000);
+  }, []);
 
   const handleFileUpload = async () => {
     if (fileList.length === 0) return;
     setIsUploading(true);
 
     const formData = new FormData();
-    
-    setFileList((prev) => prev.map(entry => ({ ...entry, status: "uploading", progress: 0, error: null })));
+    setFileList((prev) =>
+      prev.map((entry) => ({ ...entry, status: "uploading", progress: 0, error: null }))
+    );
 
     fileList.forEach((entry) => {
-      const fileName = entry.file.name;
-      let key = null;
-      if (fileName.includes("Perdas de Energia")) key = "energy_losses";
-      else if (fileName.includes("gdb") || fileName.includes("EDP_SP_391")) key = "gdb";
-      else if (fileName.includes("limite")) key = "indicadores_continuidade_limite";
-      else if (fileName.includes("indicadores-continuidade-coletivos")) key = "indicadores_continuidade";
-      
-      if (key) {
-        formData.append(key, entry.file);
-      }
+      const key = fileNameToKey(entry.file.name);
+      if (key) formData.append(key, entry.file);
     });
 
     try {
       const response = await uploadFormDataWithProgress(formData, (pct) => {
-        setFileList((prev) => prev.map(entry => 
-          (entry.status === "uploading" ? { ...entry, progress: pct } : entry)
-        ));
+        setFileList((prev) =>
+          prev.map((entry) =>
+            entry.status === "uploading" ? { ...entry, progress: pct } : entry
+          )
+        );
       });
 
-      if (response.load_ids) {
-        setAppLoadIds(response.load_ids);
-        
-        setFileList((prev) => prev.map((entry) => {
-          const fileName = entry.file.name;
-          let key = null;
-          if (fileName.includes("Perdas de Energia")) key = "energy_losses";
-          else if (fileName.includes("gdb") || fileName.includes("EDP_SP_391")) key = "gdb";
-          else if (fileName.includes("limite")) key = "indicadores_continuidade_limite";
-          else if (fileName.includes("indicadores-continuidade-coletivos")) key = "indicadores_continuidade";
-          
-          if (key && response.load_ids[key]) {
-             startPolling(entry.file.name, response.load_ids[key]);
-             return { ...entry, status: "processing", progress: 100 };
-          } else {
-             return { ...entry, status: "error", error: "Arquivo não processado pelo servidor" };
-          }
-        }));
+      if (response.batch_id) {
+        setBatchId(response.batch_id);
+        setFileList((prev) =>
+          prev.map((entry) => ({ ...entry, status: "processing", progress: 100 }))
+        );
+        startBatchPolling(response.batch_id);
+      } else {
+        setFileList((prev) =>
+          prev.map((entry) => ({
+            ...entry,
+            status: "error",
+            error: "Resposta inválida do servidor",
+          }))
+        );
+        setIsUploading(false);
+        toast.error("Resposta inválida do servidor.");
       }
-
     } catch (err) {
       let errMsg = "Erro ao enviar arquivos.";
-      if (err.data && err.data.detail) {
-        if (typeof err.data.detail === "string") {
-           errMsg = err.data.detail;
-        } else if (Array.isArray(err.data.detail)) {
-           errMsg = err.data.detail.map(e => e.msg || JSON.stringify(e)).join(", ");
-        }
+      if (err.data?.detail) {
+        if (typeof err.data.detail === "string") errMsg = err.data.detail;
+        else if (Array.isArray(err.data.detail))
+          errMsg = err.data.detail.map((e) => e.msg || JSON.stringify(e)).join(", ");
       } else if (err.message) {
         errMsg = err.message;
       }
-      
-      setFileList((prev) => prev.map(entry => ({ ...entry, status: "error", error: errMsg })));
+      setFileList((prev) => prev.map((entry) => ({ ...entry, status: "error", error: errMsg })));
       setIsUploading(false);
       toast.error("Erro no envio dos arquivos.");
     }
   };
 
   useEffect(() => {
-    if (isUploading && fileList.length > 0) {
-      const allFinished = fileList.every(f => f.status === "done" || f.status === "error");
-      const hasProcessing = fileList.some(f => f.status === "uploading" || f.status === "processing");
-      
-      if (allFinished && !hasProcessing) {
-        setIsUploading(false);
-        const errCount = fileList.filter((f) => f.status === "error").length;
-        const doneCount = fileList.filter((f) => f.status === "done").length;
-        
-        if (errCount === 0) {
-          toast.success(`${doneCount} arquivo(s) processado(s) com sucesso!`);
-          setTimeout(() => {
-            setUploadModalOpen(false);
-            setFileList([]);
-          }, 2000);
-        } else {
-          toast.error(`${errCount} arquivo(s) falharam no processamento.`);
-        }
-      }
-    }
-  }, [fileList, isUploading]);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
 
   const allDone =
-    fileList.length > 0 && fileList.every((f) => f.status === "done");
-  const hasUploading = fileList.some((f) => f.status === "uploading");
-  const hasValidFiles = fileList.some(
-    (f) => f.status === "idle" || f.status === "error",
-  );
+    fileList.length > 0 &&
+    fileList.every((f) => f.status === "done" || f.status === "warning");
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -342,9 +331,7 @@ export default function DashboardLayout() {
               alt="Zeus Logo"
               className="w-8 h-8 object-contain"
             />
-            <span className="text-lg font-bold text-sidebar-foreground">
-              Zeus
-            </span>
+            <span className="text-lg font-bold text-sidebar-foreground">Zeus</span>
             <button
               className="ml-auto lg:hidden text-sidebar-foreground"
               onClick={() => setSidebarOpen(false)}
@@ -396,8 +383,7 @@ export default function DashboardLayout() {
               <h1 className="text-lg font-semibold text-foreground">
                 {pathname === "/dashboard/perfil"
                   ? "Meu Perfil"
-                  : menuItems.find((item) => item.href === pathname)?.label ||
-                    "Dashboard"}
+                  : menuItems.find((item) => item.href === pathname)?.label || "Dashboard"}
               </h1>
             </div>
 
@@ -407,9 +393,7 @@ export default function DashboardLayout() {
                 onClick={() => setUploadModalOpen(true)}
               >
                 <Upload className="w-4 h-4" />
-                <span className="hidden sm:block text-sm font-medium">
-                  Upload de Arquivos
-                </span>
+                <span className="hidden sm:block text-sm font-medium">Upload de Arquivos</span>
               </button>
 
               <div className="relative">
@@ -420,9 +404,7 @@ export default function DashboardLayout() {
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                     <span className="text-sm font-medium text-primary">AD</span>
                   </div>
-                  <span className="hidden sm:block text-sm font-medium text-foreground">
-                    Admin
-                  </span>
+                  <span className="hidden sm:block text-sm font-medium text-foreground">Admin</span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
 
@@ -464,9 +446,7 @@ export default function DashboardLayout() {
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Upload de Arquivos
-                </h2>
+                <h2 className="text-lg font-semibold text-foreground">Upload de Arquivos</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Selecione os {REQUIRED_COUNT} arquivos necessários
                 </p>
@@ -483,7 +463,6 @@ export default function DashboardLayout() {
             {/* Drop Zone */}
             <div className="px-6 py-4 shrink-0">
               <input
-                ref={inputRef}
                 type="file"
                 id="fileInput"
                 accept=".csv,.xlsx,.zip"
@@ -492,7 +471,6 @@ export default function DashboardLayout() {
                 className="hidden"
                 disabled={isUploading}
               />
-
               <label
                 htmlFor="fileInput"
                 onDragEnter={handleDrag}
@@ -518,9 +496,7 @@ export default function DashboardLayout() {
                   )}
                 />
                 <p className="text-sm text-foreground font-medium text-center">
-                  {dragActive
-                    ? "Solte os arquivos aqui"
-                    : "Clique ou arraste para selecionar"}
+                  {dragActive ? "Solte os arquivos aqui" : "Clique ou arraste para selecionar"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Múltiplos arquivos permitidos · .csv, .xlsx, .zip
@@ -540,37 +516,44 @@ export default function DashboardLayout() {
                   {fileList.map((entry, index) => {
                     const Icon = getFileIcon(entry.file.name);
                     const isDone = entry.status === "done";
+                    const isWarn = entry.status === "warning";
                     const isErr = entry.status === "error";
                     const isUp = entry.status === "uploading";
                     const isProc = entry.status === "processing";
 
+                    let borderClass = "border-border bg-muted/20";
+                    if (isDone) borderClass = "border-green-500/30 bg-green-500/5";
+                    else if (isWarn) borderClass = "border-yellow-500/30 bg-yellow-500/5";
+                    else if (isErr) borderClass = "border-destructive/30 bg-destructive/5";
+                    else if (isUp || isProc) borderClass = "border-primary/30 bg-primary/5";
+
+                    let iconColor = "text-muted-foreground";
+                    if (isDone) iconColor = "text-green-500";
+                    else if (isWarn) iconColor = "text-yellow-500";
+                    else if (isErr) iconColor = "text-destructive";
+                    else if (isUp || isProc) iconColor = "text-primary";
+
+                    let barColor = "bg-primary";
+                    if (isDone) barColor = "bg-green-500";
+                    else if (isWarn) barColor = "bg-yellow-500";
+                    else if (isProc) barColor = "bg-primary animate-pulse";
+
+                    let statusLabel = "Enviando...";
+                    if (isDone) statusLabel = "Concluído";
+                    else if (isWarn) statusLabel = "Concluído com avisos";
+                    else if (isProc) statusLabel = "Processando...";
+
+                    let labelColor = "text-primary";
+                    if (isDone) labelColor = "text-green-500";
+                    else if (isWarn) labelColor = "text-yellow-500";
+
                     return (
                       <li
                         key={`${entry.file.name}-${index}`}
-                        className={cn(
-                          "rounded-lg border px-3 py-2.5 transition-colors",
-                          isDone
-                            ? "border-green-500/30 bg-green-500/5"
-                            : isErr
-                              ? "border-destructive/30 bg-destructive/5"
-                              : (isUp || isProc)
-                                ? "border-primary/30 bg-primary/5"
-                                : "border-border bg-muted/20",
-                        )}
+                        className={cn("rounded-lg border px-3 py-2.5 transition-colors", borderClass)}
                       >
                         <div className="flex items-center gap-2">
-                          <Icon
-                            className={cn(
-                              "w-4 h-4 shrink-0",
-                              isDone
-                                ? "text-green-500"
-                                : isErr
-                                  ? "text-destructive"
-                                  : (isUp || isProc)
-                                    ? "text-primary"
-                                    : "text-muted-foreground",
-                            )}
-                          />
+                          <Icon className={cn("w-4 h-4 shrink-0", iconColor)} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                               {entry.file.name}
@@ -578,25 +561,25 @@ export default function DashboardLayout() {
                             <p className="text-xs text-muted-foreground">
                               {formatSize(entry.file.size)}
                               {isErr && (
-                                <span className="text-destructive ml-1">
-                                  · {entry.error}
-                                </span>
+                                <span className="text-destructive ml-1">· {entry.error}</span>
                               )}
                             </p>
+                            {isWarn && entry.reconciliation?.invalid > 0 && (
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                                {entry.reconciliation.invalid} referências inválidas detectadas
+                              </p>
+                            )}
                           </div>
 
                           {/* Status icon / remove */}
                           <div className="shrink-0 flex items-center gap-1">
-                            {isDone && (
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            )}
-                            {isErr && (
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                            )}
+                            {isDone && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            {isWarn && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                            {isErr && <AlertCircle className="w-4 h-4 text-destructive" />}
                             {(isUp || isProc) && (
                               <Loader2 className="w-4 h-4 text-primary animate-spin" />
                             )}
-                            {!isUploading && !isDone && !isProc && !isUp && (
+                            {!isUploading && !isDone && !isWarn && !isProc && !isUp && (
                               <button
                                 onClick={() => removeFile(index)}
                                 className="ml-1 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -609,30 +592,21 @@ export default function DashboardLayout() {
                         </div>
 
                         {/* Progress bar */}
-                        {(isUp || isProc || isDone) && (
+                        {(isUp || isProc || isDone || isWarn) && (
                           <div className="mt-2">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-muted-foreground">
-                                {isDone ? "Concluído" : isProc ? "Processando..." : "Enviando..."}
-                              </span>
-                              <span
-                                className={cn(
-                                  "text-xs font-semibold tabular-nums",
-                                  isDone ? "text-green-500" : "text-primary",
-                                )}
-                              >
-                                {isDone ? 100 : isProc ? 100 : entry.progress}%
+                              <span className="text-xs text-muted-foreground">{statusLabel}</span>
+                              <span className={cn("text-xs font-semibold tabular-nums", labelColor)}>
+                                {isUp ? entry.progress : 100}%
                               </span>
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all duration-300",
-                                  isDone ? "bg-green-500" : isProc ? "bg-primary animate-pulse" : "bg-primary",
+                                  barColor,
                                 )}
-                                style={{
-                                  width: `${isDone || isProc ? 100 : entry.progress}%`,
-                                }}
+                                style={{ width: `${isUp ? entry.progress : 100}%` }}
                               />
                             </div>
                           </div>
@@ -655,9 +629,7 @@ export default function DashboardLayout() {
               </button>
               <button
                 onClick={handleFileUpload}
-                disabled={
-                  fileList.length < REQUIRED_COUNT || isUploading || allDone
-                }
+                disabled={fileList.length < REQUIRED_COUNT || isUploading || allDone}
                 className="flex-1 px-4 py-2 text-sm font-medium text-card-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}

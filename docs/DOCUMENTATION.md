@@ -28,7 +28,25 @@
 - 🧪 Validating TAM behavior in tests
 - 🔁 Debugging or rerunning TAM in development
 
-### 1. **[CONTRIBUTING.md](CONTRIBUTING.md)**
+### 1. **[PREDICTIONS_FORECASTS_IMPLEMENTATION.md](PREDICTIONS_FORECASTS_IMPLEMENTATION.md)**
+
+**Who is it for?** Backend developers and QA
+
+**What is it?** End-to-end reference for the predictions pipeline, persistence, reruns, and validation
+
+**Contains:**
+- ✅ Architecture from MongoDB data flow to transformation, model, forecast, and persistence
+- ✅ Examples of documents before and after being saved in `predictions`
+- ✅ Manual retraining and validation instructions for `POST /predictions/generate`
+- ✅ Traceability table for Colab parameters and backend configuration
+- ✅ Validation checklist for duplicate prevention and endpoint checks
+
+**When to read?**
+- 🔮 Implementing or changing the predictions pipeline
+- 🧪 Validating forecast output and Mongo persistence
+- 🔁 Debugging or rerunning predictions in development
+
+### 2. **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 **Who is it for?** Everyone involved (Devs, Scrum, DevOps)
 
@@ -50,7 +68,7 @@
 
 ---
 
-### 2. **[ISSUE-TRACKING.md](ISSUE-TRACKING.md)**
+### 3. **[ISSUE-TRACKING.md](ISSUE-TRACKING.md)**
 
 **Who is it for?** Mainly Scrum Masters and DevOps (tracking visualizations)
 

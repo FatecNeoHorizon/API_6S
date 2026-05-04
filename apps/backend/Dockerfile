@@ -26,4 +26,4 @@ EXPOSE 8000
 
 # Comando para iniciar o servidor (o reload permite atualizar o código sem derrubar o container)
 #CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-CMD ["fastapi dev"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "tmp"]

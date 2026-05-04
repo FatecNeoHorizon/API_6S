@@ -407,17 +407,54 @@ const buildChartData = (data) => {
       year,
       dec: decValues.length
         ? parseFloat(
-            (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
-              2,
-            ),
-          )
+          (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
       fec: fecValues.length
         ? parseFloat(
-            (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
-              2,
-            ),
-          )
+          (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
+            2,
+          ),
+        )
+        : null,
+    }));
+};
+
+const buildPreviewChartData = (data) => {
+  const map = {};
+  data.forEach((item) => {
+    const key = `${item.forecast_year}-${String(item.forecast_period).padStart(2, "0")}`;
+    if (!map[key])
+      map[key] = {
+        key,
+        year: item.forecast_year,
+        month: item.forecast_period,
+        decValues: [],
+        fecValues: [],
+      };
+    if (item.indicator === "DEC") map[key].decValues.push(item.forecast_value);
+    if (item.indicator === "FEC") map[key].fecValues.push(item.forecast_value);
+  });
+  return Object.values(map)
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month))
+    .map(({ month, year, decValues, fecValues }) => ({
+      mes: MONTH_LABELS[month - 1],
+      year,
+      dec: decValues.length
+        ? parseFloat(
+          (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
+            2,
+          ),
+        )
+        : null,
+      fec: fecValues.length
+        ? parseFloat(
+          (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
     }));
 };
@@ -483,6 +520,51 @@ export default function IndicadoresPage() {
   const [perdasData, setPerdasData] = useState([]);
   const [perdasLoading, setPerdasLoading] = useState(false);
 
+  // TAM/SAM
+  const [tamTotal, setTamTotal] = useState(null);
+  const [samTotal, setSamTotal] = useState(null);
+
+  //ML Preview
+  const [previewChartData, setpreviewChartData] = useState([])
+
+  const fetchTamTotal = async () => {
+    const url = `/tam-sam/tam`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setTamTotal(null);
+        return;
+      }
+      setTamTotal(data.tam_total)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  }
+
+  const fetchSamTotal = async (from, to) => {
+
+    const params = new URLSearchParams({ year: from.year })
+    const url = `/tam-sam/sam?${params.toString()}`;
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[tam-sam] Expected JSON, got text:", data);
+        setSamTotal(null);
+        return;
+      }
+      setSamTotal(data)
+    } catch (error) {
+      console.error("[tam-sam] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  }
+
   // ── DEC/FEC handlers ─────────────────────────────────────────────────────────
   const fetchDecFec = async (from, to) => {
     const url = buildDecFecUrl(from, to);
@@ -513,12 +595,43 @@ export default function IndicadoresPage() {
     }
   };
 
+  // ── Preview DEC/FEC handlers ─────────────────────────────────────────────────────────
+  const fetchPreviewDecFec = async (from, to) => {
+
+    const params = new URLSearchParams({
+      consumer_unit_set_id: 16648,
+      year_start: 2014,
+      year_end: 2024,
+      save_models: false,
+    });
+
+    const url = `/timeseries/forecast-unit?${params.toString()}`;
+    console.log("[get-dec-fec] Fetching:", url);
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.post(url);
+      if (typeof data === "string") {
+        console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
+        setpreviewChartData([])
+        return;
+      }
+      setpreviewChartData(buildPreviewChartData(data.forecasts))
+    } catch (error) {
+      console.error("[get-preview-dec-fec] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  };
+
   const handleQuickPeriod = (period) => {
     setSelectedPeriod(period.label);
     const from = monthsAgo(period.months);
     const to = currentMonth();
     setMonthRange({ from, to });
     fetchDecFec(from, to);
+    fetchTamTotal();
+    fetchSamTotal(from, to);
+    fetchPreviewDecFec(from, to);
   };
 
   const handleMonthRangeChange = (range) => {
@@ -527,6 +640,9 @@ export default function IndicadoresPage() {
     if (range.from && range.to) {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
+      fetchTamTotal();
+      fetchSamTotal(range.from, range.to);
+      fetchPreviewDecFec(range.from, range.to);
     }
   };
 
@@ -734,7 +850,7 @@ export default function IndicadoresPage() {
       {selectedTab === "dec_fec" ? (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Card className="bg-card border-border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -752,7 +868,7 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
                       {decFecPeriodLabel
-                        ? `Média · ${decFecPeriodLabel}`
+                        ? `${decFecPeriodLabel}`
                         : "Selecione um período"}
                     </span>
                   </div>
@@ -771,14 +887,49 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
                       {decFecPeriodLabel
-                        ? `Média · ${decFecPeriodLabel}`
+                        ? `${decFecPeriodLabel}`
                         : "Selecione um período"}
                     </span>
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    TAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    SAM Calculado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {decFecLoading ? "..." : samTotal !== null ? samTotal : "—"}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             <Card className="bg-card border-border flex-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">
@@ -891,11 +1042,124 @@ export default function IndicadoresPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="bg-card border-border flex-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-foreground">
+                  Previsão DEC/FEC
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  {decFecPeriodLabel
+                    ? `Previsão · ${decFecPeriodLabel}`
+                    : "Selecione um período"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="h-40 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={previewChartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                      />
+                      <XAxis
+                        dataKey="mes"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: "hsl(var(--muted-foreground))",
+                          fontSize: 12,
+                        }}
+                        tickFormatter={(label, index) => {
+                          const item = previewChartData[index];
+                          if (!item) return label;
+                          const years = [
+                            ...new Set(previewChartData.map((d) => d.year)),
+                          ];
+                          return years.length > 1
+                            ? `${label}/${String(item.year).slice(2)}`
+                            : label;
+                        }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: "hsl(var(--muted-foreground))",
+                          fontSize: 12,
+                        }}
+                        domain={([dataMin, dataMax]) => [
+                          0,
+                          Math.ceil(dataMax * 1.2),
+                        ]}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        labelStyle={{ color: "hsl(var(--foreground))" }}
+                        labelFormatter={(label, payload) => {
+                          if (payload && payload[0]) {
+                            const item = payload[0].payload;
+                            const years = [
+                              ...new Set(previewChartData.map((d) => d.year)),
+                            ];
+                            return years.length > 1
+                              ? `${label}/${item.year}`
+                              : label;
+                          }
+                          return label;
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="dec"
+                        name="DEC (horas)"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, fill: "#3b82f6" }}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="fec"
+                        name="FEC (interrupções)"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, fill: "#22c55e" }}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#3b82f6]" />
+                    <span className="text-sm text-muted-foreground">
+                      Previsão DEC (horas)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#22c55e]" />
+                    <span className="text-sm text-muted-foreground">
+                      Previsão FEC (interrupções)
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <Card
             className="bg-card border-border lg:row-span-2 flex flex-col"
-            style={{ maxHeight: 520 }}
+            style={{ maxHeight: 875 }}
           >
             <CardHeader className="flex-shrink-0">
               <CardTitle className="text-foreground">
@@ -905,8 +1169,8 @@ export default function IndicadoresPage() {
                 Ordenado por indicador DEC
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <div className="overflow-auto h-full">
+            <CardContent className="p-0">
+              <div className="overflow-auto max-h-[780px]">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border">

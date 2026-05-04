@@ -25,8 +25,8 @@
 
 ### Demonstration Video
 
-Add the Sprint 2 demonstration video link here.
-
+| [Sprint 2 demonstration video](https://drive.google.com/drive/folders/1xhPzqp9PZmWwpUhA6LugZi4Wq-HRTqhF?usp=sharing
+) | Video presenting the deliveries completed during Sprint 2. |
 <!--
 Suggested format after publishing the video:
 

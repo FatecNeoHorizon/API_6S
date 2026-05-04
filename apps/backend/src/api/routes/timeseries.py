@@ -1,16 +1,9 @@
-"""
-Time Series Forecasting API endpoints.
-
-Routes for training RandomForest models and generating forecasts for distribution indicators.
-"""
-
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from datetime import datetime, timezone
 import logging
 
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
-from src.etl.query_mongo_timeseries import query_indicators_for_unit
 from src.etl.load.load_predictions import persist_predictions
 from src.config.settings import Settings
 from src.database.connection import get_client

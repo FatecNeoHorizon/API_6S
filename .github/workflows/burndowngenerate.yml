@@ -42,6 +42,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ISSUE_TOKEN_API }}
           SPRING_MAIN_WEB_APPLICATION_TYPE: none
+          LOGGING_LEVEL_COM_ZEUS: DEBUG
         run: |
           if [ -z "$GITHUB_TOKEN" ]; then
             echo "❌ ERROR: ISSUE_TOKEN_API secret is not configured!"

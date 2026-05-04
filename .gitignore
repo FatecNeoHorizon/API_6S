@@ -1,10 +1,51 @@
-# Environment variables
+################################################################################
+# 1. VARIÁVEIS DE AMBIENTE
+# Ignorar arquivos .env para não expor credenciais
+# Manter apenas templates .example como referência
+################################################################################
 .env
 .env.local
 .env.*.local
+.env.*.dev
+.env.*.prod
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.*.example          # Manter template como exemplo
 
-# Maven
-target/
+################################################################################
+# 2. AMBIENTES VIRTUAIS
+# Python: venv, virtualenv, conda, pipenv, poetry, pdm
+# Relacionado com: dependências do backend Python
+################################################################################
+.venv
+venv/
+envs/*                   # Pasta de envs (exceto exemplos)
+!envs/.env.*.example     # Manter templates de env
+ENV/
+env.bak/
+venv.bak/
+.env                     # (já na seção anterior, duplicado aqui por ser relacionado)
+
+################################################################################
+# 3. IDEs E EDITORES
+# Ignorar configurações específicas de cada IDE
+# Não comitar preferências pessoais que variam por desenvolvedor
+################################################################################
+.vscode/                 # VS Code settings
+.vscode-test            # VS Code test extensions
+.idea/                  # IntelliJ IDEA
+*.swp                   # Vim swap files
+*.swo                   # Vim swap files
+*~                      # Backup files
+.DS_Store               # macOS system file
+
+################################################################################
+# 4. BUILD SYSTEMS
+################################################################################
+
+# 4.1 JAVA / MAVEN (burndown module)
+target/                 # Maven build output
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -15,17 +56,221 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
+# 4.2 PYTHON
+**/__pycache__/
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+*/*/*/*/__pycache__/
+*/*/*/*/*/__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Java
-*.class
-*.jar
-*.war
-*.ear
-*.log
+# 4.3 NODE / FRONTEND
+node_modules/           # npm dependencies
+jspm_packages/          # JSPM packages
+.npm                    # npm cache
+.pnpm-debug.log*        # pnpm logs
+
+################################################################################
+# 5. DEPENDÊNCIAS E LOCK FILES (NOTA: git track normal, mas inclusos para referência)
+################################################################################
+# Uncomment se não rastrear lock files:
+# Pipfile.lock           # pipenv
+# poetry.lock            # poetry
+# pdm.lock               # pdm
+
+################################################################################
+# 6. CACHE E COMPILAÇÕES INTERMEDIÁRIAS
+################################################################################
+
+# 6.1 Java / Python compilados
+*.class                 # Java class files
+*.so                    # C extensions (Python)
+*.manifest              # Java manifest
+*.spec                  # PyInstaller
+
+# 6.2 Type checking e linters
+*.tsbuildinfo           # TypeScript cache
+.eslintcache            # ESLint cache
+.stylelintcache         # Stylelint cache
+pyrightconfig.json      # Pylance config (auto-generated)
+
+# 6.3 Build tool caches
+.rpt2_cache/            # Rollup plugin cache
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.grunt                  # Grunt
+.webpack/               # Webpack
+.parcel-cache           # Parcel
+.cache                  # Generic cache
+.fusebox/               # FuseBox
+.dynamodb/              # DynamoDB local
+
+# 6.4 Python type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# 6.5 Python tools
+.ruff_cache/            # Ruff linter cache
+.hypothesis/            # Hypothesis testing
+.pytest_cache/
+.tox/
+.nox/
+
+################################################################################
+# 7. LOGS
+# Todos em um lugar para fácil localização
+# Relacionado com: sistema de logging do projeto
+################################################################################
+logs/                   # Log directory
+logs/*.log
+logs/*.gz
+*.log                   # All log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pip-log.txt
+pip-delete-this-directory.txt
+
+################################################################################
+# 8. TESTES E COBERTURA
+# Coverage reports não devem ser versionados (regenerados localmente)
+################################################################################
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+*.lcov
+.nyc_output             # NYC coverage
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+cover/
+
+################################################################################
+# 9. ARTEFATOS DE BANCO DE DADOS (local)
+# Banco local para desenvolvimento não deve ser versionado
+################################################################################
+db.sqlite3              # Django SQLite
+db.sqlite3-journal
+*.db
+
+################################################################################
+# 10. ARQUIVOS LOCAIS E TEMPORÁRIOS
+# Arquivos gerados durante execução local
+# Relacionado com: upload de arquivos, dados temporários
+################################################################################
+/data                   # Data directory (for uploaded files)
+/tmp                    # Temporary directory
+tmp/                    # Temporary files
+tmp/uploads/*           # Uploaded files (keep tmp/ dir structure but ignore contents)
+!tmp/.gitkeep           # Keep tmp directory in git
+
+################################################################################
+# 11. OUTPUT E DISTRIBUTIVOS
+# Arquivos gerados para distribuição não devem ser versionados
+################################################################################
+dist/
+out/                    # Build output
+.next/                  # Next.js build
+.nuxt/                  # Nuxt build
+.svelte-kit/            # SvelteKit build
+.parcel-cache/
+.cache/
+.temp/
+
+################################################################################
+# 12. PACOTES E ARQUIVOS COMPACTADOS
+# Artifacts gerados por npm pack, yarn, etc
+################################################################################
+*.jar                   # Java executables
+*.war                   # Java web archives
+*.ear                   # Java enterprise archives
+*.tgz                   # Tarball archives
+*.zip                   # ZIP archives
+
+################################################################################
+# 13. PID E ARQUIVOS DE PROCESSO
+# Arquivos criados em tempo de execução
+################################################################################
+*.pid
+*.seed
+*.pid.lock
+pids/
+
+################################################################################
+# 14. DOCUMENTAÇÃO GERADA
+# Documentações geradas não devem ser versionadas
+################################################################################
+docs/_build/            # Sphinx documentation build
+/site                   # MkDocs
+.vuepress/dist          # VuePress build
+.vuepress/              # VuePress temp
+.docusaurus/            # Docusaurus cache
+
+################################################################################
+# 15. CONFIGURAÇÕES ESPECÍFICAS DO DESENVOLVEDOR
+# Preferências pessoais que variam por person
+################################################################################
+.spyderproject          # Spyder IDE
+.spyproject
+.ropeproject            # Rope refactoring
+profile_default/        # IPython
+ipython_config.py
+local_settings.py       # Django local settings
+
+################################################################################
+# 16. DIAGNOSTICS E RELATÓRIOS
+# Relatórios de execução e diagnósticos
+################################################################################
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json  # Node diagnostic reports
+
+################################################################################
+# 17. RUNTIME DATA (Node)
+################################################################################
+lib-cov/                # Coverage libs
+.lock-wscript           # node-waf
+.tern-port              # TernJS port
+.node_repl_history      # Node REPL history
+
+################################################################################
+# 18. CONFIGURAÇÕES E TOKENS (Segurança)
+################################################################################
+.webassets-cache        # Flask assets
+instance/               # Flask instance folder
+
+################################################################################
+# NOTAS GERAIS:
+# - Use ! para adicionar exceções (ex: !.env.example)
+# - Gitignore é processado de cima para baixo
+# - Padrões mais específicos devem vir depois de padrões gerais
+# - Use / para paths relativos à raiz do repo
+# - Use /* para ignorar todo conteúdo de uma pasta mantendo a estrutura
+################################################################################

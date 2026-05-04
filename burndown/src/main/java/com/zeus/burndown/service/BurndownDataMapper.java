@@ -36,8 +36,8 @@ public class BurndownDataMapper {
     }
  
     private static final List<SprintPeriod> SPRINTS = List.of(
-            new SprintPeriod("Sprint 1", 16, 3, 5, 4),   // 16/03 - 05/04
-            new SprintPeriod("Sprint 2", 13, 4, 3, 5),   // 13/04 - 03/05
+            new SprintPeriod("Sprint 1", 16, 3, 6, 4),   // 16/03 - 05/04
+            new SprintPeriod("Sprint 2", 13, 4, 4, 5),   // 13/04 - 03/05
             new SprintPeriod("Sprint 3", 11, 5, 31, 5)   // 11/05 - 31/05
     );
  
@@ -83,7 +83,7 @@ public class BurndownDataMapper {
  
     private SprintPeriod findActiveSprint(LocalDate today) {
         for (SprintPeriod sprint : SPRINTS) {
-            if (!today.isBefore(sprint.start) && !today.isAfter(sprint.end)) {
+            if (!today.isBefore(sprint.start) && today.isBefore(sprint.end.plusDays(1))) {
                 return sprint;
             }
         }
@@ -119,18 +119,11 @@ public class BurndownDataMapper {
                                     LocalDate end,
                                     List<ProjectItemNode> allIssues) {
 
-        LocalDate today = LocalDate.now();
-        LocalDate effectiveEnd;
-        if (today.isBefore(start)) {
-            effectiveEnd = end;
-        } else {
-            effectiveEnd = end.isAfter(today) ? today : end;
-        }
- 
+
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
                 LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isAfter(end); // usa end, não effectiveEnd
+                return !created.isAfter(end);
             })
             .collect(Collectors.toList());
  
@@ -150,7 +143,7 @@ public class BurndownDataMapper {
         List<Double> realLine = new ArrayList<>();
      
         long dayIndex = 0;
- 
+
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
 
             final LocalDate currentDate = date;

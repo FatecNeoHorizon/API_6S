@@ -1,4 +1,4 @@
-name: Validar Commits (CommitLint)
+name: Validate Commits
 
 on:
   pull_request:
@@ -8,13 +8,114 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout código
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Validar commits
-        uses: wagoid/commitlint-github-action@v5
-        with:
-          configFile: .commitlintrc.json
-          helpURL: "https://www.conventionalcommits.org/"
+      - name: Validate commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          TIPO_PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?: .+"
+          CARD_PATTERN="^#[0-9]+$"
+          FAILED=0
+
+          COMMITS=$(git log --format="%H" "$BASE_SHA".."$HEAD_SHA")
+
+          for HASH in $COMMITS; do
+            COMMIT_MSG=$(git log -1 --format="%B" "$HASH")
+            FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+            LAST_LINE=$(echo "$COMMIT_MSG" | grep -v '^$' | tail -n 1)
+            AUTHOR=$(git log -1 --format="%an <%ae>" "$HASH")
+
+            echo "──────────────────────────────────────────────────────"
+            echo "🔍 Validando commit: $HASH"
+            echo "   Autor  : $AUTHOR"
+            echo "   Header : $FIRST_LINE"
+
+            if echo "$FIRST_LINE" | grep -q "^#"; then
+              echo "   ⏭️  Ignorado: comentário"
+              continue
+            fi
+
+            if echo "$FIRST_LINE" | grep -qi "^Merge "; then
+              echo "   ⏭️  Ignorado: merge commit"
+              continue
+            fi
+
+            if echo "$FIRST_LINE" | grep -qi "^Revert \""; then
+              echo "   ⏭️  Ignorado: revert automático"
+              continue
+            fi
+
+            if echo "$FIRST_LINE" | grep -qi "^Initial commit"; then
+              echo "   ⏭️  Ignorado: initial commit"
+              continue
+            fi
+
+            if echo "$FIRST_LINE" | grep -qiE "^(chore\(release\)|release:)"; then
+              echo "   ⏭️  Ignorado: release/versionamento"
+              continue
+            fi
+
+            if echo "$AUTHOR" | grep -qiE "dependabot|renovate|bot|github-actions"; then
+              echo "   ⏭️  Ignorado: autor automatizado"
+              continue
+            fi
+
+            if echo "$COMMIT_MSG" | grep -qi "burndown"; then
+              echo "   ⏭️  Ignorado: burndown/automação"
+              continue
+            fi
+
+            if ! echo "$FIRST_LINE" | grep -qE "$TIPO_PATTERN"; then
+              echo ""
+              echo "❌ ERRO: Primeira linha inválida!"
+              echo "   Commit : $HASH"
+              echo "   Header : \"$FIRST_LINE\""
+              echo ""
+              echo "   Formato esperado : <tipo>(<escopo>): <descrição>"
+              echo "   Tipos válidos    : feat, fix, docs, style, refactor, perf, test, chore, ci, revert"
+              echo "   Exemplo          : feat(database): update database"
+              echo ""
+              FAILED=1
+              continue
+            fi
+
+            if ! echo "$LAST_LINE" | grep -qE "$CARD_PATTERN"; then
+              echo ""
+              echo "❌ ERRO: Card obrigatório no final do commit!"
+              echo "   Commit       : $HASH"
+              echo "   Última linha : \"$LAST_LINE\""
+              echo ""
+              echo "   Formato esperado:"
+              echo "     feat(database): update database"
+              echo ""
+              echo "     update table from database 1"
+              echo ""
+              echo "     #123"
+              echo ""
+              FAILED=1
+              continue
+            fi
+
+            echo "   ✅ Commit válido"
+          done
+
+          echo "──────────────────────────────────────────────────────"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "╔════════════════════════════════════════════════════╗"
+            echo "║     ❌ Um ou mais commits foram rejeitados!        ║"
+            echo "╚════════════════════════════════════════════════════╝"
+            echo ""
+            echo "  Corrija com: git rebase -i $BASE_SHA"
+            echo ""
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Todos os commits do PR são válidos!"

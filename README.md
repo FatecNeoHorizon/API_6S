@@ -1,197 +1,218 @@
-# <p align = "center">API 6º Semestre - BD 2026
+# <p align="center">API 6th Semester - BD 2026
 
 
 <p align="center">
-  <img src="docs/Zeus.png" alt="Descrição da imagem" width="400">
+  <img src="image/logo/Zeus.png" alt="Project logo" width="400">
 </p>
-
 
 <p align="center">
-  <a href=#problema>Contexto e Desafio</a> •
-  <a href=#objetivo>Objetivo do Projeto</a> •
-  <a href=#requisitos-funcionais-e-nao-funcionais>Requisitos Funcionais e Não Funcionais</a> •
-  <a href=#backlog-do-produto>Backlog do Produto</a> •
-  <a href=#date-sprint-backlog>Sprint Backlog</a> •
-  <a href=#padroes-processos>Padrões de Processo</a> •
-  <a href=#integrantes-equipe>Integrantes da Equipe</a> •
-  <a href=#tecnologias-utilizadas>Tecnologias Utilizadas</a> •
-  <a href=#burndown>Evolução do Projeto (Burndown)</a> •
-  <a href=#cronograma>Cronograma</a>
-
+  <a href="#problem">💡 Context and Challenge</a> •
+  <a href="#objective">🎯 Project Objective</a> •
+  <a href="#requirements">📋 Requirements</a> •
+  <a href="#product-backlog">📦 Product Backlog</a> •
+  <a href="#sprint-backlog">🗓️ Sprint Backlog</a> •
+  <a href="#schedule">📅 Schedule</a> •
+  <a href="#team-members">👥 Team Members</a> •
+  <a href="#technologies">🛠️ Technologies</a> •
+  <a href="#process-standards">📁 Process Standards</a> •
+  <a href="#technical-documentation">📖 Technical Documentation</a>
 </p>
 
-## :bulb: Contexto e Desafio <a id="problema"></a>
+---
 
-A Tecsys do Brasil, empresa parceira com atuação no setor de monitoramento de redes elétricas, possui produtos capazes de identificar falhas e vulnerabilidades na infraestrutura de distribuição de energia. Porém, apesar de dominar a tecnologia de monitoramento em campo, a empresa não dispõe de uma forma estruturada de processar e analisar os dados públicos disponibilizados pela ANEEL. Sem esse tratamento, identificar com precisão quais regiões do Brasil apresentam maior criticidade na rede de distribuição exige um esforço manual elevado — dificultando também a identificação de onde há maior potencial de aplicação dos seus produtos.
+## 💡 Context and Challenge <a id="problem"></a>
 
-## :dart: Objetivo do Projeto <a id="objetivo"></a>
+[Tecsys do Brasil](https://www.tecsysbrasil.com.br/), while offering advanced real-time monitoring solutions for power distribution networks, faces a strategic barrier: the lack of a structured process to ingest and analyze public data from ANEEL. This limitation prevents the company from turning external information into market intelligence, leaving the identification of critical regions dependent on manual, non-scalable, and error-prone analyses. As a result, market prioritization and commercial strategy definition are compromised, reducing decision-making accuracy and hindering data-driven expansion. The core challenge is to overcome this analytical gap, enabling Tecsys to enhance efficiency, strengthen competitive positioning, and drive growth in an increasingly information-driven energy sector.
 
-O objetivo do projeto é desenvolver uma plataforma que realize o tratamento e a análise dos dados provenientes da ANEEL, transformando informações brutas em indicadores acionáveis. Com isso, os analistas poderão identificar regiões prioritárias com base em critérios como qualidade de fornecimento, perdas de energia e vulnerabilidade da rede — subsidiando a equipe comercial com dados concretos para abordar novos mercados e oportunidades de aplicação do produto.
+---
 
-## Requisitos Funcionais e Não Funcionais<a id="requisitos-funcionais-e-nao-funcionais"></a>
+## 🎯 A Solution - Zeus <a id="objective"></a>
+
+**ZEUS** was created to solve a clear pain for Tecsys: the inability to turn vast public **ANEEL** datasets into scalable, reliable market intelligence. Our web platform converts dispersed information into **actionable insights** — delivering a consolidated **physical TAM**, a planned evolution toward **SAM**, a **criticality ranking** based on DEC/FEC, and **DEC/FEC forecasts** produced by time‑series models — all accessible via APIs and an intuitive dashboard.
+
+By centralizing processing in a dual‑database architecture (MongoDB for public analytical data; PostgreSQL for sensitive data) and a versioned ETL pipeline, ZEUS guarantees **deterministic, traceable and reproducible results**, removing manual, inconsistent and non‑scalable analyses. Compliance with **LGPD** is treated as a product requirement: append‑only audit trails, immutable consent records, masking and encryption of sensitive fields, and logical anonymization routines ensure legal protection and build trust with customers and partners.
+
+**ZEUS** is more than a dashboard — it is a commercial and technical prioritization engine that enables Tecsys to identify where to act first, with predictability, security and scale.
+
+---
+
+## 📋 Requirements <a id="requirements"></a>
 
 <details>
-<summary>Exibir Requisitos Funcionais e Não Funcionais</summary>
+<summary>Show Functional and Non-Functional Requirements</summary>
 
-### Requisitos Funcionais
+### Functional Requirements
 
-<details>
-<summary>Exibir Requisitos Funcionais</summary><br>
-
-| ID | Requisito | Descrição |
+| ID | Requirement | Description |
 |:---|:---|:---|
-| <a id="RF01">RF01</a> | _Pipeline ETL_ | O sistema deve realizar a extração, o tratamento e o carregamento (ETL) dos dados provenientes da base disponibilizada pela ANEEL, com registro de logs e controle de versionamento dos dados. |
-| <a id="RF02">RF02</a> | _Dashboard de Redes de Distribuição_ | O sistema deve exibir dados referentes às estruturas das redes de distribuição (informações geográficas, elétricas e estruturais) via dashboards e relatórios interativos. |
-| <a id="RF03">RF03</a> | _Relatórios de Redes de Distribuição_ | O sistema deve exibir indicadores e métricas de qualidade das redes elétricas (DEC, FEC e perdas de energia), permitindo filtragem por região e período. |
-| <a id="RF04">RF04</a> | _Cálculo de TAM Físico_ | O sistema deve calcular e exibir os valores de TAM (Total Addressable Market) físico de instalação de sensores na rede elétrica, identificando o número máximo de pontos tecnicamente monitoráveis no Brasil. |
-| <a id="RF05">RF05</a> | _Classificação por Criticidade com ML_ | O sistema deve agrupar regiões ou áreas da rede por nível de criticidade (alta, média, baixa), aplicando modelos de Machine Learning para apoiar a priorização de ações. |
-| <a id="RF06">RF06</a> | _Ranking de Perdas de Energia_ | O sistema deve gerar um ranking de regiões com base nos indicadores de perdas de energia, utilizando modelos de regressão para projeção e ordenação das áreas mais críticas. |
-| <a id="RF07">RF07</a> | _Gestão de Usuários e Perfis_ | O sistema deve permitir o cadastro de usuários com perfis distintos (Administrador e Analista), controlando o acesso a funcionalidades e dados conforme o perfil. |
-| <a id="RF08">RF08</a> | _Cálculo de SAM_ | O sistema deve calcular e exibir os valores de SAM, cruzando o TAM com critérios técnicos, regulatórios e de viabilidade operacional. |
-| <a id="RF09">RF09</a> | _Mapa de Calor Geográfico_ | O sistema deve exibir um mapa de calor (heatmap) geográfico indicando o nível de criticidade da rede elétrica por região, com suporte a filtros dinâmicos por indicador. |
-| <a id="RF10">RF10</a> | _Conformidade com LGPD_ | O sistema deve garantir conformidade com a LGPD: coleta de consentimento explícito, anonimização de dados pessoais, política de retenção e exclusão, e geração de relatório de tratamento de dados (ROPA simplificado para fins acadêmicos). |
+| <a id="RF01">RF01</a> | **ETL Pipeline and Data Versioning** | The system must execute the extraction, transformation and loading (ETL) process for public ANEEL/BDGD data, with log records for each stage, batch version control, data origin traceability and persistence of processed data for analytical consumption across the platform. Each load must have a unique version identifier, execution date/time and processing status. |
+| <a id="RF02">RF02</a> | **Distribution Network Structure Dashboard** | The system must provide interactive dashboards and reports containing geographic, electrical and structural information about the power distribution network, including, when applicable, substations, transformers, network segments, circuits and electrical sets, enabling the user to explore the infrastructure mesh and understand the physical distribution of assets by region. |
+| <a id="RF03">RF03</a> | **Continuity and Loss Indicators Dashboard** | The system must display electrical network indicators, including DEC, FEC and energy losses, with filtering by time period and analytical scope. The solution must support time series visualization, summary indicators, regulatory status and analytical tables, providing the user with a consolidated view of service continuity and loss behavior in the network. |
+| <a id="RF04">RF04</a> | **Physical TAM Calculation** | The system must calculate and display the physical TAM (Total Addressable Market) for sensor installation in the electrical grid, representing the maximum number of technically monitorable points, without considering commercial, financial or operational restrictions. In the first version, the calculation must use the electrical set as the base monitoring unit, consolidating results by utility and displaying the total value together with a summarized calculation memory and the reference batch used. |
+| <a id="RF05">RF05</a> | **Machine Learning-Based Indicator Forecasting** | The system must allow the training, execution and versioning of Machine Learning models to forecast future electrical network indicators, initially focused on DEC and FEC. The solution must record the training dataset, variables used, training period, model version, generated forecasts and training parameters, enabling future network behavior analysis and supporting technical and commercial decision-making. |
+| <a id="RF06">RF06</a> | **Analytical Criticality Ranking and Sorting** | The system must generate an analytical ranking of utilities or regions based on power continuity indicators, using DEC and FEC as primary variables and losses as a complementary prioritization variable. The solution must classify each record by criticality level, allow sorting from most critical to least critical, and offer alternative ordering by DEC, FEC or losses, without requiring regression or Machine Learning in the first version. |
+| <a id="RF07">RF07</a> | **User, Profile, Login and First Access Management** | The system must allow user registration, listing, editing, inactivation and management with distinct profiles, in addition to providing login, first access flow, initial password setup and mandatory acceptance of the current legal terms. The registration process must store only the minimum necessary personal data and support profiles such as Administrator, Analyst and Viewer, with the permission model prepared for future expansion. |
+| <a id="RF08">RF08</a> | **SAM Calculation** | The system must calculate and display the SAM (Serviceable Available Market) from the physical TAM by applying technical, regulatory and operational feasibility criteria that reduce the total number of possible points to the number of points realistically serviceable by Tecsys solutions. The calculation must consider rules such as infrastructure compatibility, technical network indicators, operational constraints and business filters, with traceability of the applied logic. |
+| <a id="RF09">RF09</a> | **Geographic Visualization and Analytical Heatmap** | The system must provide geographic analytical visualization, including heatmaps by region or electrical set, allowing the highlighting of priority areas based on indicators such as DEC, FEC, losses or consolidated criticality. The interface must support dynamic filters by indicator and network type while preserving readability and performance. |
+| <a id="RF10">RF10</a> | **LGPD Compliance and Consent Management** | The system must implement LGPD compliance mechanisms for personal data, including data minimization, explicit acceptance of terms and privacy policies, legal document versioning, immutable consent history recording, action traceability, retention policy, logical deletion with anonymization when applicable, and strict separation between public and sensitive data. The system must also maintain a foundation for the future implementation of data subject rights provided by law. |
+| <a id="RF11">RF11</a> | **Dual-Database Storage Architecture** | The system must use a storage architecture separated by data purpose, employing a relational database for sensitive data and a non-relational database for public operational data. Personal data, credentials, consents and sensitive audit logs must be stored in PostgreSQL, while public ANEEL/BDGD data and analytical collections must be stored in MongoDB, in order to reduce exposure risk, simplify LGPD compliance and support large-scale ingestion and geospatial data handling. |
+| <a id="RF12">RF12</a> | **Terms, Policies and Acceptance History Management** | The system must allow the creation, editing, versioning, publication, inactivation and consultation of terms of use and privacy policies, maintaining the full content of published versions and ensuring that the first access flow always displays the most recent active versions. Acceptance must be recorded with timestamp, user and accepted version, preserving an immutable history for audit and proof of consent. |
 
-</details>
+<br>
 
-### Requisitos Não Funcionais
+### Non-Functional Requirements
 
-<details>
-<summary>Exibir Requisitos não Funcionais</summary><br>
-
-| ID | Requisito | Descrição |
+| ID | Requirement | Description |
 |:---|:---|:---|
-| <a id="RNF01">RNF01</a> | _Performance de Consultas ao Banco_ | As consultas críticas ao banco de dados — relacional (dados sensíveis) e MongoDB (dados da ANEEL) — devem apresentar desempenho adequado para uso fluido da aplicação, com uso de paginação e índices básicos.|
-| <a id="RNF02">RNF02</a> | _Inicialização e Estabilidade da Aplicação_ | A aplicação web deve inicializar corretamente e operar de forma estável durante sessões contínuas de uso, sem travamentos ou erros inesperados. |
-| <a id="RNF03">RNF03</a> | _Responsividade e Compatibilidade_ | A interface deve ser responsiva, garantindo compatibilidade e boa experiência em navegadores modernos. |
-| <a id="RNF04">RNF04</a> | _Métricas de Desempenho de ML_ | O desempenho do modelo de machine learning treinado deve ser documentado com as métricas adequadas ao tipo de tarefa: Silhouette Score para clustering, RMSE para regressão e F1-Score para classificação. |
-| <a id="RNF05">RNF05</a> | _Consistência Pós-Carga Manual_ | Sempre que houver nova carga de dados os indicadores (DEC, FEC e perdas) devem ser recalculados, com exibição da data/hora da última carga e identificação da versão do lote utilizado. |
+| <a id="RNF01">RNF01</a> | **Database Query Performance** | The system must ensure adequate performance for critical queries executed against both PostgreSQL and MongoDB, adopting pagination, indexing and query strategies compatible with the expected workload. Analytical and administrative queries must support fluid navigation, avoiding noticeable freezing during filtering, rankings, dashboards and list views. |
+| <a id="RNF02">RNF02</a> | **Application Startup and Stability** | The web application must start correctly, remain stable during continuous use sessions and support navigation across pages, filters, dashboards and administrative flows without unexpected failures, freezes or improper loss of state. |
+| <a id="RNF03">RNF03</a> | **Responsiveness and Compatibility** | The interface must be responsive and compatible with modern browsers, ensuring a good user experience across different resolutions and access contexts, with consistent behavior in tables, filters, dashboards, modals and forms. |
+| <a id="RNF04">RNF04</a> | **ML Model Performance Documentation and Validation** | Every Machine Learning model used by the system must have its performance documented with metrics compatible with the problem type. For numerical forecasting and time series tasks, metrics such as RMSE, MAE or equivalent must be used; for classification, metrics such as F1-Score; and for clustering, metrics such as Silhouette Score, when applicable. The system must keep records of model version, training dataset, variables used, analyzed period and obtained results, enabling technical review and reliability validation. |
+| <a id="RNF05">RNF05</a> | **Post-Load Consistency and Traceability** | Whenever a new ETL load is processed, the system must automatically recalculate the dependent indicators and analytical structures, including DEC, FEC, losses and correlated aggregations, ensuring consistency between the data shown in the interface and the latest validated batch. The application must display the date/time of the last load and the batch version identifier used in the analysis. |
+| <a id="RNF06">RNF06</a> | **Security and Protection of Sensitive Data** | The system must protect credentials, consents and other personal data through appropriate security mechanisms, including secure password hashing, protection or encryption of sensitive fields, masking of data in logs when necessary, controlled access to administrative information and strict separation between development and production environments. |
+| <a id="RNF07">RNF07</a> | **Auditability and Immutability of Sensitive Records** | Audit and consent records must be preserved in a traceable and tamper-resistant way, maintaining append-only or equivalent history for sensitive events, especially login, acceptance of terms, administrative actions and compliance-related events. The system must allow future proof of who performed a certain action, when it happened and which entity was affected. |
+| <a id="RNF08">RNF08</a> | **Support for Geospatial and Large-Volume Data** | The solution must support the storage and querying of large volumes of semi-structured and geospatial BDGD/ANEEL data, using MongoDB as the main non-relational database for these datasets, with ingestion, indexing and querying capacity compatible with the needs of dashboards, heatmaps and analytical aggregations across the project. |
 
 </details>
-</details>
 
-<a id=""></a>
+---
 
-## :date: Backlog do Produto <a id="backlog-do-produto"></a>
+## 📦 Product Backlog <a id="product-backlog"></a>
+
+| ID | Priority | Title | User Story | Estimate | Sprint | Related Requirements |
+|:---|:---|:---|:---|:---:|:---:|:---|
+| US01 | Highest | [Network Structure Reports](https://github.com/FatecNeoHorizon/API_6S/wiki/US01-%E2%80%94-Network-Structure-Reports-TO-DO) | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | 8 | 01 | RF01, RF02, RNF01, RNF02, RNF03 |
+| US02 | Highest | [Quality Indicators Dashboard](https://github.com/FatecNeoHorizon/API_6S/wiki/US02-%E2%80%94-Quality-Indicators-Dashboard-TO-DO) | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | 5 | 01 | RF01, RF03, RNF01, RNF02, RNF03, RNF05 |
+| US03 | High | [Physical TAM Calculation](https://github.com/FatecNeoHorizon/API_6S/wiki/US03-%E2%80%94-Physical-TAM-Calculation) | As a commercial analyst, I want to calculate the physical TAM for sensor installation, to size the maximum universe of monitorable points in Brazil. | 3 | 02 | RF04, RF01, RNF01, RNF05 |
+| US04 | High | [Criticality Ranking](https://github.com/FatecNeoHorizon/API_6S/wiki/US04-%E2%80%94-Criticality-Ranking) | As a data analyst, I want a ranking of regions by energy losses, to identify the most critical areas and support technical and commercial decisions. | 3 | 02 | RF03, RF06, RF01, RNF01, RNF05 |
+| US05 | High | [Login and First Access](https://github.com/FatecNeoHorizon/API_6S/wiki/US05-%E2%80%90-Login-and-First-Access) | As a registered user, I want to log into the platform and complete my first access flow, so that I can securely activate my account and access the system. | 8 | 02 | RF07, RF10, RF11, RF12, RNF02, RNF06, RNF07 |
+| US06 | High | [User CRUD Management](https://github.com/FatecNeoHorizon/API_6S/wiki/US06-%E2%80%94-User-CRUD-Management) | As an administrator, I want to create, edit, list and manage users, so that I can control who has access to the platform and maintain user records in compliance with LGPD principles. | 8 | 02 | RF07, RF10, RF11, RNF02, RNF06, RNF07 |
+| US07 | High | [Terms and Consent Management](https://github.com/FatecNeoHorizon/API_6S/wiki/US07-%E2%80%94-Terms-and-Consent-Management) | As an administrator, I want to create and manage terms of use and privacy policies, so that users always accept the active versions required by the platform and the system maintains auditable consent records. | 8 | 02 | RF07, RF10, RF12, RNF06, RNF07 |
+| US08 | High | [LGPD Audit Base](https://github.com/FatecNeoHorizon/API_6S/wiki/US08-%E2%80%94-LGPD-Audit-Base) | As an administrator, I want the system to register essential consent, access and administrative events, so that the platform starts complying with LGPD traceability and audit requirements. | 13 | 02 | RF10, RF11, RF12, RNF06, RNF07 |
+| US09 | High | [ML Model Validation](https://github.com/FatecNeoHorizon/API_6S/wiki/US09-%E2%80%94-ML-Model-Validation) | As a data analyst, I want ML models to have documented performance and validated metrics, to ensure the reliability of results generated by the system. | 8 | 02 | RF05, RNF04, RF01, RNF05 |
+| US10 | Medium | SAM Indicator | As a commercial analyst, I want a SAM indicator, to identify the accessible market for the product by region based on technical and regulatory criteria. | 5 | 03 | RF08, RF04, RF01, RNF01, RNF05 |
+| US11 | Medium | Geographic Heatmap | As a commercial analyst, I want a geographic visualization (heatmap), to visually identify priority regions for commercial outreach. | 13 | 03 | RF09, RF03, RF06, RF01, RNF01, RNF03, RNF08 |
+| US12 | Medium | LGPD Transparency and Control | As a user, I want control and transparency over my personal data (LGPD), to ensure my information is handled securely and in accordance with the law. | 8 | 03 | RF07, RF10, RF11, RF12, RNF06, RNF07 |
+| US13 | Low | Automatic Recalculation | As a data analyst, I want indicators to be automatically recalculated after each new data load, to ensure analyses always reflect the most up-to-date information. | 5 | 03 | RF01, RNF05, RNF01, RNF02 |
+
+---
+
+## 🗓️ Sprint Backlog <a id="sprint-backlog"></a>
+
 <details>
+<summary><b>Sprint 1</b></summary>
 
-<summary>Mostrar Backlog do Produto</summary>
+[View Sprint 1 documentation](docs/SPRINT1.md)
 
-<br>
-
-| ID | Rank | Prioridade | User Story | Sprint | Requisitos Relacionados |
-|:---|:---|:---|:---|:---|:---|
-| US01 | 01 | Highest | Como analista de dados, quero acessar relatórios de estruturas das redes de distribuição, para identificar características geográficas, elétricas e estruturais da infraestrutura monitorada. | 01 | [RF01](#RF01), [RF02](#RF02) |
-| US02 | 02 | Highest | Como analista de dados, quero que o sistema exponha dados de qualidade (DEC, FEC, perdas), para avaliar o desempenho da rede elétrica por região e período. | 01 | [RF01](#RF01), [RF03](#RF03) |
-| US03 | 03 | High | Como usuário, quero que o sistema responda rapidamente às minhas consultas, sem travamentos durante o uso. | 01 | [RNF01](#RNF01), [RNF02](#RNF02) |
-| US04 | 04 | Medium | Como usuário, quero acessar o sistema por qualquer navegador moderno com boa experiência visual. | 01 | [RNF03](#RNF03) |
-| US05 | 01 | Highest | Como analista de dados, quero agrupar regiões por nível de criticidade, para que a equipe comercial possa priorizar abordagens nas áreas com maior potencial de aplicação do produto. | 02 | [RF05](#RF05) |
-| US06 | 02 | Highest | Como analista comercial, quero calcular o TAM físico de instalação de sensores, para dimensionar o universo máximo de pontos monitoráveis no Brasil. | 02 | [RF04](#RF04) |
-| US07 | 03 | High | Como analista de dados, quero um ranking de regiões por perdas de energia, para identificar as áreas mais críticas e subsidiar decisões técnicas e comerciais. | 02 | [RF06](#RF06) |
-| US08 | 04 | High | Como administrador, quero cadastrar e gerenciar usuários com perfis distintos, para controlar o acesso às funcionalidades conforme o papel de cada usuário. | 02 | [RF07](#RF07) |
-| US09 | 05 | Medium | Como analista de dados, quero que os modelos de ML tenham desempenho documentado e métricas validadas, para garantir a confiabilidade dos resultados gerados pelo sistema. | 02 | [RNF04](#RNF04) |
-| US10 | 01 | Highest | Como analista comercial, quero um indicador de SAM, para identificar o mercado acessível do produto por região com base em critérios técnicos e regulatórios. | 03 | [RF08](#RF08) |
-| US11 | 02 | Highest | Como analista comercial, quero uma visualização geográfica (mapa de calor), para identificar visualmente as regiões prioritárias de atuação comercial. | 03 | [RF09](#RF09) |
-| US12 | 03 | High | Como usuário, quero controle e transparência sobre meus dados pessoais (LGPD), para garantir que minhas informações sejam tratadas de forma segura e conforme a legislação. | 03 | [RF07](#RF07), [RF10](#RF10) |
-| US13 | 04 | Medium | Como analista de dados, quero que os indicadores sejam recalculados automaticamente após cada nova carga de dados, para garantir que as análises sempre reflitam as informações mais atualizadas. | 03 | [RNF05](#RNF05) |
+- **Sprint video:** [Watch Sprint 1 demonstration](https://www.youtube.com/watch?v=w10nwgCj9kc)
 </details>
 
-## :date: Sprint Backlog <a id="date-sprint-backlog"></a>
 <details>
+<summary><b>Sprint 2</b></summary>
 
-<summary>Mostrar Spring Backlog</summary>
+[View Sprint 2 documentation](docs/SPRINT2.md)
 
-### Sprint 1
-
-[Ver documentação da Sprint 1](docs/SPRINT1.md)
-
-
-### Sprint 2
-
-[Ver documentação da Sprint 2](docs/SPRINT2.md)
-
-
-### Sprint 3
-
-[Ver documentação da Sprint 3](docs/SPRINT3.md)
-
-
+- **Sprint video:** | [Watch Sprint 2 demonstration](https://drive.google.com/drive/folders/1xhPzqp9PZmWwpUhA6LugZi4Wq-HRTqhF?usp=sharing
+) | Video presenting the deliveries completed during Sprint 2. |
+- **Impact artifacts:**
+  - [Google Colab - Sprint 2 analysis](https://colab.research.google.com/drive/1itbtMpPBJKlcQDCD3ssneQeNRWCSla-S?authuser=3#scrollTo=8msgZwQezrFa)
+  - [Notion - ANEEL Data Analysis, TAM and SAM](https://www.notion.so/An-lise-de-Dados-Aneel-TAM-e-SAM-33ea59aef56d802db726cfc98114223c?source=copy_link)
 </details>
 
-<br>
+<details>
+<summary><b>Sprint 3</b></summary>
 
-## :calendar: <a id="cronograma"> Cronograma 📅 </a>
+[View Sprint 3 documentation](docs/SPRINT3.md)
+</details>
 
-| Sprint  | Nome | Data inicio  | Data Fim | Status |
-| --- | -------------------------- | --------| ----- |:---:|
-| --- | KickOff                    | 02/03   | 06/03 | Ok  |
-| --- | Planejamento               | 09/03   | 13/13 | Ok  |
-|  1  | Sprint 1                   | 16/03   | 05/04 |     |
-|  2  | Sprint review / Planning   | 06/04   | 10/04 |     |
-|  3  | Sprint 2                   | 13/04   | 03/05 |     |
-|  4  | Sprint review / Planning   | 04/05   | 08/05 |     |
-|  5  | Sprint 3                   | 11/05   | 31/05 |     |
-|  6  | Sprint review              | 01/06   | 05/06 |     |
-|  7  | Feira de Soluções          | 11/06   |       |     |
-|  8  | Apresentações TGs          | 15/06   | 19/06 |     |
+---
 
-<br>
+## 📅 Schedule <a id="schedule"></a>
 
-## :mortar_board: Integrantes da Equipe <a id="integrantes-equipe"></a>
+| Sprint | Name | Start Date | End Date | Status |
+|:---:|:---:|:---:|:---:|:---:|
+| --- | KickOff                   | Mar 02 | Mar 06 | Ok |
+| --- | Planning                  | Mar 09 | Mar 13 | Ok |
+|  1  | Sprint 1                  | Mar 16 | Apr 05 | Ok |
+|  2  | Sprint review / Planning  | Apr 06 | Apr 10 | Ok |
+|  3  | Sprint 2                  | Apr 13 | May 03 |    |
+|  4  | Sprint review / Planning  | May 04 | May 08 |    |
+|  5  | Sprint 3                  | May 11 | May 31 |    |
+|  6  | Sprint review             | Jun 01 | Jun 05 |    |
+|  7  | Solutions Fair            | Jun 11 |       |    |
+|  8  | TG Presentations          | Jun 15 | Jun 19 |    |
 
-| *Nome*                   | *Função*            | *LinkedIn*                                                  |
+---
+
+## 👥 Team Members <a id="team-members"></a>
+
+| *Name*                   | *Function*            | *LinkedIn*                                                  |
 |:------------------:|:-----------------:|:---------------------------------------:|
-| Vinicius Monteiro | Product Owner     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/viniciusvasm/ ) |
+| Ruth da Silva Mira | Product Owner     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/ruth-mira/) |
 | Cesar Pelogia | Scrum Master  | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/cesar-augusto-anselmo-pelogia-truyts-94a08a268/ ) |
 | Alexandre Jonas | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/alexandre-jonas-de-souza-fonseca-989920181/) |
 | Eliézer Lopes     | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/eli%C3%A9zer-lopes/) |
-| Lucas Henrique | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/lucashenriqueco/) |
 | Gabriel Souza | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/gabriel-alves-de-souza-5b7747267/) |
 | Gustavo Robert     | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/gustavo-robert/) |
+| Lucas Henrique | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/lucashenriqueco/) |
+| Vinicius Monteiro | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](https://www.linkedin.com/in/viniciusvasm/ ) |
 | Vitor Morais       | Developer     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin&labelColor=blue)](http://www.linkedin.com/in/vitor-faria-morais-330b19204/) |
 
-</br>
+---
 
-## Padrões de Processo <a id="padroes-processos"></a>
-[Documentação Geral](docs/DOCUMENTACAO.md)  
-[Padrões de Commits e Branches](docs/PADROES-COMMITS-BRANCHES.md)  
-[Rastreio de Issues](docs/RASTREIO-ISSUES.md)
+## 🛠️ Technologies Used <a id="technologies"></a>
 
-</br>
-
-## Evolução do Projeto (Burndown)<a id="burndown"></a>
-
-<img src="burndown/src/main/resources/static/burndown.png?v=20b5e25d72c93bb0015628f7de835e20d089df8a">
-
-</br>
-
-## 🛠️ Tecnologias Utilizadas <a id="tecnologias-utilizadas"></a>
-
-Esta solução é composta por uma aplicação principal e por um módulo de apoio para acompanhamento da evolução do projeto (Burndown).
+This solution consists of a main application and a support module for tracking project evolution (Burndown).
 
 ### 🖥️ Frontend
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
-[![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
 ### ⚙️ Backend
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 
-### 🗄️ Banco de Dados
+### 🗄️ Database
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
-### 📊 Burndown (Módulo de Apoio)
+### 📊 Burndown (Support Module)
 [![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![GitHub API](https://img.shields.io/badge/GitHub_API-181717?style=for-the-badge&logo=github&logoColor=white)](https://docs.github.com/en/rest)
 
-### 💬 Comunicação
+### 🐳 DevOps
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?style=for-the-badge&logo=turborepo&logoColor=white)](https://turbo.build/)
+
+### 💬 Communication
 [![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://slack.com/)
 
-<br>
+---
 
-## Burndown Automatico
+## 📁 Process Standards <a id="process-standards"></a>
 
-Guia completo de uso, execução local e CI:
+| Document | Description |
+|:---------|:------------|
+| [General Documentation](docs/DOCUMENTATION.md) | Centralized index of all project standards |
+| [Commit and Branch Standards](docs/CONTRIBUTING.md) | Conventional Commits, branch naming and Git hooks |
+| [Issue Tracking](docs/ISSUE-TRACKING.md) | How to trace issues, branches and PRs |
+| [LGPD](docs/LGPD.md) | LGPD guidelines and data privacy compliance |
 
-- `burndown/README.md`
+---
+
+## 📖 Technical Documentation <a id="technical-documentation"></a>
+
+| Document | Description |
+|:---------|:------------|
+| [Installation Manual](docs/INSTALLATION_MANUAL.md) | Complete setup guide for deploying the Z application via Docker Compose |
+| [User Manual](docs/USER_MANUAL.MD) | Operating guide with focus on interface navigation, APIs, and ETL execution |
+| [Prototyping](docs/UI-DESIGN.md) | User flows, screens, and UI components (Figma) |
+| [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
+| [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
+| [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
+| [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
+| [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |

@@ -1,5 +1,5 @@
 name: "🐛 Bug Report"
-description: "Reportar um comportamento inesperado"
+description: "Report an unexpected behavior"
 title: "[BUG] - "
 labels: ["type:bug"]
 assignees: []
@@ -7,33 +7,33 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      value: "## 🐛 Descrição do Bug"
+      value: "## 🐛 Bug Description"
 
   - type: textarea
     id: description
     attributes:
-      label: "O que está acontecendo?"
-      description: "Descreva o comportamento inesperado"
-      placeholder: "Ex: Endpoint GET /indicadores retorna 500 ao filtrar por tipo_rede=transmissão..."
+      label: "What is happening?"
+      description: "Describe the unexpected behavior"
+      placeholder: "Ex: GET /indicadores endpoint returns 500 when filtering by tipo_rede=transmission..."
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: "Comportamento esperado"
-      placeholder: "Ex: Deve retornar os indicadores filtrados com status 200..."
+      label: "Expected behavior"
+      placeholder: "Ex: Should return filtered indicators with status 200..."
     validations:
       required: true
 
   - type: markdown
     attributes:
-      value: "## 🔁 Passos para Reproduzir"
+      value: "## 🔁 Steps to Reproduce"
 
   - type: textarea
     id: steps
     attributes:
-      label: "Como reproduzir?"
+      label: "How to reproduce?"
       value: |
         1. 
         2. 
@@ -44,18 +44,18 @@ body:
   - type: textarea
     id: error-output
     attributes:
-      label: "Mensagem de erro / Stack trace"
-      description: "Cole o erro completo se disponível"
+      label: "Error message / Stack trace"
+      description: "Paste the full error if available"
       render: shell
 
   - type: markdown
     attributes:
-      value: "## 🗂️ Rastreabilidade"
+      value: "## 🗂️ Traceability"
 
   - type: dropdown
     id: sprint
     attributes:
-      label: "Sprint onde o bug foi encontrado"
+      label: "Sprint where the bug was found"
       options:
         - Sprint 1
         - Sprint 2
@@ -66,36 +66,45 @@ body:
   - type: input
     id: related-task
     attributes:
-      label: "Task relacionada (se houver)"
-      placeholder: "Ex: TASK-08"
+      label: "Related task"
+      description: |
+        Reference the related GitHub issue using #issue-number.
+        Example: #42 — GitHub will automatically create a cross-reference link.
+      placeholder: "#42"
 
   - type: input
     id: related-requirement
     attributes:
-      label: "Requisito relacionado"
-      placeholder: "Ex: RF-01, RF-02, RNF-05"
+      label: "Related requirement"
+      description: |
+        Link directly to the requirement in the README using markdown.
+        Example: [RF01](../../README.md#RF01)
+        The README must have an anchor like <a id="RF01"> on the requirement line.
+      placeholder: "[RF01](../../README.md#RF01)"
 
-  - type: textarea
+  - type: input
     id: related-user-stories
     attributes:
-      label: "User Stories relacionadas"
-      placeholder: |
-        Ex:
-        - US-12: Como usuário, espero que o endpoint retorne 200...
-        - US-07: Como analista, preciso que os filtros funcionem corretamente...
+      label: "Related user story"
+      description: |
+        Link directly to the user story in the README using markdown.
+        Example: [US01](../../README.md#backlog-do-produto)
+        To link a specific US, add an anchor like <a id="US01"> to the README backlog table.
+      placeholder: "[US01](../../README.md#backlog-do-produto)"
 
   - type: markdown
     attributes:
-      value: "## 🏷️ Classificação"
+      value: "## 🏷️ Classification"
 
   - type: dropdown
     id: domain
     attributes:
-      label: "Domínio"
+      label: "Domain"
       options:
         - "[BACK]"
         - "[FRONT]"
         - "[INFRA]"
+        - "[DOCS]"
         - "[DATA]"
         - "[ML]"
         - "[SEC]"
@@ -106,31 +115,10 @@ body:
   - type: dropdown
     id: severity
     attributes:
-      label: "Severidade"
+      label: "Severity"
       options:
-        - 🔴 Alta — bloqueia funcionalidade crítica
-        - 🟡 Média — funcionalidade parcialmente comprometida
-        - 🟢 Baixa — comportamento inesperado sem impacto crítico
+        - 🔴 High — blocks critical functionality
+        - 🟡 Medium — functionality partially compromised
+        - 🟢 Low — unexpected behavior with no critical impact
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "## 🌍 Ambiente"
-
-  - type: checkboxes
-    id: environment
-    attributes:
-      label: "Onde o bug ocorre?"
-      options:
-        - label: "Local (Docker Compose)"
-        - label: "Backend (FastAPI)"
-        - label: "Frontend (React)"
-        - label: "MongoDB"
-        - label: "PostgreSQL"
-
-  - type: textarea
-    id: additional-notes
-    attributes:
-      label: "Notas adicionais"
-      placeholder: "Prints, logs, ou contexto extra..."

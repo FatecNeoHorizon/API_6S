@@ -1,126 +1,58 @@
-# Sprint 1 — Relatórios e Estrutura de Dados
+# Sprint 1
 
-[Voltar ao README principal](../README.md#date-sprint-backlog)
+[Back to main README](../README.md#sprint-backlog)
 
-> **Período:** 16/03/2026 → 05/04/2026  
-> **Status:** 🔄 Em andamento
-
----
-
-## 🎯 Objetivo da Sprint
-
-Estabelecer a base de dados e visibilidade da rede elétrica — construindo o pipeline ETL sobre os dados da BDGD/ANEEL e expondo os primeiros indicadores de qualidade (DEC, FEC e perdas) em uma interface funcional e responsiva, contemplando tanto a malha de transmissão quanto a de distribuição.
+> **Period:** March 16, 2026 to April 05, 2026  
+> **Status:** In progress
 
 ---
 
-## ✅ MVC da Sprint — Entregas
+## Sprint 1: Planning and Execution
 
-### 🟢 Mínimo Comprometido
-O que a equipe se compromete a entregar obrigatoriamente até o fim da sprint.
+- **Estimated Team Capacity:** `13`
+- **Sprint Goal:** Deliver user stories `US01: Network Structure Reports` and `US02: Quality Indicators Dashboard`, establishing the initial ETL pipeline and the first analytical indicators for the platform.
+- **Sprint Forecast (Stretch goals - non-committed items):** No stretch goals defined for this sprint.
 
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Pipeline ETL funcional com os layers prioritários da BDGD | ⬜ |
-| 2 | Exposição dos indicadores DEC, FEC e perdas agregados por região | ⬜ |
+| Id | Prioridade | Titulo | User Story | Estimativa | Sprint |
+| -- | ---------- | ------ | ---------- | ---------- | ------ |
+| US01 | Highest | Network Structure Reports | As a data analyst, I want to access structural reports of distribution networks, to identify geographic, electrical and structural characteristics of the monitored infrastructure. | 8 | 1 |
+| US02 | Highest | Quality Indicators Dashboard | As a data analyst, I want the system to expose quality data (DEC, FEC, losses), to evaluate electrical grid performance by region and period. | 5 | 1 |
 
-### 🔵 Entregas Adicionais
-O que será entregue além do mínimo, caso o tempo e contexto permitissem.
+### Demonstration Video
 
-| # | Funcionalidade | Status |
-|:--|:--------------|:------:|
-| 1 | Dashboard interativo com filtros por região e tipo de rede | ⬜ |
-| 2 | Interface responsiva e compatível com navegadores modernos | ⬜ |
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=w10nwgCj9kc">
+    <img src="https://img.youtube.com/vi/w10nwgCj9kc/maxresdefault.jpg" alt="Demonstration video - Click to watch" width="600">
+  </a>
+</div>
 
----
+### Sprint Artifacts
 
-## 📋 User Stories e Requisitos
+| Artifact | Description |
+|:---------|:------------|
+| [Sprint 1 demonstration video](https://www.youtube.com/watch?v=w10nwgCj9kc) | Video presenting the deliveries completed during Sprint 1. |
 
-| User Story | Descrição | Requisitos | Prioridade |
-|:-----------|:----------|:----------:|:----------:|
-| US01 | Como analista, quero acessar relatórios de estruturas das redes de distribuição. | RF01, RF02 | 🔴 Highest |
-| US02 | Como analista, quero que o sistema exponha dados de qualidade (DEC, FEC, perdas). | RF01, RF03 | 🔴 Highest |
-| US03 | Como usuário, quero que o sistema responda rapidamente, sem travamentos. | RNF01, RNF02 | 🟠 High |
-| US04 | Como usuário, quero acessar o sistema por qualquer navegador moderno. | RNF03 | 🟡 Medium |
+### Sprint Evolution (Burndown)
 
----
+<img src="../burndown/src/main/resources/static/sprint-1.png" alt="Sprint 1 burndown">
 
-## 🏗️ Arquitetura e Decisões Técnicas
+### Definition of Ready (DoR)
+For a User Story to be ready to start in a sprint, the following criteria must be met:
+- Mandatory items already defined
+- It has a clear **title, description, and objective**.
+- **Acceptance criteria and business rules** are defined.
+- **Priority** has been established.
+- **Required data or system access** is available, or an alternative plan has been defined.
+- The **effort** has been estimated by the team.
+- **Supporting artifacts** have been provided (e.g., wireframes, mockups, diagrams).
 
-### Separação de responsabilidades entre os bancos de dados
-
-A arquitetura de dados foi projetada com dois bancos de dados com responsabilidades distintas e complementares:
-
-**PostgreSQL — dados sensíveis**  
-Responsável pelo armazenamento de dados que exigem conformidade com a LGPD:
-credenciais de usuários, perfis de acesso e qualquer informação pessoal identificável.
-A escolha garante controle transacional, integridade referencial e facilidade
-de auditoria — requisitos essenciais para atender à legislação.
-
-**MongoDB — dados públicos (BDGD)**  
-Responsável pelo armazenamento dos dados da BDGD/ANEEL.
-Por serem dados públicos, não há restrições de privacidade. A escolha se justifica
-pela facilidade de ingestão de grandes volumes de dados semiestruturados e pelo
-suporte nativo a GeoJSON — necessário para os layers com geometria da BDGD.
-
-> Essa separação garante que dados sensíveis nunca trafeguem ou
-> residam no mesmo ambiente que os dados operacionais públicos,
-> simplificando a conformidade com a LGPD e reduzindo a superfície de risco.
-
-### Layers da BDGD e estratégia de ingestão
-
-A BDGD é composta por 43 layers. Nesta sprint, são ingeridos apenas os layers
-de alta prioridade para os indicadores e estrutura da rede:
-
-**Layers obrigatórios na Sprint 1:**
-- `SUB` — subestações com geometria
-- `UNTRAT` — transformadores AT com perdas e energia mensal
-- `UNTRMT` — transformadores MT com geometria e perdas
-- `SSDAT` — segmentos de rede AT com geometria
-- `CTMT` — circuitos MT com indicadores de perdas mensais
-- `UCBT_tab` — consumidores BT com DIC/FIC mensais
-- `UCMT_tab` — consumidores MT com DIC/FIC mensais
-- `UCAT_tab` — consumidores AT com DIC/FIC mensais
-- `CONJ` — conjuntos geográficos — nível de agregação para o heatmap
-
-**Atenção especial:**
-`UCBT_tab` tem 3M de registros (1.4GB em memória). A ingestão deve ser feita
-em chunks de 100.000 linhas. Índice composto `{DIST, MUN, CONJ}` deve ser
-criado antes de qualquer consulta analítica.
-
-### Cálculo dos indicadores DEC e FEC
-
-DEC e FEC são calculados a partir dos campos `DIC_01..DIC_12` e `FIC_01..FIC_12`
-presentes nas tabelas de consumidores (`UCBT_tab`, `UCMT_tab`, `UCAT_tab`).
-O ETL agrega esses valores por `MUN` (município) e `CONJ` (conjunto elétrico)
-— nunca expondo dados individuais por UC.
-
-### Perdas de energia
-
-Três granularidades disponíveis na BDGD:
-- **Por circuito MT:** `CTMT.PERD_MED` — perda média percentual do circuito. Feature principal para o ranking.
-- **Por transformador MT:** `EQTRMT.PER_TOT` — perda total por transformador.
-- **Por transformador AT:** diferença entre `UNTRAT.ENES_XX` (energia secundário) e `UNTRAT.ENET_XX` (energia terciário).
-
-### Estrutura da API com FastAPI
-
-O backend será construído com FastAPI por três razões principais:
-a exposição de dados via API REST para o frontend React, a integração natural
-com bibliotecas de ML (scikit-learn, pandas/geopandas) e a geração automática de
-documentação Swagger — facilitando a comunicação com o cliente e a validação
-das rotas durante as sprint reviews.
-
-### Desenho do pipeline ETL
-
-O pipeline segue o fluxo extração → transformação → carga, com registro de logs
-em cada etapa e controle de versionamento por lote. Cada carga recebe um
-identificador de versão, permitindo rastrear qual conjunto de dados alimentou
-cada indicador exibido na interface.
-
-O atributo `tipo_rede` (transmissão/distribuição) é derivado da tensão nominal
-de cada layer e preservado como campo indexável no MongoDB para uso nas sprints seguintes.
-O campo `ARE_LOC` (área de localização: urbana/rural/periurbana), presente em
-vários layers, é preservado para alimentar o filtro operacional do SAM na Sprint 3.
-
----
-
-*Última atualização: 16/03/2026*
+### Definition of Done (DoD)
+For a User Story to be considered **complete**, the following criteria must be met:
+- The code has been written, locally tested, and is clean (following team standards).
+- Technical documentation has been updated by the developers.
+- The functionality has been integrated into the branch: **develop**.
+- All **automated tests** have been created and successfully executed.
+- The **User Story acceptance criteria** have been fulfilled.
+- The interface complies with **usability principles**, providing clear and consistent navigation for the end user.
+- The task complies with **LGPD (data protection) principles**.
+- The functionality has been **tested and approved by the Product Owner (PO)**.

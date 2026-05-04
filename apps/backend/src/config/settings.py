@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
 
+    # File Upload Settings
+    csv_file_path: str = Field(default="/app/data/indicadores-continuidade-coletivos-2020-2029.csv")
     max_upload_size_mb: int = Field(default=500)
     tmp_upload_path: str = Field(default="tmp/uploads")
 
@@ -71,12 +73,29 @@ class Settings(BaseSettings):
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
 
+    # Model retraining policy
+    model_retrain_on_new_data: bool = Field(default=False)
+    model_retrain_strategy: str = Field(default="per_load")
+    model_retrain_min_new_records: int = Field(default=1)
+
+    # PostgreSQL Configuration
+    postgres_host: str = Field(default="postgres")
+    postgres_port: int = Field(default=5432)
+    postgres_user: str = Field(default="postgres")
+    postgres_password: str = Field(default="postgres")
+    postgres_db: str = Field(default="postgres")
+    postgres_sslmode: str = Field(default="prefer")
+
+    # User Security Configuration
     email_hash_salt: str = Field(default="change-me")
     email_encryption_key: Optional[str] = Field(default=None)
 
     jwt_secret_key: str = Field(default="change-this-jwt-secret-in-production")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_token_expire_minutes: int = Field(default=60)
+
+    # Model & Forecasting Configuration
+    model_forecast_months: int = Field(default=12, description="Number of months to forecast ahead")
 
     model_config = ConfigDict(
         case_sensitive=False,

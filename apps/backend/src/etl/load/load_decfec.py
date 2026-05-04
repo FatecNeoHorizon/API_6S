@@ -2,6 +2,75 @@ import os
 import logging
 from pymongo.collection import Collection
 from pymongo import UpdateOne
+
+from src.config.settings import Settings
+from src.control.tam_sam_procedures import Tam_sam_procedures
+from src.database.connection import get_client
+from src.etl.extract.extract_decfec import extract_decfec
+from src.services.retraining_service import schedule_retraining
+
+
+MANDATORY_FIELDS = [
+    "SigAgente", "NumCNPJ", "IdeConjUndConsumidoras",
+    "DscConjUndConsumidoras", "SigIndicador", "AnoIndice",
+    "NumPeriodoIndice", "VlrIndiceEnviado",
+]
+MAX_REJECTION_LOGS_PER_CHUNK = 5
+
+settings = Settings()
+
+def _to_str(value) -> str | None:
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip() or None
+
+
+def _to_float(value) -> float | None:
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        # The CSV stores decimals with comma and may omit the leading zero.
+        # Examples: ",44" -> "0.44", "1.234,56" -> "1234.56"
+        normalized = normalized.replace(" ", "")
+        if "," in normalized:
+            normalized = normalized.replace(".", "").replace(",", ".")
+        try:
+            return float(normalized)
+        except (ValueError, TypeError):
+            return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _history_totals(totals):
+    return {
+        "total_processed": totals["rows_processed"],
+        "total_inserted": totals["inserted"],
+        "total_updated": totals["updated"],
+        "total_rejected": totals["rows_rejected"],
+        "chunks_completed": totals["chunks_processed"],
+    }
+
+
+def _log_event(event, **payload):
+    log_line = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        **payload,
+    }
+    print(json.dumps(log_line, default=str, ensure_ascii=True))
+
 from pymongo.errors import BulkWriteError
 from src.etl.utils.bulk_persist import bulk_persist
 

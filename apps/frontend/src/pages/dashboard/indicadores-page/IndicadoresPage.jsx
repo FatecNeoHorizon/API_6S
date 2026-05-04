@@ -434,8 +434,8 @@ const buildPreviewChartData = (data) => {
         decValues: [],
         fecValues: [],
       };
-    if (item.indicator === "DEC") map[key].decValues.push(item.value);
-    if (item.indicator === "FEC") map[key].fecValues.push(item.value);
+    if (item.indicator === "DEC") map[key].decValues.push(item.forecast_value);
+    if (item.indicator === "FEC") map[key].fecValues.push(item.forecast_value);
   });
   return Object.values(map)
     .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month))
@@ -578,7 +578,6 @@ export default function IndicadoresPage() {
         setFecAvg(null);
         setRankingData([]);
         setChartData([]);
-        setpreviewChartData([])
         return;
       }
       setDecAvg(
@@ -589,7 +588,6 @@ export default function IndicadoresPage() {
       );
       setRankingData(buildRanking(data));
       setChartData(buildChartData(data));
-      setpreviewChartData(buildPreviewChartData(data))
     } catch (error) {
       console.error("[get-dec-fec] Erro:", error);
     } finally {
@@ -602,21 +600,22 @@ export default function IndicadoresPage() {
 
     const params = new URLSearchParams({
       consumer_unit_set_id: 16648,
-      year_start: from.year,
-      year_end: to.year,
+      year_start: 2014,
+      year_end: 2024,
+      save_models: false,
     });
 
-    const url = `/get-dec-fec?${params.toString()}`;
+    const url = `/timeseries/forecast-unit?${params.toString()}`;
     console.log("[get-dec-fec] Fetching:", url);
     setDecFecLoading(true);
     try {
-      const data = await apiClient.get(url);
+      const data = await apiClient.post(url);
       if (typeof data === "string") {
         console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
         setpreviewChartData([])
         return;
       }
-      setpreviewChartData(buildPreviewChartData(data))
+      setpreviewChartData(buildPreviewChartData(data.forecasts))
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
@@ -632,6 +631,7 @@ export default function IndicadoresPage() {
     fetchDecFec(from, to);
     fetchTamTotal();
     fetchSamTotal(from, to);
+    fetchPreviewDecFec(from, to);
   };
 
   const handleMonthRangeChange = (range) => {
@@ -642,6 +642,7 @@ export default function IndicadoresPage() {
       setDecFecPopoverOpen(false);
       fetchTamTotal();
       fetchSamTotal(range.from, range.to);
+      fetchPreviewDecFec(range.from, range.to);
     }
   };
 

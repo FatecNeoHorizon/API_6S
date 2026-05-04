@@ -99,7 +99,7 @@ class TimeSeriesForecastProcedures:
                 - message (str)
         """
         try:
-            # Step 1: Prepare time series data
+            # Step 1: Build the same monthly feature table used by the original notebook.
             result = prepare_timeseries(
                 consumer_unit_set_id=consumer_unit_set_id,
                 indicator_type_code=indicator_type_code,
@@ -123,7 +123,7 @@ class TimeSeriesForecastProcedures:
             
             df = result["df"]
             
-            # Step 2: Extract features and target
+            # Step 2: Remove rows that still have incomplete lag windows or missing target values.
             lag_cols = [f"lag_{i}" for i in range(1, n_lags + 1)]
             df_clean = df.dropna(subset=lag_cols + ["VlrIndiceEnviado"]).reset_index(drop=True)
             
@@ -141,12 +141,12 @@ class TimeSeriesForecastProcedures:
             X = df_clean[lag_cols]
             y = df_clean["VlrIndiceEnviado"]
             
-            # Step 3: Split data
+            # Step 3: Split chronologically; this is time series data, so shuffling would leak future information.
             split_idx = int(len(df_clean) * (1 - test_split))
             X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            # Step 4: Train model
+            # Step 4: Train the baseline RandomForest used by the Colab implementation.
             model = RandomForestRegressor(
                 n_estimators=100,
                 n_jobs=-1,
@@ -154,7 +154,7 @@ class TimeSeriesForecastProcedures:
             )
             model.fit(X_train, y_train)
             
-            # Step 5: Evaluate
+            # Step 5: Compare the result with the holdout slice using MAE.
             mae = mean_absolute_error(y_test, model.predict(X_test))
             
             gc.collect()
@@ -216,7 +216,7 @@ class TimeSeriesForecastProcedures:
                     "message": "Model is None",
                 }
             
-            # Get historical data
+            # Reload the historical series so each forecast step can roll forward recursively.
             result = prepare_timeseries(
                 consumer_unit_set_id=consumer_unit_set_id,
                 indicator_type_code=indicator_type_code,
@@ -236,7 +236,7 @@ class TimeSeriesForecastProcedures:
             df = result["df"]
             lag_cols = [f"lag_{i}" for i in range(1, n_lags + 1)]
             
-            # Get last valid values for lags
+            # Start from the most recent observed values; these seed the recursive forecast loop.
             df_valid = df.dropna(subset=["VlrIndiceEnviado"])
             if df_valid.empty:
                 return {
@@ -248,11 +248,11 @@ class TimeSeriesForecastProcedures:
             history = list(df_valid["VlrIndiceEnviado"].values)
             last_date = df_valid["data"].iloc[-1]
             
-            # Generate forecasts
+            # Predict one month at a time and feed each prediction back into the history window.
             forecasts = []
             for m in range(1, forecast_months + 1):
                 new_date = pd.Timestamp(last_date) + pd.DateOffset(months=m)
-                lags = history[-n_lags:][::-1]
+                lags = history[-n_lags:][::-1]  # lag_1 must point to the most recent observed/predicted value
                 pred = model.predict(
                     pd.DataFrame([lags], columns=lag_cols)
                 )[0]
@@ -289,7 +289,7 @@ class TimeSeriesForecastProcedures:
     ) -> dict:
         forecast_months = _settings.model_forecast_months
         
-        # Get forecast result using existing method
+        # Generate the recursive forecast and adapt it to the collection schema.
         forecast_result = self.generate_forecasts(
             model=model,
             consumer_unit_set_id=consumer_unit_set_id,
@@ -310,7 +310,7 @@ class TimeSeriesForecastProcedures:
         forecasts = forecast_result["forecasts"]
         now = datetime.now(timezone.utc)
         
-        # Transform to persistence format
+            # Flatten the forecast output so each document matches the MongoDB validator.
         predictions = []
         for forecast in forecasts:
             prediction = {
@@ -367,7 +367,7 @@ class TimeSeriesForecastProcedures:
         for indicator in indicator_types:
             print(f"\n[{indicator}] Training model...")
             
-            # Train model
+            # Train one model per indicator so DEC and FEC can be evaluated independently.
             train_result = self.train_forecast_model(
                 consumer_unit_set_id=consumer_unit_set_id,
                 indicator_type_code=indicator,
@@ -396,7 +396,7 @@ class TimeSeriesForecastProcedures:
                 "n_records": train_result["n_records"],
             }
             
-            # Save model if requested
+            # Save the estimator to disk for reproducibility and manual inspection.
             if save_models:
                 model_path = self.models_dir / f"modelo_{indicator}_{consumer_unit_set_id}.pkl"
                 joblib.dump(model, str(model_path))
@@ -404,7 +404,7 @@ class TimeSeriesForecastProcedures:
             else:
                 models[indicator] = model
             
-            # Generate forecasts
+            # Generate the 12-month horizon using the same fitted model.
             print(f"[{indicator}] Generating forecasts...")
             forecast_result = self.generate_forecasts(
                 model=model,
@@ -422,7 +422,7 @@ class TimeSeriesForecastProcedures:
             forecasts = forecast_result["forecasts"]
             print(f"  ✓ Generated {len(forecasts)} forecasts")
             
-            # Add indicator info to each forecast
+            # Enrich each forecast with the unit and indicator so the API can persist it directly.
             for f in forecasts:
                 f["consumer_unit_id"] = consumer_unit_set_id
                 f["indicator"] = indicator

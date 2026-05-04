@@ -63,7 +63,7 @@ def generate_predictions_task(
         db = client[settings.mongo_db_name]
         predictions_collection = db["predictions"]
         
-        # Determine which units to forecast
+        # Allow the endpoint to target one unit or the full population discovered in MongoDB.
         units_to_process = []
         if consumer_unit_set_id:
             units_to_process = [consumer_unit_set_id]
@@ -81,7 +81,7 @@ def generate_predictions_task(
         total_updated = 0
         failed_units = []
         
-        # Process each unit
+        # Process each unit independently so a failure does not stop the rest of the batch.
         for unit_id in units_to_process:
             try:
                 logger.info(f"[generate_predictions_task] Forecasting unit {unit_id}")
@@ -101,7 +101,7 @@ def generate_predictions_task(
                     failed_units.append(unit_id)
                     continue
                 
-                # Persist predictions
+                # Adapt the forecasting output to the exact document shape stored in predictions.
                 all_predictions = []
                 for forecast in result.get("forecasts", []):
                     pred = {
@@ -116,6 +116,7 @@ def generate_predictions_task(
                     all_predictions.append(pred)
                 
                 if all_predictions:
+                    # Upsert on the natural key so reruns update the same logical month instead of duplicating it.
                     persist_metrics = persist_predictions(predictions_collection, all_predictions)
                     total_inserted += persist_metrics.get("inserted", 0)
                     total_updated += persist_metrics.get("updated", 0)

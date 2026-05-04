@@ -292,6 +292,26 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
     ]
 
 
+def create_first_access_token(
+    conn: PgConnection,
+    *,
+    user_id: str,
+    token_hash: str,
+    expires_at: datetime,
+) -> str:
+    query = """
+        INSERT INTO TB_FIRST_ACCESS_TOKEN (USER_ID, TOKEN_HASH, EXPIRES_AT)
+        VALUES (%s, %s, %s)
+        RETURNING TOKEN_UUID
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_id), token_hash, expires_at))
+        row = cursor.fetchone()
+
+    return str(row[0])
+
+
 def get_valid_first_access_token(conn: PgConnection, token_hash: str):
     query = """
         SELECT

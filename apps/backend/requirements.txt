@@ -13,6 +13,7 @@ pandas
 openpyxl
 geopandas
 pyogrio
+scikit-learn
 structlog
 python-json-logger
 bcrypt

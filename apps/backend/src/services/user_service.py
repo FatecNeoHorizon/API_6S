@@ -1,5 +1,6 @@
 import base64
 import hashlib
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from cryptography.fernet import Fernet
@@ -21,6 +22,7 @@ from src.repositories.user_repository import (
     UserNotFoundError,
     UserResult,
     create_user,
+    create_user_session,
     exists_by_username,
     exists_by_email_hash,
     get_user_by_id,
@@ -33,7 +35,11 @@ from src.repositories.user_repository import (
 )
 
 
-def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
+def create_user_service(
+    payload: UserCreateRequest,
+    source_ip: str = "0.0.0.0",
+    user_agent: str = "",
+) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
     email_hash = EmailHasher.hash(normalized_email)
@@ -56,6 +62,18 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
             }
 
             result = create_user(conn, data)
+            
+            # Criar sessão para o novo usuário
+            expires_at = datetime.now(timezone.utc) + timedelta(
+                minutes=settings.jwt_access_token_expire_minutes
+            )
+            create_user_session(
+                conn,
+                user_id=result.user_uuid,
+                source_ip=source_ip,
+                user_agent=user_agent,
+                expires_at=expires_at,
+            )
 
         return UserCreateResponse(
             user_uuid=result.user_uuid,

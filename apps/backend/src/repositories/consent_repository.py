@@ -70,6 +70,19 @@ def list_current_mandatory_clauses(conn) -> list[dict]:
     with dict_cursor(conn) as cur:
         cur.execute(
             """
+                        WITH current_versions AS (
+                                SELECT
+                                        pv.VERSION_UUID,
+                                        pv.POLICY_TYPE,
+                                        pv.VERSION,
+                                        ROW_NUMBER() OVER (
+                                                PARTITION BY pv.POLICY_TYPE
+                                                ORDER BY pv.EFFECTIVE_FROM DESC, pv.CREATED_AT DESC
+                                        ) AS rn
+                                FROM TB_POLICY_VERSION pv
+                                WHERE pv.DELETED_AT IS NULL
+                                    AND pv.EFFECTIVE_FROM <= NOW()
+                        )
             SELECT
                 c.CLAUSE_UUID,
                 c.POLICY_VERSION_ID,
@@ -78,10 +91,9 @@ def list_current_mandatory_clauses(conn) -> list[dict]:
                 pv.POLICY_TYPE,
                 pv.VERSION
             FROM TB_POLICY_CLAUSE c
-            JOIN TB_POLICY_VERSION pv
-              ON pv.VERSION_UUID = c.POLICY_VERSION_ID
-            WHERE pv.DELETED_AT IS NULL
-              AND pv.EFFECTIVE_FROM <= NOW()
+                        JOIN current_versions pv
+                            ON pv.VERSION_UUID = c.POLICY_VERSION_ID
+                        WHERE pv.rn = 1
               AND c.DELETED_AT IS NULL
               AND c.MANDATORY = TRUE
             ORDER BY pv.POLICY_TYPE, pv.VERSION, c.DISPLAY_ORDER

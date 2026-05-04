@@ -38,8 +38,17 @@ def create_access_token(
     user_id: str,
     session_id: str,
     profile_name: str,
+    username: str | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
+    # Validate inputs
+    if not user_id or not session_id or not profile_name:
+        raise ValueError("user_id, session_id, and profile_name are required")
+
+    # Validate session_id format (should be UUID)
+    if len(session_id) != 36:
+        raise ValueError(f"Invalid session_id format: {session_id}")
+
     expire = datetime.now(timezone.utc) + (
         expires_delta
         or timedelta(minutes=settings.jwt_access_token_expire_minutes)
@@ -52,6 +61,9 @@ def create_access_token(
         "exp": expire,
         "type": "access",
     }
+    
+    if username:
+        payload["username"] = username
 
     return jwt.encode(
         payload,
@@ -82,6 +94,14 @@ def decode_token(token: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_token_type",
+        )
+
+    # Validate session_id format
+    session_id = payload.get("sid")
+    if not session_id or len(str(session_id)) != 36:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_session_id_in_token",
         )
 
     return payload

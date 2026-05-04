@@ -39,6 +39,7 @@ def query_indicators_for_unit(
     Returns:
         List of documents from distribution_indices collection
     """
+    # Keep the query narrow so the model always trains on one unit and one indicator at a time.
     filter_dict = {
         "consumer_unit_set_id": consumer_unit_set_id,
         "indicator_type_code": indicator_type_code,
@@ -72,6 +73,7 @@ def prepare_timeseries_dataframe(
         DataFrame with columns [data, VlrIndiceEnviado] sorted by date
         Returns empty DataFrame if no data found
     """
+    # Load the raw documents first; the rest of the pipeline assumes a monthly sequence.
     records = query_indicators_for_unit(
         consumer_unit_set_id=consumer_unit_set_id,
         indicator_type_code=indicator_type_code,
@@ -86,20 +88,20 @@ def prepare_timeseries_dataframe(
     # Convert to DataFrame
     df = pd.DataFrame(records)
     
-    # Create date column from year + period
+    # Rebuild the monthly timestamp used by the Colab notebook from year + period.
     df["data"] = df.apply(
         lambda row: convert_year_period_to_date(row["year"], row["period"]),
         axis=1
     )
     
-    # Keep only necessary columns
+    # Normalize the target name so downstream training code can stay notebook-compatible.
     df = df[["data", "value"]].copy()
     df.columns = ["data", "VlrIndiceEnviado"]
     
-    # Sort by date
+    # Preserve chronological order because the lag features depend on it.
     df = df.sort_values("data").reset_index(drop=True)
     
-    # Convert value to float
+    # Ensure the target column is numeric before validation and lag generation.
     df["VlrIndiceEnviado"] = pd.to_numeric(df["VlrIndiceEnviado"], errors="coerce")
     
     return df
@@ -183,7 +185,7 @@ def prepare_timeseries(
             - message (str): Status message
             - record_count (int): Number of records loaded
     """
-    # Step 1: Query and prepare DataFrame
+    # Step 1: Query and prepare the base monthly series.
     df = prepare_timeseries_dataframe(
         consumer_unit_set_id=consumer_unit_set_id,
         indicator_type_code=indicator_type_code,
@@ -194,7 +196,7 @@ def prepare_timeseries(
     
     record_count = len(df)
     
-    # Step 2: Validate before lag creation
+    # Step 2: Validate before creating lag features so sparse series fail fast.
     is_valid, validation_msg = validate_timeseries_data(df, min_records=min_records)
     
     if not is_valid:
@@ -205,7 +207,7 @@ def prepare_timeseries(
             "record_count": record_count,
         }
     
-    # Step 3: Create lag features
+    # Step 3: Create the lag window required by the trainer.
     df = create_lag_features(df, n_lags=n_lags)
     
     return {

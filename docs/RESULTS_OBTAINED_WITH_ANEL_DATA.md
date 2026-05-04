@@ -129,6 +129,8 @@ Stored fields:
 This makes the saved records easier to query by reporting period and aligns the database schema with the monthly nature of the forecasts.
 
 At runtime, the backend also reapplies the `predictions` collection validator on startup so existing environments are migrated to the same year/month schema instead of keeping the legacy `forecast_date` document shape.
+
+For the implementation details behind this persistence format, see [PREDICTIONS_FORECASTS_IMPLEMENTATION.md](PREDICTIONS_FORECASTS_IMPLEMENTATION.md).
 ## 6. Insights from the Results
 ### Model Performance
 - The Random Forest model performed well for most units

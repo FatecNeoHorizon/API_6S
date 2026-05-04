@@ -44,6 +44,25 @@ const STATUS_STYLE = {
 
 const REGIOES = ["Todas", "Urbana", "Rural"];
 
+const normalizeAssetsResponse = (data) => {
+  if (Array.isArray(data)) {
+    return { assets: data, total: data.length };
+  }
+
+  const rows = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
+
+  return {
+    assets: rows,
+    total: Number.isFinite(data?.total) ? data.total : rows.length,
+  };
+};
+
 export default function EstruturaRedesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [apiSearch, setApiSearch] = useState("");
@@ -84,8 +103,9 @@ export default function EstruturaRedesPage() {
       .get(`/network-structure/assets?${params}`)
       .then((data) => {
         if (!cancelled) {
-          setAssets(data.data ?? []);
-          setTotal(data.total ?? 0);
+          const normalized = normalizeAssetsResponse(data);
+          setAssets(normalized.assets);
+          setTotal(normalized.total);
         }
       })
       .catch(() => {
@@ -128,6 +148,7 @@ export default function EstruturaRedesPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const fmt = (val) => (loadingSummary ? "..." : (val ?? "-"));
+  const assetRows = Array.isArray(assets) ? assets : [];
   const equipamentoLabel = total === 1 ? "equipamento encontrado" : "equipamentos encontrados";
 
   const getStatusBadge = (status) => {
@@ -294,7 +315,7 @@ export default function EstruturaRedesPage() {
                 </tr>
               </thead>
               <tbody>
-                {assets.map((asset) => (
+                {assetRows.map((asset) => (
                   <tr
                     key={asset.code}
                     className="border-b border-border/50 transition-colors"
@@ -338,7 +359,7 @@ export default function EstruturaRedesPage() {
             </table>
           </div>
 
-          {!loadingAssets && assets.length === 0 && (
+          {!loadingAssets && assetRows.length === 0 && (
             <div className="text-center py-12 px-4">
               <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">

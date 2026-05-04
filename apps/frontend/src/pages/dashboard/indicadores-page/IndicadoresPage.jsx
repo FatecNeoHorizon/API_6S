@@ -407,17 +407,17 @@ const buildChartData = (data) => {
       year,
       dec: decValues.length
         ? parseFloat(
-            (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
-              2,
-            ),
-          )
+          (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
       fec: fecValues.length
         ? parseFloat(
-            (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
-              2,
-            ),
-          )
+          (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
     }));
 };
@@ -425,17 +425,17 @@ const buildChartData = (data) => {
 const buildPreviewChartData = (data) => {
   const map = {};
   data.forEach((item) => {
-    const key = `${item.year}-${String(item.period).padStart(2, "0")}`;
+    const key = `${item.forecast_year}-${String(item.forecast_period).padStart(2, "0")}`;
     if (!map[key])
       map[key] = {
         key,
-        year: item.year,
-        month: item.period,
+        year: item.forecast_year,
+        month: item.forecast_period,
         decValues: [],
         fecValues: [],
       };
-    if (item.indicator_type_code === "DEC") map[key].decValues.push(item.value);
-    if (item.indicator_type_code === "FEC") map[key].fecValues.push(item.value);
+    if (item.indicator === "DEC") map[key].decValues.push(item.value);
+    if (item.indicator === "FEC") map[key].fecValues.push(item.value);
   });
   return Object.values(map)
     .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month))
@@ -444,17 +444,17 @@ const buildPreviewChartData = (data) => {
       year,
       dec: decValues.length
         ? parseFloat(
-            (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
-              2,
-            ),
-          ) * Math.random()
+          (decValues.reduce((s, v) => s + v, 0) / decValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
       fec: fecValues.length
         ? parseFloat(
-            (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
-              2,
-            ),
-          ) * Math.random()
+          (fecValues.reduce((s, v) => s + v, 0) / fecValues.length).toFixed(
+            2,
+          ),
+        )
         : null,
     }));
 };
@@ -527,7 +527,7 @@ export default function IndicadoresPage() {
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
 
-  const fetchTamTotal = async() => {
+  const fetchTamTotal = async () => {
     const url = `/tam-sam/tam`;
     setDecFecLoading(true);
     try {
@@ -545,9 +545,9 @@ export default function IndicadoresPage() {
     }
   }
 
-  const fetchSamTotal = async(from, to) => {
+  const fetchSamTotal = async (from, to) => {
 
-    const params = new URLSearchParams({year: from.year})
+    const params = new URLSearchParams({ year: from.year })
     const url = `/tam-sam/sam?${params.toString()}`;
     setDecFecLoading(true);
     try {
@@ -592,6 +592,33 @@ export default function IndicadoresPage() {
       setpreviewChartData(buildPreviewChartData(data))
     } catch (error) {
       console.error("[get-dec-fec] Erro:", error);
+    } finally {
+      setDecFecLoading(false);
+    }
+  };
+
+  // ── Preview DEC/FEC handlers ─────────────────────────────────────────────────────────
+  const fetchPreviewDecFec = async (from, to) => {
+
+    const params = new URLSearchParams({
+      consumer_unit_set_id: 16648,
+      year_start: from.year,
+      year_end: to.year,
+    });
+
+    const url = `/get-dec-fec?${params.toString()}`;
+    console.log("[get-dec-fec] Fetching:", url);
+    setDecFecLoading(true);
+    try {
+      const data = await apiClient.get(url);
+      if (typeof data === "string") {
+        console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
+        setpreviewChartData([])
+        return;
+      }
+      setpreviewChartData(buildPreviewChartData(data))
+    } catch (error) {
+      console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
       setDecFecLoading(false);
     }

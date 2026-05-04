@@ -123,7 +123,7 @@ public class BurndownDataMapper {
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
                 LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isBefore(start) && !created.isAfter(end);
+                return !created.isAfter(end);
             })
             .collect(Collectors.toList());
  

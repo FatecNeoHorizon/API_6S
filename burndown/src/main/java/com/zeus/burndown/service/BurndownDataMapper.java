@@ -37,7 +37,7 @@ public class BurndownDataMapper {
  
     private static final List<SprintPeriod> SPRINTS = List.of(
             new SprintPeriod("Sprint 1", 16, 3, 6, 4),   // 16/03 - 05/04
-            new SprintPeriod("Sprint 2", 13, 4, 3, 5),   // 13/04 - 03/05
+            new SprintPeriod("Sprint 2", 13, 4, 4, 5),   // 13/04 - 03/05
             new SprintPeriod("Sprint 3", 11, 5, 31, 5)   // 11/05 - 31/05
     );
  

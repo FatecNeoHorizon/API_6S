@@ -11,15 +11,15 @@ SELECT 'MANAGER', '{"view": true, "edit": true, "insert": false, "delete": false
 WHERE NOT EXISTS (SELECT 1 FROM TB_PROFILE WHERE PROFILE_NAME = 'MANAGER');
 
 INSERT INTO TB_POLICY_VERSION (VERSION, POLICY_TYPE, CONTENT, EFFECTIVE_FROM)
-SELECT '1.0.0', 'PRIVACY_POLICY', 'This privacy policy describes how users personal data is collected, stored, used and protected in accordance with Federal Law 13.709/2018 (General Data Protection Law - LGPD). The data collected is used exclusively for the purposes informed at the time of registration. The data subject has the right to access, correct, delete and revoke consent at any time. Data is stored in a secure environment with encryption at rest and in transit. This policy takes effect on the date of publication and may be updated with prior notice to the data subject.', NOW()
+SELECT '1.0.0', 'PRIVACY_POLICY', 'Esta política de privacidade descreve como os dados pessoais dos usuários são coletados, armazenados, utilizados e protegidos em conformidade com a Lei Federal nº 13.709/2018 (Lei Geral de Proteção de Dados - LGPD). Os dados coletados são utilizados exclusivamente para as finalidades informadas no momento do cadastro. O titular dos dados tem o direito de acessar, corrigir, excluir e revogar o consentimento a qualquer momento. Os dados são armazenados em ambiente seguro com criptografia em repouso e em trânsito. Esta política entra em vigor na data de sua publicação e poderá ser atualizada com aviso prévio ao titular dos dados.', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM TB_POLICY_VERSION WHERE VERSION = '1.0.0');
 
 INSERT INTO TB_POLICY_CLAUSE (POLICY_VERSION_ID, CODE, TITLE, DESCRIPTION, MANDATORY, DISPLAY_ORDER)
 SELECT
     (SELECT VERSION_UUID FROM TB_POLICY_VERSION WHERE VERSION = '1.0.0' AND POLICY_TYPE = 'PRIVACY_POLICY'),
     'DATA_COLLECTION',
-    'Consent for Data Collection',
-    'The data subject must provide explicit consent for the collection and processing of their personal data, as provided by the LGPD.',
+    'Consentimento para Coleta de Dados',
+    'O titular deve fornecer consentimento explícito para a coleta e o tratamento de seus dados pessoais, conforme previsto pela LGPD.',
     true,
     1
 WHERE NOT EXISTS (SELECT 1 FROM TB_POLICY_CLAUSE WHERE CODE = 'DATA_COLLECTION');
@@ -28,8 +28,8 @@ INSERT INTO TB_POLICY_CLAUSE (POLICY_VERSION_ID, CODE, TITLE, DESCRIPTION, MANDA
 SELECT
     (SELECT VERSION_UUID FROM TB_POLICY_VERSION WHERE VERSION = '1.0.0' AND POLICY_TYPE = 'PRIVACY_POLICY'),
     'MARKETING',
-    'Consent for Marketing Communications',
-    'The data subject may optionally consent to receive promotional communications and marketing materials. This consent may be revoked at any time.',
+    'Consentimento para Comunicações de Marketing',
+    'O titular pode, de forma opcional, consentir em receber comunicações promocionais e materiais de marketing. Este consentimento pode ser revogado a qualquer momento.',
     false,
     2
 WHERE NOT EXISTS (SELECT 1 FROM TB_POLICY_CLAUSE WHERE CODE = 'MARKETING');

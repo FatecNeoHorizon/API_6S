@@ -137,11 +137,11 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 | --- | Planning                  | Mar 09 | Mar 13 | Ok |
 |  1  | Sprint 1                  | Mar 16 | Apr 05 | Ok |
 |  2  | Sprint review / Planning  | Apr 06 | Apr 10 | Ok |
-|  3  | Sprint 2                  | Apr 13 | May 03 |    |
-|  4  | Sprint review / Planning  | May 04 | May 08 |    |
+|  3  | Sprint 2                  | Apr 13 | May 03 | Ok |
+|  4  | Sprint review / Planning  | May 04 | May 08 | Ok |
 |  5  | Sprint 3                  | May 11 | May 31 |    |
 |  6  | Sprint review             | Jun 01 | Jun 05 |    |
-|  7  | Solutions Fair            | Jun 11 |       |    |
+|  7  | Solutions Fair            | Jun 11 |        |    |
 |  8  | TG Presentations          | Jun 15 | Jun 19 |    |
 
 ---

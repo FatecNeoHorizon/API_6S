@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     app_env: str = Field(default="dev")
     backend_url: Optional[str] = Field(default=None)
     frontend_url: Optional[str] = Field(default=None)
+    cors_allowed_origins: str = Field(default="")
+    cors_allowed_headers: str = Field(
+        default="Authorization,Content-Type,Accept,Origin,X-Requested-With"
+    )
 
     # File Upload Settings
     csv_file_path: str = Field(default="/app/data/indicadores-continuidade-coletivos-2020-2029.csv")
@@ -128,6 +132,21 @@ class Settings(BaseSettings):
         return self
 
     @property
+    def cors_origins(self) -> list[str]:
+        origins = _parse_csv_setting(self.cors_allowed_origins)
+        if origins:
+            return origins
+
+        if self.frontend_url:
+            return [self.frontend_url.rstrip("/")]
+
+        return []
+
+    @property
+    def cors_headers(self) -> list[str]:
+        return _parse_csv_setting(self.cors_allowed_headers)
+
+    @property
     def mongo_uri(self) -> str:
         return (
             f"mongodb://{self.mongo_user}:{self.mongo_password}@"
@@ -144,3 +163,7 @@ class Settings(BaseSettings):
             f"password={self.postgres_password} "
             f"dbname={self.postgres_db}"
         )
+
+
+def _parse_csv_setting(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]

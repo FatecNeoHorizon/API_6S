@@ -30,7 +30,7 @@ async def get_sam_total(year: int):
     return result
 
 @router.get("/sam-top-ten")
-async def get_sam_total(year: int, indicator_type_code: str):
+async def get_sam_top_ten(year: int, indicator_type_code: str):
     
     result = Tam_sam_procedures().get_sam_top_ten(year, indicator_type_code)
 

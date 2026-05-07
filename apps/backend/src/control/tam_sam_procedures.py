@@ -56,7 +56,13 @@ class Tam_sam_procedures:
             },
         ]
 
-        list(self.db.distribution_indices.aggregate(pipeline, allowDiskUse=True))
+        list(
+            self.db.distribution_indices.aggregate(
+                pipeline,
+                allowDiskUse=True,
+                maxTimeMS=_settings.mongo_query_max_time_ms,
+            )
+        )
         doc = self.db.tam_sam.find_one(
             {"metric": "tam_total"},
             {"_id": 0, "tam_total": 1, "calculated_on": 1},
@@ -146,7 +152,13 @@ class Tam_sam_procedures:
             {"$count": "sam_total"},
         ]
 
-        result = list(self.db.conj.aggregate(pipeline, allowDiskUse=True))
+        result = list(
+            self.db.conj.aggregate(
+                pipeline,
+                allowDiskUse=True,
+                maxTimeMS=_settings.mongo_query_max_time_ms,
+            )
+        )
         sam_total = int(result[0]["sam_total"]) if result else 0
 
         return sam_total
@@ -226,4 +238,10 @@ class Tam_sam_procedures:
             {"$limit": 10}
         ]
 
-        return list(self.db.conj.aggregate(pipeline, allowDiskUse=True))
+        return list(
+            self.db.conj.aggregate(
+                pipeline,
+                allowDiskUse=True,
+                maxTimeMS=_settings.mongo_query_max_time_ms,
+            )
+        )

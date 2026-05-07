@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     mongo_max_pool_size: int = Field(default=10)
     mongo_server_selection_timeout_ms: int = Field(default=120000)
     mongo_connect_timeout_ms: int = Field(default=10000)
+    mongo_query_max_time_ms: int = Field(default=30000)
 
     # Model retraining policy
     model_retrain_on_new_data: bool = Field(default=False)

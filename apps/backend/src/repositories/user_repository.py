@@ -312,25 +312,25 @@ def create_first_access_token(
     return str(row[0])
 
 
-def get_valid_first_access_token(conn: PgConnection, token_hash: str):
+def consume_valid_first_access_token(conn: PgConnection, token_hash: str):
     query = """
-        SELECT
+        UPDATE TB_FIRST_ACCESS_TOKEN fat
+        SET USED_AT = NOW()
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE fat.USER_ID = u.USER_UUID
+          AND fat.TOKEN_HASH = %s
+          AND fat.USED_AT IS NULL
+          AND fat.EXPIRES_AT > NOW()
+          AND u.DELETED_AT IS NULL
+        RETURNING
             fat.TOKEN_UUID,
             fat.USER_ID,
             u.ACTIVE,
             p.PROFILE_NAME,
             u.USERNAME,
             u.EMAIL_HASH
-        FROM TB_FIRST_ACCESS_TOKEN fat
-        JOIN TB_USER u
-          ON u.USER_UUID = fat.USER_ID
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE fat.TOKEN_HASH = %s
-          AND fat.USED_AT IS NULL
-          AND fat.EXPIRES_AT > NOW()
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
     """
 
     with conn.cursor() as cursor:
@@ -348,18 +348,6 @@ def get_valid_first_access_token(conn: PgConnection, token_hash: str):
         "username": row[4],
         "email_hash": row[5],
     }
-
-
-def mark_first_access_token_used(conn: PgConnection, token_uuid: str) -> None:
-    query = """
-        UPDATE TB_FIRST_ACCESS_TOKEN
-        SET USED_AT = NOW()
-        WHERE TOKEN_UUID = %s
-          AND USED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(token_uuid),))
 
 
 def complete_first_access(

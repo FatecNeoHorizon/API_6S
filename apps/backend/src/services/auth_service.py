@@ -21,12 +21,11 @@ from src.database.postgres import set_current_user
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     complete_first_access,
+    consume_valid_first_access_token,
     create_password_reset_token,
     create_user_session,
     get_user_auth_by_email_hash,
-    get_valid_first_access_token,
     get_valid_password_reset_token,
-    mark_first_access_token_used,
     mark_password_reset_token_used,
     update_user_password,
 )
@@ -94,7 +93,7 @@ def first_access(
     user_agent: str,
 ):
     token_hash = hash_token(payload.token)
-    token_data = get_valid_first_access_token(conn, token_hash)
+    token_data = consume_valid_first_access_token(conn, token_hash)
 
     if not token_data:
         raise HTTPException(
@@ -117,8 +116,6 @@ def first_access(
         user_id=user_id,
         password_hash=hash_password(payload.new_password),
     )
-
-    mark_first_access_token_used(conn, str(token_data["token_uuid"]))
 
     return _create_session_and_token(
         conn,

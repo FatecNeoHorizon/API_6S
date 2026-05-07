@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     postgres_host: str = Field(default="postgres")
     postgres_port: int = Field(default=5432)
     postgres_user: str = Field(default="postgres")
-    postgres_password: str = Field(default="postgres")
+    postgres_password: str = Field(default="")
     postgres_db: str = Field(default="postgres")
     postgres_sslmode: str = Field(default="prefer")
 
@@ -82,15 +82,15 @@ class Settings(BaseSettings):
     postgres_host: str = Field(default="postgres")
     postgres_port: int = Field(default=5432)
     postgres_user: str = Field(default="postgres")
-    postgres_password: str = Field(default="postgres")
+    postgres_password: str = Field(default="")
     postgres_db: str = Field(default="postgres")
     postgres_sslmode: str = Field(default="prefer")
 
     # User Security Configuration
-    email_hash_salt: str = Field(default="change-me")
+    email_hash_salt: str = Field(default="")
     email_encryption_key: Optional[str] = Field(default=None)
 
-    jwt_secret_key: str = Field(default="change-this-jwt-secret-in-production")
+    jwt_secret_key: str = Field(default="")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_token_expire_minutes: int = Field(default=60)
 
@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def validate_mongo_credentials(self) -> "Settings":
+    def validate_required_secrets(self) -> "Settings":
         if not self.mongo_user:
             self.mongo_user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "")
 
@@ -115,6 +115,15 @@ class Settings(BaseSettings):
                 "MongoDB credentials are missing. "
                 "Set MONGO_USER/MONGO_PASSWORD or MONGO_INITDB_ROOT_USERNAME/MONGO_INITDB_ROOT_PASSWORD."
             )
+
+        if not self.postgres_password:
+            raise ValueError("POSTGRES_PASSWORD is missing.")
+
+        if not self.email_hash_salt:
+            raise ValueError("EMAIL_HASH_SALT is missing.")
+
+        if not self.jwt_secret_key:
+            raise ValueError("JWT_SECRET_KEY is missing.")
 
         return self
 

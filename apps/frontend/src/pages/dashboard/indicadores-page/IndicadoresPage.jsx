@@ -496,6 +496,8 @@ const formatBRL = (v) => {
   return `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
 };
 
+const unwrapApiData = (response) => response?.data ?? response;
+
 const sumField = (data, field) =>
   data.reduce((acc, item) => acc + (item[field] ?? 0), 0);
 
@@ -537,7 +539,8 @@ export default function IndicadoresPage() {
         setTamTotal(null);
         return;
       }
-      setTamTotal(data.tam_total)
+      const payload = unwrapApiData(data);
+      setTamTotal(payload?.tam_total ?? null)
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
@@ -557,7 +560,8 @@ export default function IndicadoresPage() {
         setSamTotal(null);
         return;
       }
-      setSamTotal(data)
+      const payload = unwrapApiData(data);
+      setSamTotal(payload?.sam_total ?? payload)
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
@@ -615,7 +619,8 @@ export default function IndicadoresPage() {
         setpreviewChartData([])
         return;
       }
-      setpreviewChartData(buildPreviewChartData(data.forecasts))
+      const payload = unwrapApiData(data);
+      setpreviewChartData(buildPreviewChartData(payload?.forecasts ?? []))
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {

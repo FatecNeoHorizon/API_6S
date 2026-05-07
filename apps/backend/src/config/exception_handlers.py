@@ -1,8 +1,10 @@
 import structlog
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from psycopg2 import IntegrityError, OperationalError
+
+from src.api.schemas.response import error_response
 
 log = structlog.get_logger()
 
@@ -16,7 +18,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "internal_server_error"},
+        content=error_response("internal_server_error"),
+    )
+
+
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response(exc.detail),
+        headers=exc.headers,
     )
 
 
@@ -29,7 +39,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
     return JSONResponse(
         status_code=422,
-        content={"detail": format_validation_errors(exc.errors())},
+        content=error_response(format_validation_errors(exc.errors())),
     )
 
 

@@ -24,30 +24,44 @@ class Tam_sam_procedures:
         self.db = self.connection[_settings.mongo_db_name]
 
     def calculate_and_persist_tam_total(self):
-        # TAM is the number of distinct consumer unit sets in the indicators collection.
-        pipeline = [
-            {"$match": {"consumer_unit_set_id": {"$nin": [None, ""]}}},
-            {"$group": {"_id": "$consumer_unit_set_id"}},
-            {"$count": "tam_total"},
-        ]
-
-        result = list(self.db.distribution_indices.aggregate(pipeline, allowDiskUse=True))
-        tam_total = int(result[0]["tam_total"]) if result else 0
-
         calculated_on = datetime.now(timezone.utc)
 
-        # Upsert keeps a single logical TAM record and replaces it on reprocessing.
-        self.db.tam_sam.update_one(
-            {"metric": "tam_total"},
+        # TAM is calculated and persisted in a single server-side aggregation.
+        # This avoids the read-then-upsert race between application round trips.
+        pipeline = [
             {
-                "$set": {
-                    "metric": "tam_total",
-                    "tam_total": tam_total,
-                    "calculated_on": calculated_on,
+                "$facet": {
+                    "tam": [
+                        {"$match": {"consumer_unit_set_id": {"$nin": [None, ""]}}},
+                        {"$group": {"_id": "$consumer_unit_set_id"}},
+                        {"$count": "tam_total"},
+                    ]
                 }
             },
-            upsert=True,
+            {
+                "$project": {
+                    "_id": 0,
+                    "metric": {"$literal": "tam_total"},
+                    "tam_total": {"$ifNull": [{"$first": "$tam.tam_total"}, 0]},
+                    "calculated_on": {"$literal": calculated_on},
+                }
+            },
+            {
+                "$merge": {
+                    "into": "tam_sam",
+                    "on": "metric",
+                    "whenMatched": "merge",
+                    "whenNotMatched": "insert",
+                }
+            },
+        ]
+
+        list(self.db.distribution_indices.aggregate(pipeline, allowDiskUse=True))
+        doc = self.db.tam_sam.find_one(
+            {"metric": "tam_total"},
+            {"_id": 0, "tam_total": 1, "calculated_on": 1},
         )
+        tam_total = int(doc["tam_total"]) if doc else 0
 
         return {
             "tam_total": tam_total,

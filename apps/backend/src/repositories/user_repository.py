@@ -446,6 +446,8 @@ def create_user_session(
     source_ip: str,
     user_agent: str,
     expires_at,
+    refresh_token_hash: str,
+    refresh_expires_at,
 ) -> str:
     invalidate_query = """
         UPDATE TB_SESSION
@@ -464,9 +466,11 @@ def create_user_session(
             SOURCE_IP,
             USER_AGENT,
             EXPIRES_AT,
+            REFRESH_TOKEN_HASH,
+            REFRESH_EXPIRES_AT,
             INVALIDATED_AT
         )
-        VALUES (%s, %s, %s, %s, NULL)
+        VALUES (%s, %s, %s, %s, %s, %s, NULL)
         RETURNING SESSION_UUID
     """
 
@@ -478,6 +482,8 @@ def create_user_session(
                 source_ip,
                 user_agent[:255],
                 expires_at,
+                refresh_token_hash,
+                refresh_expires_at,
             ),
         )
         row = cursor.fetchone()
@@ -492,6 +498,54 @@ def create_user_session(
         raise ValueError(f"Invalid session UUID format: {session_uuid}")
 
     return session_uuid
+
+
+def rotate_refresh_token(conn: PgConnection, refresh_token_hash: str, new_refresh_token_hash: str, refresh_expires_at):
+    query = """
+        UPDATE TB_SESSION s
+        SET REFRESH_TOKEN_HASH = %s,
+            REFRESH_EXPIRES_AT = %s,
+            EXPIRES_AT = %s,
+            UPDATED_AT = NOW()
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE s.USER_ID = u.USER_UUID
+          AND s.REFRESH_TOKEN_HASH = %s
+          AND s.REFRESH_EXPIRES_AT > NOW()
+          AND s.INVALIDATED_AT IS NULL
+          AND s.DELETED_AT IS NULL
+          AND u.DELETED_AT IS NULL
+        RETURNING
+            s.SESSION_UUID,
+            u.USER_UUID,
+            u.ACTIVE,
+            p.PROFILE_NAME,
+            u.USERNAME
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                new_refresh_token_hash,
+                refresh_expires_at,
+                refresh_expires_at,
+                refresh_token_hash,
+            ),
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "session_uuid": row[0],
+        "user_uuid": row[1],
+        "active": row[2],
+        "profile_name": row[3],
+        "username": row[4],
+    }
 
 
 def get_active_session_user(conn: PgConnection, session_uuid: str):

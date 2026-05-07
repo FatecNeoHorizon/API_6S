@@ -13,6 +13,7 @@ EXEMPT_PREFIXES = (
     "/terms",
     "/auth/login",
     "/auth/logout",
+    "/auth/refresh",
     "/auth/first-access",
     "/auth/forgot-password",
     "/auth/reset-password",

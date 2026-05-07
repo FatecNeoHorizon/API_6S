@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_token_expire_minutes: int = Field(default=60)
+    jwt_refresh_token_expire_days: int = Field(default=7)
 
     # Model & Forecasting Configuration
     model_forecast_months: int = Field(default=12, description="Number of months to forecast ahead")

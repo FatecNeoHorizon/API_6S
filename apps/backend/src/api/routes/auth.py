@@ -7,6 +7,8 @@ from src.api.schemas.user_schemas import (
     ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
@@ -15,6 +17,7 @@ from src.services.auth_service import (
     first_access,
     forgot_password,
     login,
+    refresh_access_token,
     reset_password,
 )
 
@@ -48,6 +51,12 @@ def post_login(payload: LoginRequest, request: Request):
             source_ip=source_ip,
             user_agent=user_agent,
         )
+
+
+@router.post("/refresh", response_model=RefreshTokenResponse)
+def post_refresh(payload: RefreshTokenRequest):
+    with get_pg_connection() as conn:
+        return refresh_access_token(conn, payload=payload)
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)

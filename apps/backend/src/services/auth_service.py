@@ -7,6 +7,7 @@ from src.api.schemas.user_schemas import (
     FirstAccessRequest,
     ForgotPasswordResponse,
     LoginRequest,
+    RefreshTokenRequest,
     ResetPasswordRequest,
 )
 from src.config.auth_security import (
@@ -28,6 +29,7 @@ from src.repositories.user_repository import (
     get_user_auth_by_email_hash,
     get_valid_password_reset_token,
     mark_password_reset_token_used,
+    rotate_refresh_token,
     update_user_password,
 )
 
@@ -37,6 +39,10 @@ settings = Settings()
 
 def _build_email_hash(email: str) -> str:
     return EmailHasher.hash(email)
+
+
+def _generate_refresh_token() -> str:
+    return secrets.token_urlsafe(48)
 
 
 def _create_session_and_token(
@@ -53,6 +59,10 @@ def _create_session_and_token(
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.jwt_access_token_expire_minutes
     )
+    refresh_token = _generate_refresh_token()
+    refresh_expires_at = datetime.now(timezone.utc) + timedelta(
+        days=settings.jwt_refresh_token_expire_days
+    )
 
     session_id = create_user_session(
         conn,
@@ -60,6 +70,8 @@ def _create_session_and_token(
         source_ip=source_ip,
         user_agent=user_agent,
         expires_at=expires_at,
+        refresh_token_hash=hash_token(refresh_token),
+        refresh_expires_at=refresh_expires_at,
     )
 
     # Ensure session_id is a valid UUID string
@@ -80,9 +92,52 @@ def _create_session_and_token(
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "pending_consent": len(pending_clauses) > 0,
         "pending_clauses": pending_clauses,
+    }
+
+
+def refresh_access_token(conn, *, payload: RefreshTokenRequest) -> dict:
+    new_refresh_token = _generate_refresh_token()
+    refresh_expires_at = datetime.now(timezone.utc) + timedelta(
+        days=settings.jwt_refresh_token_expire_days
+    )
+
+    session_data = rotate_refresh_token(
+        conn,
+        refresh_token_hash=hash_token(payload.refresh_token),
+        new_refresh_token_hash=hash_token(new_refresh_token),
+        refresh_expires_at=refresh_expires_at,
+    )
+
+    if not session_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_refresh_token",
+        )
+
+    if not session_data["active"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="inactive_user",
+        )
+
+    user_id = str(session_data["user_uuid"])
+    set_current_user(conn, user_id)
+
+    access_token = create_access_token(
+        user_id=user_id,
+        session_id=str(session_data["session_uuid"]),
+        profile_name=session_data["profile_name"],
+        username=session_data["username"],
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
     }
 
 

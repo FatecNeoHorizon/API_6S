@@ -5,6 +5,8 @@ const SESSION_KEYS = [
   "sessionUuid",
   "access_token",
   "accessToken",
+  "refresh_token",
+  "refreshToken",
   "token",
 ];
 
@@ -34,7 +36,7 @@ function getAuthOptions() {
   };
 }
 
-export function saveClientSession(token, { remember = false } = {}) {
+export function saveClientSession(token, { remember = false, refreshToken = null } = {}) {
   // Clear old tokens from both storages first
   for (const key of SESSION_KEYS) {
     sessionStorage.removeItem(key);
@@ -45,6 +47,11 @@ export function saveClientSession(token, { remember = false } = {}) {
   const storage = remember ? localStorage : sessionStorage;
   storage.setItem("access_token", token);
   storage.setItem("accessToken", token);
+
+  if (refreshToken) {
+    storage.setItem("refresh_token", refreshToken);
+    storage.setItem("refreshToken", refreshToken);
+  }
 }
 
 export function clearClientSession() {

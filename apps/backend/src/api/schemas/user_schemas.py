@@ -87,6 +87,7 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     pending_consent: bool
     pending_clauses: list[dict]
@@ -103,9 +104,20 @@ class FirstAccessRequest(BaseModel):
 
 class FirstAccessResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     pending_consent: bool
     pending_clauses: list[dict]
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=20)
+
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
 class ForgotPasswordRequest(BaseModel):

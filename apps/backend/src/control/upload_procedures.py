@@ -5,7 +5,7 @@ from src.config.settings import Settings
 
 from fastapi import UploadFile
 
-from src.utils.file_validator import validate_and_store_upload
+from src.utils.file_validator import validate_and_store_upload, validate_filename
 from src.utils.unpacker import unpack_zip_file
 
 _settings = Settings()
@@ -35,6 +35,10 @@ async def process_uploaded_zip(
 
     for file_key, upload_file in files.items():
         if upload_file is None:
+            continue
+
+        if error := validate_filename(upload_file.filename):
+            errors.append(error)
             continue
 
         dest_path = upload_dir / upload_file.filename

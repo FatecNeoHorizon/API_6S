@@ -13,6 +13,7 @@ from src.config.auth_security import (
     create_access_token,
     hash_password,
     hash_token,
+    is_valid_uuid,
     verify_password,
 )
 from src.config.email_hasher import EmailHasher
@@ -62,7 +63,7 @@ def _create_session_and_token(
     )
 
     # Ensure session_id is a valid UUID string
-    if not isinstance(session_id, str) or len(session_id) != 36:
+    if not is_valid_uuid(session_id):
         raise HTTPException(
             status_code=500,
             detail="invalid_session_id_generated",

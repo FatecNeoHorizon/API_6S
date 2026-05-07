@@ -6,6 +6,8 @@ from uuid import UUID
 from psycopg2.errors import UniqueViolation
 from psycopg2.extensions import connection as PgConnection
 
+from src.config.auth_security import is_valid_uuid
+
 
 class UserAlreadyExistsError(Exception):
     pass
@@ -485,8 +487,8 @@ def create_user_session(
         raise ValueError("Failed to create session: no UUID returned")
 
     session_uuid = str(row[0])
-    # Validate UUID format (should be 36 characters)
-    if len(session_uuid) != 36:
+    # Validate UUID format.
+    if not is_valid_uuid(session_uuid):
         raise ValueError(f"Invalid session UUID format: {session_uuid}")
 
     return session_uuid

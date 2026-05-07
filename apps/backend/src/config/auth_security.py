@@ -1,6 +1,7 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import UUID
 
 import bcrypt
 import jwt
@@ -10,6 +11,18 @@ from src.config.settings import Settings
 
 
 settings = Settings()
+
+
+def is_valid_uuid(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+
+    try:
+        UUID(value)
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+    return True
 
 
 def hash_password(password: str) -> str:
@@ -46,7 +59,7 @@ def create_access_token(
         raise ValueError("user_id, session_id, and profile_name are required")
 
     # Validate session_id format (should be UUID)
-    if len(session_id) != 36:
+    if not is_valid_uuid(session_id):
         raise ValueError(f"Invalid session_id format: {session_id}")
 
     expire = datetime.now(timezone.utc) + (
@@ -98,7 +111,7 @@ def decode_token(token: str) -> dict:
 
     # Validate session_id format
     session_id = payload.get("sid")
-    if not session_id or len(str(session_id)) != 36:
+    if not is_valid_uuid(session_id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_session_id_in_token",

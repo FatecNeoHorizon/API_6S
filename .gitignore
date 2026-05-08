@@ -28,6 +28,10 @@ venv.bak/
 .env                     # (já na seção anterior, duplicado aqui por ser relacionado)
 
 ################################################################################
+# CLAUDE CODE
+CLAUDE.md
+
+################################################################################
 # 3. IDEs E EDITORES
 # Ignorar configurações específicas de cada IDE
 # Não comitar preferências pessoais que variam por desenvolvedor

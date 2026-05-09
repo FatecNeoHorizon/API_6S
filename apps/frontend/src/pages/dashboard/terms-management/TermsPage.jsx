@@ -701,7 +701,7 @@ export default function TermsPage() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md border-border bg-card">
+          <Card className="w-full max-w-md max-h-[90vh] border-border bg-card flex flex-col overflow-hidden">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-foreground">Nova Versão</CardTitle>
@@ -722,7 +722,7 @@ export default function TermsPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-4 overflow-y-auto flex-1">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-foreground" htmlFor="create-policy-type">
                   Tipo
@@ -848,41 +848,41 @@ export default function TermsPage() {
                   {createError}
                 </p>
               )}
-
-              <div className="mt-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-border text-foreground hover:bg-muted"
-                  onClick={handleCloseCreateModal}
-                  disabled={isCreatingVersion}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={handleCreateVersion}
-                  disabled={isCreatingVersion}
-                >
-                  {isCreatingVersion ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar Versão"
-                  )}
-                </Button>
-              </div>
             </CardContent>
+
+            <div className="border-t border-border bg-card px-4 py-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-border text-foreground hover:bg-muted"
+                onClick={handleCloseCreateModal}
+                disabled={isCreatingVersion}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleCreateVersion}
+                disabled={isCreatingVersion}
+              >
+                {isCreatingVersion ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Versão"
+                )}
+              </Button>
+            </div>
           </Card>
         </div>
       )}
 
       {showViewContentModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl border-border bg-card">
+          <Card className="w-full max-w-2xl max-h-[90vh] border-border bg-card flex flex-col overflow-hidden">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-foreground">{viewContentTitle}</CardTitle>
@@ -899,8 +899,8 @@ export default function TermsPage() {
               <CardDescription className="text-muted-foreground">Conteúdo completo da versão</CardDescription>
             </CardHeader>
 
-            <CardContent>
-              <pre className="whitespace-pre-wrap max-h-96 overflow-auto rounded border border-border bg-muted/10 p-4 text-sm text-foreground">
+            <CardContent className="overflow-y-auto flex-1">
+              <pre className="whitespace-pre-wrap rounded border border-border bg-muted/10 p-4 text-sm text-foreground">
                 {viewContentText || "(Vazio)"}
               </pre>
             </CardContent>
@@ -939,7 +939,7 @@ export default function TermsPage() {
 
       {showAddClauseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md border-border bg-card">
+          <Card className="w-full max-w-md max-h-[90vh] border-border bg-card flex flex-col overflow-hidden">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-foreground">Adicionar Cláusula</CardTitle>
@@ -1038,41 +1038,41 @@ export default function TermsPage() {
                   {addClauseError}
                 </p>
               )}
-
-              <div className="mt-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-border text-foreground hover:bg-muted"
-                  onClick={closeAddClauseModal}
-                  disabled={isAddingClause}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={handleAddClauseSubmit}
-                  disabled={isAddingClause}
-                >
-                  {isAddingClause ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar Cláusula"
-                  )}
-                </Button>
-              </div>
             </CardContent>
+
+            <div className="border-t border-border bg-card px-4 py-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-border text-foreground hover:bg-muted"
+                onClick={closeAddClauseModal}
+                disabled={isAddingClause}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleAddClauseSubmit}
+                disabled={isAddingClause}
+              >
+                {isAddingClause ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Cláusula"
+                )}
+              </Button>
+            </div>
           </Card>
         </div>
       )}
 
       {showTempClauseForm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md border-border bg-card">
+          <Card className="w-full max-w-md max-h-[90vh] border-border bg-card flex flex-col overflow-hidden">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-foreground">Nova Cláusula (Versão)</CardTitle>
@@ -1093,7 +1093,7 @@ export default function TermsPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-4 overflow-y-auto flex-1">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-foreground" htmlFor="temp-modal-clause-code">
                   Código
@@ -1166,26 +1166,27 @@ export default function TermsPage() {
                 </div>
               </div>
 
-              <div className="mt-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-border text-foreground hover:bg-muted"
-                  onClick={closeTempClauseForm}
-                  disabled={isCreatingVersion}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={addTempClause}
-                  disabled={isCreatingVersion}
-                >
-                  Adicionar
-                </Button>
-              </div>
             </CardContent>
+
+            <div className="border-t border-border bg-card px-4 py-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-border text-foreground hover:bg-muted"
+                onClick={closeTempClauseForm}
+                disabled={isCreatingVersion}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={addTempClause}
+                disabled={isCreatingVersion}
+              >
+                Adicionar
+              </Button>
+            </div>
           </Card>
         </div>
       )}

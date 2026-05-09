@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-import hashlib
 import secrets
 
 from fastapi import HTTPException, status
@@ -16,6 +15,7 @@ from src.config.auth_security import (
     hash_token,
     verify_password,
 )
+from src.config.email_hasher import EmailHasher
 from src.config.settings import Settings
 from src.database.postgres import set_current_user
 from src.services.consent_service import get_pending_consent
@@ -36,9 +36,7 @@ settings = Settings()
 
 
 def _build_email_hash(email: str) -> str:
-    normalized_email = email.strip().lower()
-    payload = f"{normalized_email}:{settings.email_hash_salt}".encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    return EmailHasher.hash(email)
 
 
 def _create_session_and_token(
@@ -48,6 +46,7 @@ def _create_session_and_token(
     profile_name: str,
     source_ip: str,
     user_agent: str,
+    username: str | None = None,
 ):
     set_current_user(conn, user_id)
 
@@ -63,10 +62,18 @@ def _create_session_and_token(
         expires_at=expires_at,
     )
 
+    # Ensure session_id is a valid UUID string
+    if not isinstance(session_id, str) or len(session_id) != 36:
+        raise HTTPException(
+            status_code=500,
+            detail="invalid_session_id_generated",
+        )
+
     access_token = create_access_token(
         user_id=user_id,
         session_id=session_id,
         profile_name=profile_name,
+        username=username,
     )
 
     pending_clauses = get_pending_consent(conn, user_id)
@@ -119,6 +126,7 @@ def first_access(
         profile_name=token_data["profile_name"],
         source_ip=source_ip,
         user_agent=user_agent,
+        username=token_data["username"],
     )
 
 
@@ -158,6 +166,7 @@ def login(
         profile_name=user["profile_name"],
         source_ip=source_ip,
         user_agent=user_agent,
+        username=user["username"],
     )
 
 
@@ -185,6 +194,8 @@ def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:
 
     if settings.app_env != "prod":
         generic_response.dev_reset_token = raw_token
+        frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
+        generic_response.dev_reset_url = f"{frontend_base_url}/reset-password?token={raw_token}"
 
     return generic_response
 

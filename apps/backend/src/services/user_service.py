@@ -1,35 +1,39 @@
 import base64
 import hashlib
-
-import bcrypt
-from cryptography.fernet import Fernet
-
-from psycopg2 import IntegrityError, OperationalError
-from fastapi import HTTPException
-from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
-from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
-from src.config.settings import Settings
-from src.config.email_hasher import EmailHasher
-from src.database.postgres import get_pg_connection
-from src.repositories.user_repository import ProfileResult
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
 
+import bcrypt
+from cryptography.fernet import Fernet
+from fastapi import HTTPException
+from psycopg2 import IntegrityError, OperationalError
+
+from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
+from src.config.auth_security import hash_token
+from src.config.email_hasher import EmailHasher
+from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
+from src.config.settings import Settings
+from src.database.postgres import get_pg_connection
 from src.repositories.user_repository import (
-    UserProfileNotFoundError,
+    ProfileResult,
     UserAlreadyExistsError,
     UserNotFoundError,
+    UserPersistenceError,
+    UserProfileNotFoundError,
     UserResult,
+    create_first_access_token,
     create_user,
-    exists_by_username,
-    exists_by_email_hash,
-    get_user_by_id,
-    list_users,
-    update_user,
-    set_user_active,
     delete_user,
-    list_profiles,
+    exists_by_email_hash,
     exists_by_profile_id,
+    exists_by_username,
+    get_user_by_id,
+    list_profiles,
+    list_users,
+    set_user_active,
+    update_user,
 )
 
 
@@ -57,13 +61,29 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
 
             result = create_user(conn, data)
 
-        return UserCreateResponse(
+            raw_token = secrets.token_urlsafe(32)
+            token_expires_at = datetime.now(timezone.utc) + timedelta(hours=48)
+            create_first_access_token(
+                conn,
+                user_id=str(result.user_uuid),
+                token_hash=hash_token(raw_token),
+                expires_at=token_expires_at,
+            )
+
+        response = UserCreateResponse(
             user_uuid=result.user_uuid,
             username=result.username,
             profile_id=result.profile_id,
             active=result.active,
             created_at=result.created_at,
         )
+
+        if settings.app_env != "prod":
+            frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
+            response.dev_first_access_token = raw_token
+            response.dev_first_access_url = f"{frontend_base_url}/first-access?token={raw_token}"
+
+        return response
     except (UserProfileNotFoundError, UserAlreadyExistsError):
         raise
     except IntegrityError as exc:

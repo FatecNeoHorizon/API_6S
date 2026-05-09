@@ -8,6 +8,21 @@ def list_current_terms(conn) -> list[dict]:
     with dict_cursor(conn) as cur:
         cur.execute(
             """
+            WITH current_versions AS (
+                SELECT
+                    pv.VERSION_UUID,
+                    pv.VERSION,
+                    pv.POLICY_TYPE,
+                    pv.CONTENT,
+                    pv.EFFECTIVE_FROM,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY pv.POLICY_TYPE
+                        ORDER BY pv.EFFECTIVE_FROM DESC, pv.CREATED_AT DESC
+                    ) AS rn
+                FROM TB_POLICY_VERSION pv
+                WHERE pv.DELETED_AT IS NULL
+                  AND pv.EFFECTIVE_FROM <= NOW()
+            )
             SELECT
                 pv.VERSION_UUID,
                 pv.VERSION,
@@ -20,12 +35,11 @@ def list_current_terms(conn) -> list[dict]:
                 c.DESCRIPTION,
                 c.MANDATORY,
                 c.DISPLAY_ORDER
-            FROM TB_POLICY_VERSION pv
+                        FROM current_versions pv
             LEFT JOIN TB_POLICY_CLAUSE c
               ON c.POLICY_VERSION_ID = pv.VERSION_UUID
              AND c.DELETED_AT IS NULL
-            WHERE pv.DELETED_AT IS NULL
-              AND pv.EFFECTIVE_FROM <= NOW()
+                        WHERE pv.rn = 1
             ORDER BY
                 pv.POLICY_TYPE,
                 pv.EFFECTIVE_FROM DESC,

@@ -1,0 +1,4 @@
+-- Dev admin user: email=admin@admin.com, password=Admin@123
+-- EMAIL_HASH = SHA-256("admin@admin.com:change-me") — requires EMAIL_HASH_SALT=change-me in .env
+INSERT INTO TB_USER (USERNAME, EMAIL_HASH, EMAIL_ENC, PASSWORD_HASH, ACTIVE, FIRST_ACCESS_COMPLETED, PROFILE_ID) VALUES
+('admin', 'd99d8f705f388922eece9eb1f144f14b1a4bfa96f8545f4434b4c7eaf763981f', 'ENCRYPTED::admin@admin.com', '$2b$12$8ke1VZkK0nQrvoHRy329gOvo1OChW2viTecoE19T3UoRC6SOHKjZC', TRUE, TRUE, (SELECT PROFILE_UUID FROM TB_PROFILE WHERE PROFILE_NAME = 'ADMIN'));

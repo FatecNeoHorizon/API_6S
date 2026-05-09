@@ -1,9 +1,33 @@
-import { getAdminSessionToken } from "./adminSession";
+import { waitForPendingConsentAcceptance } from "./pendingConsentInterceptor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+const SESSION_KEYS = [
+  "session_uuid",
+  "sessionUuid",
+  "access_token",
+  "accessToken",
+  "token",
+];
+
+const getSessionToken = () => {
+  if (!globalThis.window) {
+    return null;
+  }
+
+  for (const key of SESSION_KEYS) {
+    const sessionValue = sessionStorage.getItem(key);
+    const localValue = localStorage.getItem(key);
+
+    if (sessionValue) return sessionValue;
+    if (localValue) return localValue;
+  }
+
+  return null;
+};
+
 const buildAuthHeaders = () => {
-  const adminToken = getAdminSessionToken();
+  const adminToken = getSessionToken();
 
   if (!adminToken) return {};
 
@@ -12,7 +36,7 @@ const buildAuthHeaders = () => {
   };
 };
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retryAfterConsent = true) {
   const { headers: requestHeaders, ...requestOptions } = options;
 
   const url = `${API_BASE_URL}${path}`;
@@ -37,6 +61,15 @@ async function request(path, options = {}) {
       const error = new Error(`Erro na API: ${response.status}`);
       error.status = response.status;
       error.data = responseBody;
+
+      if (retryAfterConsent) {
+        const shouldRetry = await waitForPendingConsentAcceptance(error);
+
+        if (shouldRetry) {
+          return request(path, options, false);
+        }
+      }
+
       throw error;
     }
 
@@ -46,6 +79,42 @@ async function request(path, options = {}) {
     console.error("adminClient: falha na requisição", { url, options: requestOptions, error: fetchError });
     throw fetchError;
   }
+}
+
+async function postFormRequest(path, formData, options = {}, retryAfterConsent = true) {
+  const { headers: requestHeaders, ...requestOptions } = options;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...requestOptions,
+    method: "POST",
+    headers: {
+      ...buildAuthHeaders(),
+      ...requestHeaders,
+    },
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const responseBody = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const error = new Error(`Erro na API: ${response.status}`);
+    error.status = response.status;
+    error.data = responseBody;
+
+    if (retryAfterConsent) {
+      const shouldRetry = await waitForPendingConsentAcceptance(error);
+      if (shouldRetry) {
+        return postFormRequest(path, formData, options, false);
+      }
+    }
+
+    throw error;
+  }
+
+  return responseBody;
 }
 
 export const adminClient = {
@@ -82,31 +151,5 @@ export const adminClient = {
       ...options,
     }),
 
-  postForm: async (path, formData, options = {}) => {
-    const { headers: requestHeaders, ...requestOptions } = options;
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...requestOptions,
-      method: "POST",
-      headers: {
-        ...buildAuthHeaders(),
-        ...requestHeaders,
-      },
-      body: formData,
-    });
-
-    const contentType = response.headers.get("content-type");
-    const responseBody = contentType?.includes("application/json")
-      ? await response.json()
-      : await response.text();
-
-    if (!response.ok) {
-      const error = new Error(`Erro na API: ${response.status}`);
-      error.status = response.status;
-      error.data = responseBody;
-      throw error;
-    }
-
-    return responseBody;
-  },
+  postForm: (path, formData, options = {}) => postFormRequest(path, formData, options),
 };

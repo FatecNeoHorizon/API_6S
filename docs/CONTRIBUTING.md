@@ -273,7 +273,6 @@ git checkout feature/123-add-login
 │                                                      │
 │  ✅ Auto-fill workflow detects issue #42             │
 │  ✅ Informative comment added                        │
-│  ✅ commitlint GitHub Action validates all commits   │
 │  ✅ Ruleset blocks merge if any check fails          │
 └─────────────────────┬────────────────────────────────┘
                       │
@@ -310,9 +309,6 @@ This project enforces commit standards in two complementary layers:
 |-------|------|------|-----------------|
 | Local | `commit-msg` hook | On `git commit` | Yes, with `--no-verify` |
 | Local | `pre-push` hook | On `git push` | Yes, with `--no-verify` |
-| Remote | GitHub Actions + Ruleset | On Pull Request | ❌ No |
-
-> The remote layer is the final guarantee — even if a developer bypasses local hooks, the PR cannot be merged without passing all checks.
 
 ---
 
@@ -368,31 +364,18 @@ Message: "add login feature"
 
 ---
 
-### 4. `commitlint` GitHub Action
-
-**File:** `.github/workflows/commitlint.yml`
-
-Triggers on every Pull Request (`opened`, `reopened`, `synchronize`).
-
-- Validates all commits in the PR against `.commitlintrc.json`
-- Fails the check if any commit is invalid
-- Combined with the Branch Ruleset, **blocks merge** until fixed
-
----
-
-### 5. Branch Ruleset
+### 4. Branch Ruleset
 
 **Configured on GitHub** → Settings → Rules → Rulesets
 
 Applied to `main` and `sprint-*` branches:
 
 - ✅ Requires PR before merging (no direct push)
-- ✅ Requires `commitlint` check to pass
 - ✅ Cannot be bypassed, even by admins
 
 ---
 
-### 6. `auto-create-branch` Workflow
+### 5. `auto-create-branch` Workflow
 
 **File:** `.github/workflows/auto-create-branch.yml`
 
@@ -412,7 +395,7 @@ on:
 
 ---
 
-### 7. `auto-fill-pr-from-branch` Workflow
+### 6. `auto-fill-pr-from-branch` Workflow
 
 **File:** `.github/workflows/auto-fill-pr-from-branch.yml`
 
@@ -700,25 +683,7 @@ git rebase -i a1b2c3d^
 
 ---
 
-### Problem 5: PR Blocked — commitlint Check Failed
-
-Even after fixing locally, the PR check is red.
-
-**Cause:** The invalid commit was already pushed before the fix.
-
-**Solution:**
-```bash
-# Fix the commit message locally
-git rebase -i <commit-hash>^
-# Mark as 'reword', fix the message
-
-# Force push to update the PR branch
-git push --force-with-lease origin <your-branch>
-```
-
----
-
-### Problem 6: Issue Does Not Close
+### Problem 5: Issue Does Not Close
 
 **Cause:** PR description does not contain `Closes #123`
 

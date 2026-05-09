@@ -7,6 +7,18 @@ Closes #
 
 ---
 
+## 🏷️ Change Type
+
+- [ ] Bug fix
+- [ ] Feature
+- [ ] Breaking change
+- [ ] Refactor
+- [ ] Docs
+
+**Breaking change:** <!-- If checked, describe what breaks and the migration steps -->
+
+---
+
 ## 📝 What was done?
 
 > Explain what was implemented and why. Be specific about the approach taken.
@@ -25,6 +37,17 @@ docker compose up
 
 # 2. 
 ```
+
+---
+
+## 🚀 Deploy Notes
+
+> Migrations, env vars, or infra changes required for this PR.
+
+- [ ] No special deploy steps needed
+- [ ] Database migration required
+- [ ] New environment variable(s) required
+- [ ] Infrastructure change required
 
 ---
 

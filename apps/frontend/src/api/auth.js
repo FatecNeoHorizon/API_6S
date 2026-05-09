@@ -4,6 +4,10 @@ export function login(payload) {
   return apiClient.post("/auth/login", payload);
 }
 
+export function refreshToken(payload) {
+  return apiClient.post("/auth/refresh", payload);
+}
+
 export function forgotPassword(payload) {
   return apiClient.post("/auth/forgot-password", payload);
 }

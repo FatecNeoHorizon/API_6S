@@ -53,7 +53,7 @@ def get_pg_connection():
     try:
         yield conn
         conn.commit()
-    except Exception:
+    except BaseException:
         conn.rollback()
         raise
     finally:

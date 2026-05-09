@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 
 from src.config.middleware import setup_middleware
-from src.config.validation import format_validation_errors
 from src.config.exception_handlers import (
+    http_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
@@ -43,4 +42,5 @@ app.include_router(terms.router)
 app.include_router(admin_terms.router)
 
 app.add_exception_handler(Exception, unhandled_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)

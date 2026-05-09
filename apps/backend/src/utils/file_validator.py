@@ -1,5 +1,5 @@
 import logging
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from fastapi import UploadFile
 from src.config.settings import Settings
 import aiofiles
@@ -45,6 +45,21 @@ ALLOWED_FILES = {
         "required": False,
     },
 }
+
+def validate_filename(filename: str | None) -> str | None:
+    if not filename:
+        return "Nome de arquivo ausente."
+
+    normalized_name = filename.replace("\\", "/")
+    safe_name = PurePosixPath(normalized_name).name
+
+    if safe_name != filename or safe_name in {"", ".", ".."}:
+        return f"'{filename}': nome de arquivo invalido."
+
+    if any(ord(char) < 32 for char in filename):
+        return f"'{filename}': nome de arquivo invalido."
+
+    return None
 
 def resolve_file_config(file_key: str) -> dict | None:
     if file_key in ALLOWED_FILES:
@@ -119,11 +134,15 @@ async def validate_and_store_upload(
     if config is None:
         return None, f"'{file_key}': tipo de arquivo não reconhecido."
 
+    if error := validate_filename(upload_file.filename):
+        return None, error
+
     if error := validate_extensions(upload_file.filename, file_key):
         return None, error
 
     total_bytes = 0
     mime_probe = bytearray()
+    validation_error: str | None = None
 
     try:
         async with aiofiles.open(dest_path, "wb") as f:
@@ -134,7 +153,8 @@ async def validate_and_store_upload(
 
                 total_bytes += len(chunk)
                 if error := validate_file_size(total_bytes, upload_file.filename):
-                    return None, error
+                    validation_error = error
+                    break
 
                 if len(mime_probe) < MIME_PROBE_SIZE_BYTES:
                     remaining = MIME_PROBE_SIZE_BYTES - len(mime_probe)
@@ -144,18 +164,26 @@ async def validate_and_store_upload(
     finally:
         await upload_file.seek(0)
 
+    if validation_error:
+        dest_path.unlink(missing_ok=True)
+        return None, validation_error
+
     if total_bytes == 0:
+        dest_path.unlink(missing_ok=True)
         return None, f"'{upload_file.filename}': arquivo vazio."
 
     if mime_probe:
         if error := validate_mime_type(bytes(mime_probe), file_key, upload_file.filename):
+            dest_path.unlink(missing_ok=True)
             return None, error
     else:
         if error := validate_mime_type_from_file(dest_path, file_key, upload_file.filename):
+            dest_path.unlink(missing_ok=True)
             return None, error
 
     if file_key == "gdb":
         if error := validate_gdb_zip_index_from_path(dest_path, upload_file.filename):
+            dest_path.unlink(missing_ok=True)
             return None, error
 
     logger.info(

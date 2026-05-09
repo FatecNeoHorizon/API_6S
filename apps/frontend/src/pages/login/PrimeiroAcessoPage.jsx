@@ -274,6 +274,7 @@ export default function PrimeiroAcessoPage() {
       const accessToken = response.access_token
 
       sessionStorage.setItem("access_token", accessToken)
+      sessionStorage.setItem("refresh_token", response.refresh_token)
       sessionStorage.setItem("token", accessToken)
       sessionStorage.setItem("session_uuid", accessToken)
 

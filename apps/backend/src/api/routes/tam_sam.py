@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from src.api.schemas.response import success_response
 from src.control.tam_sam_procedures import Tam_sam_procedures
 
 router = APIRouter(prefix="/tam-sam", tags=["tam_sam"])
@@ -7,7 +8,7 @@ router = APIRouter(prefix="/tam-sam", tags=["tam_sam"])
 
 @router.post("/calculate")
 async def calculate_tam_total():
-    return Tam_sam_procedures().calculate_and_persist_tam_total()
+    return success_response(Tam_sam_procedures().calculate_and_persist_tam_total())
 
 
 @router.get("/tam")
@@ -20,18 +21,18 @@ async def get_tam_total():
             detail="TAM ainda nao calculado. Execute POST /tam-sam/calculate primeiro.",
         )
 
-    return result
+    return success_response(result)
 
 @router.get("/sam")
 async def get_sam_total(year: int):
     
     result = Tam_sam_procedures().get_sam_total(year)
 
-    return result
+    return success_response({"sam_total": result})
 
 @router.get("/sam-top-ten")
-async def get_sam_total(year: int, indicator_type_code: str):
+async def get_sam_top_ten(year: int, indicator_type_code: str):
     
     result = Tam_sam_procedures().get_sam_top_ten(year, indicator_type_code)
 
-    return result
+    return success_response(result)

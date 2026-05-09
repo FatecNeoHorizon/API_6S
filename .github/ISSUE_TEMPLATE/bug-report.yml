@@ -104,11 +104,22 @@ body:
         - "[BACK]"
         - "[FRONT]"
         - "[INFRA]"
-        - "[DOCS]"
         - "[DATA]"
         - "[ML]"
         - "[SEC]"
         - "[QA]"
+        - "[DOC]"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: "Environment"
+      options:
+        - Development
+        - Staging
+        - Production
     validations:
       required: true
 
@@ -120,5 +131,13 @@ body:
         - 🔴 High — blocks critical functionality
         - 🟡 Medium — functionality partially compromised
         - 🟢 Low — unexpected behavior with no critical impact
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimate"
+      placeholder: "Ex: 3h"
     validations:
       required: true

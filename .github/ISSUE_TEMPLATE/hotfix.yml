@@ -52,6 +52,18 @@ body:
     attributes:
       value: "## 🗂️ Traceability"
 
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "Sprint"
+      options:
+        - Sprint 1
+        - Sprint 2
+        - Sprint 3
+        - General
+    validations:
+      required: true
+
   - type: input
     id: related-requirement
     attributes:
@@ -89,6 +101,14 @@ body:
         - "[SEC]"
         - "[QA]"
         - "[DOC]"
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimate"
+      placeholder: "Ex: 3h"
     validations:
       required: true
 

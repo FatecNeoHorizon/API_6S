@@ -201,6 +201,7 @@ This solution consists of a main application and a support module for tracking p
 | [Commit and Branch Standards](docs/CONTRIBUTING.md) | Conventional Commits, branch naming and Git hooks |
 | [Issue Tracking](docs/ISSUE-TRACKING.md) | How to trace issues, branches and PRs |
 | [LGPD](docs/LGPD.md) | LGPD guidelines and data privacy compliance |
+| [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | ROPA entry and professor-validated argument for PostgreSQL/MongoDB separation |
 
 ---
 
@@ -214,5 +215,6 @@ This solution consists of a main application and a support module for tracking p
 | [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
 | [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
 | [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
+| [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | Dual-database architecture as a structural LGPD compliance measure |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |

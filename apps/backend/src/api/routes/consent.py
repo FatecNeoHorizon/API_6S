@@ -40,7 +40,16 @@ def get_pending_consent_route(
     return {"pending_clauses": pending_clauses}
 
 
-@router.get("/history/{user_id}", response_model=ConsentHistoryResponse)
+@router.get(
+    "/history/{user_id}",
+    response_model=ConsentHistoryResponse,
+    summary="Consultar historico de consentimento de um usuario",
+    description=(
+        "Endpoint administrativo para auditoria LGPD. "
+        "Retorna os eventos imutaveis de aceite e revogacao de termos "
+        "registrados para o usuario informado. Requer perfil ADMIN."
+    ),
+)
 def get_user_consent_history_for_audit(
     user_id: UUID,
     admin: AuthenticatedUser = Depends(require_admin),

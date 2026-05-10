@@ -1,4 +1,5 @@
 from enum import Enum
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -43,3 +44,22 @@ class ConsentActionIn(BaseModel):
 
 class ConsentRequest(BaseModel):
     actions: list[ConsentActionIn] = Field(default_factory=list)
+
+
+class ConsentHistoryItem(BaseModel):
+    log_uuid: UUID
+    action: str
+    registered_at: datetime
+    channel: str
+    policy_version_id: UUID
+    policy_type: str
+    policy_version: str
+    clause_uuid: UUID
+    clause_code: str
+    clause_title: str
+    mandatory: bool
+
+
+class ConsentHistoryResponse(BaseModel):
+    user_id: UUID
+    history: list[ConsentHistoryItem]

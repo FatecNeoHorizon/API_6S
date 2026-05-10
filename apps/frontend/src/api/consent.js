@@ -22,7 +22,7 @@ export function getSessionToken() {
   return null;
 }
 
-function getAuthOptions() {
+export function getAuthOptions() {
   const token = getSessionToken();
 
   if (!token) {

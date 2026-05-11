@@ -36,6 +36,7 @@ def post_policy_version(
             policy_type=payload.policy_type.value,
             content=payload.content,
             effective_from=payload.effective_from,
+            description=payload.description,
         )
 
         log.info(

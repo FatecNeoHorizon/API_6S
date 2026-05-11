@@ -73,6 +73,7 @@ def create_policy_version(
     policy_type: str,
     content: str,
     effective_from,
+    description: str | None,
 ):
     with dict_cursor(conn) as cur:
         cur.execute(
@@ -81,18 +82,20 @@ def create_policy_version(
                 VERSION,
                 POLICY_TYPE,
                 CONTENT,
+                DESCRIPTION,
                 EFFECTIVE_FROM
             )
-            VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING
                 VERSION_UUID,
                 VERSION,
                 POLICY_TYPE,
                 CONTENT,
+                DESCRIPTION,
                 EFFECTIVE_FROM,
                 CREATED_AT
             """,
-            (version, policy_type, content, effective_from),
+            (version, policy_type, content, description, effective_from),
         )
 
         return cur.fetchone()
@@ -101,12 +104,14 @@ def create_policy_version(
 def list_policy_versions(conn) -> list[dict]:
     with dict_cursor(conn) as cur:
         cur.execute(
-           """
+            """
             WITH versions_with_counts AS (
                 SELECT
                     pv.VERSION_UUID,
                     pv.VERSION,
                     pv.POLICY_TYPE,
+                    pv.CONTENT,
+                    pv.DESCRIPTION,
                     pv.EFFECTIVE_FROM,
                     pv.CREATED_AT,
                     COUNT(c.CLAUSE_UUID) AS CLAUSE_COUNT
@@ -119,6 +124,8 @@ def list_policy_versions(conn) -> list[dict]:
                     pv.VERSION_UUID,
                     pv.VERSION,
                     pv.POLICY_TYPE,
+                    pv.CONTENT,
+                    pv.DESCRIPTION,
                     pv.EFFECTIVE_FROM,
                     pv.CREATED_AT
             ),
@@ -141,6 +148,8 @@ def list_policy_versions(conn) -> list[dict]:
                 v.VERSION_UUID,
                 v.VERSION,
                 v.POLICY_TYPE,
+                v.CONTENT,
+                v.DESCRIPTION,
                 v.EFFECTIVE_FROM,
                 v.CREATED_AT,
                 v.CLAUSE_COUNT,
@@ -169,6 +178,7 @@ def get_policy_version(conn, version_id: str) -> dict | None:
                     VERSION,
                     POLICY_TYPE,
                     CONTENT,
+                    DESCRIPTION,
                     EFFECTIVE_FROM,
                     CREATED_AT
                 FROM TB_POLICY_VERSION
@@ -194,6 +204,7 @@ def get_policy_version(conn, version_id: str) -> dict | None:
                 v.VERSION,
                 v.POLICY_TYPE,
                 v.CONTENT,
+                v.DESCRIPTION,
                 v.EFFECTIVE_FROM,
                 v.CREATED_AT,
                 CASE

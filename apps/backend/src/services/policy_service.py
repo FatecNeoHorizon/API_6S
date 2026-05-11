@@ -20,6 +20,7 @@ def format_policy_version(row: dict) -> dict:
         "version": row["version"],
         "policy_type": row["policy_type"],
         "content": row.get("content"),
+        "description": row.get("description"),
         "effective_from": row["effective_from"].isoformat(),
         "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
         "status": row.get("status"),
@@ -31,10 +32,11 @@ def format_policy_version_summary(row: dict) -> dict:
         "policy_version_id": str(row["version_uuid"]),
         "version": row["version"],
         "policy_type": row["policy_type"],
+        "description": row.get("description"),
         "effective_from": row["effective_from"].isoformat(),
         "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
         "clause_count": int(row["clause_count"]),
-        "status": row["status"],
+        "status": row.get("status"),
     }
 
 
@@ -97,6 +99,7 @@ def create_policy_version(
     policy_type: str,
     content: str,
     effective_from: datetime,
+    description: str | None = None,
 ) -> dict:
     try:
         effective_from = normalize_datetime(effective_from)
@@ -124,6 +127,7 @@ def create_policy_version(
             policy_type=policy_type,
             content=content,
             effective_from=effective_from,
+            description=description,
         )
     except HTTPException:
         raise

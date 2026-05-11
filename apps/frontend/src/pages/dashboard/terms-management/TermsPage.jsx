@@ -50,6 +50,7 @@ const normalizeTerm = (term) => ({
   policy_type: term.policy_type,
   effective_from: term.effective_from,
   created_at: term.created_at,
+  status: term.status,
   clauses: term.clauses ?? [],
   content: term.content ?? "",
   clause_count: term.clause_count ?? term.clauses?.length ?? 0,
@@ -75,11 +76,8 @@ const toDatetimeLocalString = (date) => {
   return new Date(date.getTime() - offsetInMs).toISOString().slice(0, 16);
 };
 
-const getStatus = (effectiveFrom, allVersionsOfSameType) => {
-  const today = new Date();
-  const date = new Date(effectiveFrom);
-
-  if (date > today) {
+const getStatus = (status) => {
+  if (status === StatusFilter.scheduled) {
     return {
       key: StatusFilter.scheduled,
       label: "Agendado",
@@ -88,13 +86,7 @@ const getStatus = (effectiveFrom, allVersionsOfSameType) => {
     };
   }
 
-  const isCurrent = !allVersionsOfSameType.some(
-    (v) =>
-      new Date(v.effective_from) > date &&
-      new Date(v.effective_from) <= today
-  );
-
-  if (isCurrent) {
+  if (status === StatusFilter.current) {
     return {
       key: StatusFilter.current,
       label: "Vigente",
@@ -116,8 +108,7 @@ const buildPaginatedTermsResponse = ({ page, pageSize, searchTerm, statusFilter,
 
   const filtered = sourceTerms.filter((term) => {
     const termTypeLabel = TermType[term.policy_type] || term.policy_type;
-    const sameType = sourceTerms.filter((t) => t.policy_type === term.policy_type);
-    const status = getStatus(term.effective_from, sameType);
+    const status = getStatus(term.status);
     const matchesStatus = statusFilter === StatusFilter.all || status.key === statusFilter;
 
     const matchesSearch =
@@ -501,7 +492,7 @@ export default function TermsPage() {
       // If the version is scheduled, refresh the versions list so clause_count updates
       try {
         const term = allTerms.find((t) => t.policy_version_id === addClauseVersionId);
-        if (term && new Date(term.effective_from) > new Date()) {
+        if (term?.status === StatusFilter.scheduled) {
           await loadTerms();
         }
       } catch (e) {
@@ -573,11 +564,10 @@ export default function TermsPage() {
   const stats = allTerms.reduce(
     (acc, term) => {
       acc.total += 1;
-      const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
-      const { label } = getStatus(term.effective_from, sameType);
-      if (label === "Vigente") acc.vigentes += 1;
-      if (label === "Agendado") acc.agendados += 1;
-      if (label === "Expirado") acc.expirados += 1;
+      const { key } = getStatus(term.status);
+      if (key === StatusFilter.current) acc.vigentes += 1;
+      if (key === StatusFilter.scheduled) acc.agendados += 1;
+      if (key === StatusFilter.expired) acc.expirados += 1;
       return acc;
     },
     { total: 0, vigentes: 0, agendados: 0, expirados: 0 }
@@ -1254,10 +1244,7 @@ export default function TermsPage() {
 
                 {!loading &&
                   termsPage.data.map((term) => {
-                    const sameType = allTerms.filter(
-                      (t) => t.policy_type === term.policy_type
-                    );
-                    const status = getStatus(term.effective_from, sameType);
+                    const status = getStatus(term.status);
                     const isOpen = openRowId === term.policy_version_id;
 
                     return (
@@ -1330,8 +1317,7 @@ export default function TermsPage() {
 
                                 {/* Aviso de Versão em Vigência ou Expirada */}
                                 {(() => {
-                                  const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
-                                  const status = getStatus(term.effective_from, sameType);
+                                  const status = getStatus(term.status);
 
                                   if (status.key === StatusFilter.current) {
                                     return (
@@ -1375,9 +1361,7 @@ export default function TermsPage() {
                                       </Button>
 
                                       {(() => {
-                                        const today = new Date();
-                                        const effectiveDate = new Date(term.effective_from);
-                                        const canAddClauses = effectiveDate > today;
+                                        const canAddClauses = term.status === StatusFilter.scheduled;
                                         return canAddClauses ? (
                                           <Button
                                             type="button"

@@ -22,6 +22,7 @@ def format_policy_version(row: dict) -> dict:
         "content": row.get("content"),
         "effective_from": row["effective_from"].isoformat(),
         "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+        "status": row.get("status"),
     }
 
 
@@ -33,6 +34,7 @@ def format_policy_version_summary(row: dict) -> dict:
         "effective_from": row["effective_from"].isoformat(),
         "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
         "clause_count": int(row["clause_count"]),
+        "status": row["status"],
     }
 
 

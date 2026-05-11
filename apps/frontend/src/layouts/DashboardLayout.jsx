@@ -16,6 +16,7 @@ import {
   FileArchive,
   Loader2,
   Users, 
+  Map,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -26,6 +27,12 @@ const menuItems = [
     label: "Indicadores DEC/FEC e Perdas",
     href: "/dashboard/indicadores",
     icon: BarChart3,
+    allowedProfiles: [],
+  },
+  {
+    label: "Heat Map",
+    href: "/dashboard/heatmap",
+    icon: Map,
     allowedProfiles: [],
   },
   {

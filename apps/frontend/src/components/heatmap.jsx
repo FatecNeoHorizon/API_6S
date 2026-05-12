@@ -8,20 +8,6 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet'
 export function Heatmap() {
 
 
-
-    //   const multiPolygon = [
-//   [
-//     [51.51, -0.12],
-//     [51.51, -0.13],
-//     [51.53, -0.13],
-//   ],
-//   [
-//     [51.51, -0.05],
-//     [51.51, -0.07],
-//     [51.53, -0.07],
-//   ],
-// ]
-
   const idk = [
                 
       [
@@ -327,13 +313,7 @@ const mockedData = [
 const purpleOptions = { color: 'purple' }
 
 const revertCoordinates = (coordinateAray) => {
-  console.log("Start")
-  console.log(coordinateAray)
   coordinateAray.forEach(coordinate => coordinate.reverse())
-
-  console.log("revertedFull")
-  console.log(coordinateAray)
-
 }
 
 const lul = revertCoordinates(mockedData)

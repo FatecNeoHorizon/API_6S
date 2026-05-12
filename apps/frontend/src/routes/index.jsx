@@ -10,7 +10,7 @@ import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage
 import EstruturaRedesPage from "../pages/dashboard/estrutura-redes-page/EstruturaRedesPage";
 import UsuariosPage from "../pages/dashboard/user-management/UsuariosPage";
 import TermsPage from "../pages/dashboard/terms-management/TermsPage";
-import { Heatmap } from "../components/heatmap";
+import { HeatmapFilters } from "../pages/dashboard/heatmap/HeatmapFilters";
 
 function NotFoundPage() {
   return (
@@ -40,7 +40,7 @@ export function AppRoutes() {
             <Route path="usuarios" element={<UsuariosPage />} />
             <Route path="termos" element={<TermsPage />} />
             <Route path="*" element={<NotFoundPage />} />
-            <Route path="heatmap" element={<Heatmap/>} />
+            <Route path="heatmap" element={<HeatmapFilters/>} />
           </Route>
         </Route>
       </Routes>

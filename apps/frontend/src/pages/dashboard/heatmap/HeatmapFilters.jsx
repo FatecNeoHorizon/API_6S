@@ -1,37 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-    TrendingUp,
-    TrendingDown,
-    Calendar as CalendarIcon,
-    Filter,
-    BarChart2,
-    BarChart3,
-    Zap,
-    ChevronLeft,
-    ChevronRight,
-    Info,
+  TrendingUp,
+  TrendingDown,
+  Calendar as CalendarIcon,
+  Filter,
+  BarChart2,
+  BarChart3,
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  Info,
 } from "lucide-react";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
 } from "recharts";
 import { apiClient } from "@/api/client";
 import { Heatmap } from "../../../components/heatmap";
@@ -166,10 +166,51 @@ function MonthRangePicker({ value, onChange }) {
 }
 
 export function HeatmapFilters() {
-    const [selectedTab, setSelectedTab] = useState("dec");
-    const [monthRange, setMonthRange] = useState({ from: null, to: null });
+  const [selectedTab, setSelectedTab] = useState("dec");
+  const [monthRange, setMonthRange] = useState({ from: null, to: null });
 
-    const handleMonthRangeChange = (range) => {
+  const [convertedConjs, setConvertedConjs] = useState([{
+    name: null,
+    indicator_type_code: null,
+    year: null,
+    limit: null,
+    accumulated_value: null,
+    periods_count: null,
+    coordinates: null,
+  },])
+
+  const mockedCoordinates = [
+    [
+      -45.51313686727258,
+      -22.943924476033715
+    ],
+    [
+      -45.51021288891366,
+      -22.938418193344887
+    ],
+    [
+      -45.504575803430555,
+      -22.936958280700026
+    ]
+  ]
+
+  const mockedDataTest = [{
+    name: "ARATEMA",
+    indicator_type_code: "FEC",
+    year: 2012,
+    limit: 7,
+    accumulated_value: 9,
+    periods_count: 8,
+    coordinates: mockedCoordinates,
+  }]
+
+  useEffect(() => {
+    setConvertedConjs(mockedDataTest);
+  },[])
+
+  
+
+  const handleMonthRangeChange = (range) => {
     setMonthRange(range);
     // setSelectedPeriod(null);
     // if (range.from && range.to) {
@@ -181,44 +222,44 @@ export function HeatmapFilters() {
     // }
   };
 
-    return (
-        <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="flex gap-2">
-                    <Button
-                        variant={selectedTab === "dec" ? "default" : "outline"}
-                        onClick={() => setSelectedTab("dec")}
-                        className={
-                            selectedTab === "dec"
-                                ? "bg-primary text-primary-foreground"
-                                : "border-border text-foreground hover:bg-muted"
-                        }
-                    >
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        DEC
-                    </Button>
-                    <Button
-                        variant={selectedTab === "fec" ? "default" : "outline"}
-                        onClick={() => setSelectedTab("fec")}
-                        className={
-                            selectedTab === "fec"
-                                ? "bg-primary text-primary-foreground"
-                                : "border-border text-foreground hover:bg-muted"
-                        }
-                    >
-                        <BarChart2 className="w-4 h-4 mr-2" />
-                        FEC
-                    </Button>
-                </div>
-
-                <MonthRangePicker
-                  value={monthRange}
-                  onChange={handleMonthRangeChange}
-                />
-            </div>
-
-            <Heatmap/>
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex gap-2">
+          <Button
+            variant={selectedTab === "dec" ? "default" : "outline"}
+            onClick={() => setSelectedTab("dec")}
+            className={
+              selectedTab === "dec"
+                ? "bg-primary text-primary-foreground"
+                : "border-border text-foreground hover:bg-muted"
+            }
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            DEC
+          </Button>
+          <Button
+            variant={selectedTab === "fec" ? "default" : "outline"}
+            onClick={() => setSelectedTab("fec")}
+            className={
+              selectedTab === "fec"
+                ? "bg-primary text-primary-foreground"
+                : "border-border text-foreground hover:bg-muted"
+            }
+          >
+            <BarChart2 className="w-4 h-4 mr-2" />
+            FEC
+          </Button>
         </div>
-    )
+
+        <MonthRangePicker
+          value={monthRange}
+          onChange={handleMonthRangeChange}
+        />
+      </div>
+
+      <Heatmap convertedConjs={convertedConjs}/>
+    </div>
+  )
 
 }

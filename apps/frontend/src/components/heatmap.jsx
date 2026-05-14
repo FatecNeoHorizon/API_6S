@@ -310,15 +310,19 @@ export function Heatmap({ convertedConjs }) {
     ]
     const purpleOptions = { color: 'purple' }
 
-    const revertCoordinates = (coordinateAray) => {
-        coordinateAray.forEach(coordinate => coordinate.reverse())
-    }
+    function invertCoordinates(coordinates) {
+        return coordinates.map(([x, y]) => [
+            y,
+            x
+        ]);
+    }   
 
-    const lul = revertCoordinates(mockedData)
+    // const lul = revertCoordinates(mockedData)
 
     function mappedPolygons(conj) {
         if (conj.coordinates) {
             let coordinates = conj.coordinates
+            coordinates = invertCoordinates(coordinates)
             return (
                 <Polygon pathOptions={purpleOptions} positions={coordinates} />
             )

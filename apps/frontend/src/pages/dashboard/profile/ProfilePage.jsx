@@ -122,6 +122,7 @@ export default function ProfilePage() {
         username: updated.username || "",
         email: updated.email || "",
       });
+      window.dispatchEvent(new CustomEvent("profile:updated", { detail: updated }));
       toast.success("Perfil atualizado com sucesso.");
     } catch (err) {
       setError(getApiErrorMessage(err, "Nao foi possivel atualizar seu perfil."));

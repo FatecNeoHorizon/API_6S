@@ -28,6 +28,7 @@ from src.repositories.user_repository import (
     create_user_session,
     get_user_auth_by_email_hash,
     get_valid_password_reset_token,
+    invalidate_session,
     mark_password_reset_token_used,
     rotate_refresh_token,
     update_user_password,
@@ -221,6 +222,20 @@ def login(
         user_agent=user_agent,
         username=user["username"],
     )
+
+
+def logout(conn, *, user_id: str, session_id: str) -> dict:
+    set_current_user(conn, user_id)
+
+    was_invalidated = invalidate_session(conn, session_id)
+
+    if not was_invalidated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_session",
+        )
+
+    return {"detail": "logout_successful"}
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:

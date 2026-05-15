@@ -500,6 +500,24 @@ def create_user_session(
     return session_uuid
 
 
+def invalidate_session(conn: PgConnection, session_id: str) -> bool:
+    if not is_valid_uuid(session_id):
+        return False
+
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE SESSION_UUID = %s
+          AND INVALIDATED_AT IS NULL
+          AND DELETED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(session_id),))
+        return cursor.rowcount > 0
+    
+
 def rotate_refresh_token(conn: PgConnection, refresh_token_hash: str, new_refresh_token_hash: str, refresh_expires_at):
     query = """
         UPDATE TB_SESSION s

@@ -28,9 +28,24 @@ export function Heatmap({ convertedConjs }) {
         return (<></>)
     }
 
+    function getCoordinateCenter(conjArray) {
+        if(conjArray)
+        {
+            let conj = conjArray[0]
+            if(conj.coordinates)
+            {
+                let firstCoordinate = [conj.coordinates[0][1], conj.coordinates[0][0]]
+                return firstCoordinate
+            }
+            return [51.505, -0.09]
+        }
+        
+    }
+
     return (
         <>
-            <MapContainer center={[-22.943924476033715, -45.51313686727258]} zoom={13} scrollWheelZoom={false}>
+        {convertedConjs[0].coordinates && (
+            <MapContainer center={getCoordinateCenter(convertedConjs)} zoom={13} scrollWheelZoom={true}>
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -40,9 +55,11 @@ export function Heatmap({ convertedConjs }) {
                         A pretty CSS3 popup. <br /> Easily customizable.
                     </Popup>
                 </Marker>
-                
+
                 {convertedConjs.map(mappedPolygons)}
             </MapContainer>
+        )}
+            
         </>
     )
 }

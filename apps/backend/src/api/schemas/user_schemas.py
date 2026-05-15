@@ -78,7 +78,7 @@ class UserSetActiveRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=256)
 
     @field_validator("email")
     def normalize_email(cls, v: EmailStr) -> str:

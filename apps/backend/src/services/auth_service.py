@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from ipaddress import ip_address
 import secrets
 
 from fastapi import HTTPException, status
@@ -27,6 +28,7 @@ from src.repositories.user_repository import (
     create_password_reset_token,
     create_user_session,
     get_user_auth_by_email_hash,
+    log_auth_attempt,
     get_valid_password_reset_token,
     mark_password_reset_token_used,
     rotate_refresh_token,
@@ -43,6 +45,63 @@ def _build_email_hash(email: str) -> str:
 
 def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
+
+
+def _mask_source_ip(source_ip: str | None) -> str:
+    value = (source_ip or "").strip()
+
+    if not value or value.lower() == "unknown":
+        return "unknown"
+
+    try:
+        parsed_ip = ip_address(value)
+    except ValueError:
+        return "unknown"
+
+    if parsed_ip.version == 4:
+        octets = value.split(".")
+        return f"{octets[0]}.{octets[1]}.{octets[2]}.0"
+
+    hextets = parsed_ip.exploded.split(":")
+    return f"{':'.join(hextets[:4])}::"
+
+
+def _record_auth_attempt(
+    conn,
+    *,
+    email_hash: str,
+    source_ip: str,
+    success: bool,
+    blocked: bool,
+) -> None:
+    log_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=_mask_source_ip(source_ip),
+        success=success,
+        blocked=blocked,
+    )
+
+
+def _record_failed_auth_attempt_and_commit(
+    conn,
+    *,
+    email_hash: str,
+    source_ip: str,
+    blocked: bool = False,
+) -> None:
+    _record_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=source_ip,
+        success=False,
+        blocked=blocked,
+    )
+
+    # Login failures are followed by HTTPException.
+    # The route connection manager rolls back on exceptions,
+    # so the audit row must be committed before raising.
+    conn.commit()
 
 
 def _create_session_and_token(
@@ -199,21 +258,43 @@ def login(
     )
 
     if not user:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+        )
         raise generic_error
 
     if not user["active"]:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+            blocked=True,
+        )
         raise generic_error
 
     if not user["first_access_completed"]:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+            blocked=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="first_access_required",
         )
 
     if not verify_password(payload.password, user["password_hash"]):
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+        )
         raise generic_error
 
-    return _create_session_and_token(
+    response = _create_session_and_token(
         conn,
         user_id=str(user["user_uuid"]),
         profile_name=user["profile_name"],
@@ -221,6 +302,16 @@ def login(
         user_agent=user_agent,
         username=user["username"],
     )
+
+    _record_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=source_ip,
+        success=True,
+        blocked=False,
+    )
+
+    return response
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:

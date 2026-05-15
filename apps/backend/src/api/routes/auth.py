@@ -39,7 +39,16 @@ def post_first_access(payload: FirstAccessRequest, request: Request):
         )
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    summary="Authenticate user",
+    description=(
+        "Authenticates a user and records the authentication attempt in "
+        "TB_AUTH_ATTEMPT using the deterministic email hash and masked source IP. "
+        "The password, plain email and internal session data are never logged."
+    ),
+)
 def post_login(payload: LoginRequest, request: Request):
     source_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")

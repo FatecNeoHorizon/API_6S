@@ -371,6 +371,36 @@ def complete_first_access(
         cursor.execute(query, (password_hash, str(user_id)))
 
 
+def log_auth_attempt(
+    conn: PgConnection,
+    *,
+    email_hash: str,
+    source_ip: str,
+    success: bool,
+    blocked: bool,
+) -> None:
+    query = """
+        INSERT INTO TB_AUTH_ATTEMPT (
+            EMAIL_HASH,
+            SOURCE_IP,
+            SUCCESS,
+            BLOCKED
+        )
+        VALUES (%s, %s, %s, %s)
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                email_hash,
+                source_ip[:255],
+                success,
+                blocked,
+            ),
+        )
+
+
 def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
     query = """
         SELECT

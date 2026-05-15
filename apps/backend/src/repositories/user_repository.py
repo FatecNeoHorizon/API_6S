@@ -6,6 +6,8 @@ from uuid import UUID
 from psycopg2.errors import UniqueViolation
 from psycopg2.extensions import connection as PgConnection
 
+from src.config.auth_security import is_valid_uuid
+
 
 class UserAlreadyExistsError(Exception):
     pass
@@ -312,25 +314,25 @@ def create_first_access_token(
     return str(row[0])
 
 
-def get_valid_first_access_token(conn: PgConnection, token_hash: str):
+def consume_valid_first_access_token(conn: PgConnection, token_hash: str):
     query = """
-        SELECT
+        UPDATE TB_FIRST_ACCESS_TOKEN fat
+        SET USED_AT = NOW()
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE fat.USER_ID = u.USER_UUID
+          AND fat.TOKEN_HASH = %s
+          AND fat.USED_AT IS NULL
+          AND fat.EXPIRES_AT > NOW()
+          AND u.DELETED_AT IS NULL
+        RETURNING
             fat.TOKEN_UUID,
             fat.USER_ID,
             u.ACTIVE,
             p.PROFILE_NAME,
             u.USERNAME,
             u.EMAIL_HASH
-        FROM TB_FIRST_ACCESS_TOKEN fat
-        JOIN TB_USER u
-          ON u.USER_UUID = fat.USER_ID
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE fat.TOKEN_HASH = %s
-          AND fat.USED_AT IS NULL
-          AND fat.EXPIRES_AT > NOW()
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
     """
 
     with conn.cursor() as cursor:
@@ -348,18 +350,6 @@ def get_valid_first_access_token(conn: PgConnection, token_hash: str):
         "username": row[4],
         "email_hash": row[5],
     }
-
-
-def mark_first_access_token_used(conn: PgConnection, token_uuid: str) -> None:
-    query = """
-        UPDATE TB_FIRST_ACCESS_TOKEN
-        SET USED_AT = NOW()
-        WHERE TOKEN_UUID = %s
-          AND USED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(token_uuid),))
 
 
 def complete_first_access(
@@ -456,6 +446,8 @@ def create_user_session(
     source_ip: str,
     user_agent: str,
     expires_at,
+    refresh_token_hash: str,
+    refresh_expires_at,
 ) -> str:
     invalidate_query = """
         UPDATE TB_SESSION
@@ -474,9 +466,11 @@ def create_user_session(
             SOURCE_IP,
             USER_AGENT,
             EXPIRES_AT,
+            REFRESH_TOKEN_HASH,
+            REFRESH_EXPIRES_AT,
             INVALIDATED_AT
         )
-        VALUES (%s, %s, %s, %s, NULL)
+        VALUES (%s, %s, %s, %s, %s, %s, NULL)
         RETURNING SESSION_UUID
     """
 
@@ -488,6 +482,8 @@ def create_user_session(
                 source_ip,
                 user_agent[:255],
                 expires_at,
+                refresh_token_hash,
+                refresh_expires_at,
             ),
         )
         row = cursor.fetchone()
@@ -497,11 +493,59 @@ def create_user_session(
         raise ValueError("Failed to create session: no UUID returned")
 
     session_uuid = str(row[0])
-    # Validate UUID format (should be 36 characters)
-    if len(session_uuid) != 36:
+    # Validate UUID format.
+    if not is_valid_uuid(session_uuid):
         raise ValueError(f"Invalid session UUID format: {session_uuid}")
 
     return session_uuid
+
+
+def rotate_refresh_token(conn: PgConnection, refresh_token_hash: str, new_refresh_token_hash: str, refresh_expires_at):
+    query = """
+        UPDATE TB_SESSION s
+        SET REFRESH_TOKEN_HASH = %s,
+            REFRESH_EXPIRES_AT = %s,
+            EXPIRES_AT = %s,
+            UPDATED_AT = NOW()
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE s.USER_ID = u.USER_UUID
+          AND s.REFRESH_TOKEN_HASH = %s
+          AND s.REFRESH_EXPIRES_AT > NOW()
+          AND s.INVALIDATED_AT IS NULL
+          AND s.DELETED_AT IS NULL
+          AND u.DELETED_AT IS NULL
+        RETURNING
+            s.SESSION_UUID,
+            u.USER_UUID,
+            u.ACTIVE,
+            p.PROFILE_NAME,
+            u.USERNAME
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                new_refresh_token_hash,
+                refresh_expires_at,
+                refresh_expires_at,
+                refresh_token_hash,
+            ),
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "session_uuid": row[0],
+        "user_uuid": row[1],
+        "active": row[2],
+        "profile_name": row[3],
+        "username": row[4],
+    }
 
 
 def get_active_session_user(conn: PgConnection, session_uuid: str):

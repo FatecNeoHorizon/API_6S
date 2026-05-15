@@ -91,6 +91,26 @@
 
 ---
 
+### 4. **[LGPD_DATA_SEPARATION.md](LGPD_DATA_SEPARATION.md)**
+
+**Who is it for?** Backend developers, compliance reviewers, Scrum, and professors validating LGPD architecture
+
+**What is it?** ROPA entry and technical/legal argument for separating PostgreSQL sensitive data from MongoDB public ANEEL/BDGD analytical data
+
+**Contains:**
+- RF10/RF11 linkage
+- PostgreSQL and MongoDB data scope inventory
+- Dual-database architecture diagram
+- Separation controls and breach isolation analysis
+- Professor validation answer and acceptance criteria
+
+**When to read?**
+- Reviewing LGPD compliance
+- Changing MongoDB schemas or PostgreSQL sensitive tables
+- Validating that analytical collections do not store ZEUS user identifiers
+
+---
+
 ## 🔄 Quick Differences
 
 | Aspect | CONTRIBUTING.md | ISSUE-TRACKING.md |

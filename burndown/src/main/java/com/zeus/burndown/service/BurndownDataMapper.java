@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
 import com.zeus.burndown.integration.github.model.IssueContent;
+import com.zeus.burndown.integration.github.model.Milestone;
 import com.zeus.burndown.integration.github.model.ProjectItemNode;
 import com.zeus.burndown.model.BurndownData;
 
@@ -36,8 +37,8 @@ public class BurndownDataMapper {
     }
  
     private static final List<SprintPeriod> SPRINTS = List.of(
-            new SprintPeriod("Sprint 1", 16, 3, 6, 4),   // 16/03 - 05/04
-            new SprintPeriod("Sprint 2", 13, 4, 4, 5),   // 13/04 - 03/05
+            new SprintPeriod("Sprint 1", 16, 3, 5, 4),   // 16/03 - 05/04
+            new SprintPeriod("Sprint 2", 13, 4, 3, 5),   // 13/04 - 03/05
             new SprintPeriod("Sprint 3", 11, 5, 31, 5)   // 11/05 - 31/05
     );
  
@@ -47,7 +48,7 @@ public class BurndownDataMapper {
  
         List<BurndownData> result = new ArrayList<>();
  
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now();;
         SprintPeriod activeSprint = findActiveSprint(today);
  
         logger.debug("[DEBUG MAPPER] ====================================");
@@ -122,8 +123,8 @@ public class BurndownDataMapper {
 
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
-                LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isAfter(end);
+                Milestone milestone = node.getContent().getMilestone();
+                return milestone != null && sprintName.equals(milestone.getTitle());
             })
             .collect(Collectors.toList());
  
@@ -169,7 +170,7 @@ public class BurndownDataMapper {
     
             dayIndex++;
         }
- 
+
         BurndownData burndown = new BurndownData();
         burndown.setSprintName(sprintName);
         burndown.setStartDate(start);

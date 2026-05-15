@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 
 from src.config.middleware import setup_middleware
-from src.config.validation import format_validation_errors
 from src.config.exception_handlers import (
+    http_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
@@ -15,6 +14,7 @@ from src.api.routes import tam_sam
 from src.api.routes import timeseries
 from src.api.routes import upload
 from src.api.routes import gdb
+from src.api.routes import geo
 from src.api.routes import users
 from src.api.routes import auth
 from src.api.routes import consent
@@ -33,6 +33,7 @@ app.include_router(energy_losses.router)
 app.include_router(network_structure.router)
 app.include_router(upload.router)
 app.include_router(gdb.router)
+app.include_router(geo.router, prefix="/geo")
 app.include_router(tam_sam.router)
 app.include_router(timeseries.router)
 app.include_router(predictions.router)
@@ -43,4 +44,5 @@ app.include_router(terms.router)
 app.include_router(admin_terms.router)
 
 app.add_exception_handler(Exception, unhandled_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)

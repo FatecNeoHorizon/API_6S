@@ -119,6 +119,17 @@ The logging system enforces LGPD compliance at the application layer:
 
 Full documentation: [`docs/LOGGING.md`](docs/LOGGING.md)
 
+## Dual-Database Separation as Structural LGPD Measure
+
+ZEUS uses a dual-database architecture as a compliance control, not only as a technical storage choice:
+
+- **PostgreSQL** stores personal and sensitive application data: users, credentials, sessions, password reset tokens, consent records, policy acceptance history, and sensitive audit logs.
+- **MongoDB** stores public ANEEL/BDGD analytical data: distributor/regulatory indicators, geospatial infrastructure data, TAM/SAM outputs, predictions, and ETL metadata.
+
+This separation supports purpose limitation, minimization, and security under LGPD by keeping analytical processing structurally separated from personal data processing. MongoDB must not store `USER_UUID`, email, CPF, name, session token, consent reference, or any other natural-person identifier from the ZEUS user domain.
+
+The full ROPA entry, breach isolation analysis, professor validation argument, and control checklist are documented in [`docs/LGPD_DATA_SEPARATION.md`](LGPD_DATA_SEPARATION.md).
+
 ---
 
-*Last updated: 04/26/2026*
+*Last updated: 05/10/2026*

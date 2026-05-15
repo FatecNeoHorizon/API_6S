@@ -71,6 +71,34 @@ body:
 
   - type: markdown
     attributes:
+      value: "## 🏷️ Classification"
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: "Domain"
+      options:
+        - "[BACK]"
+        - "[FRONT]"
+        - "[INFRA]"
+        - "[DATA]"
+        - "[ML]"
+        - "[SEC]"
+        - "[QA]"
+        - "[DOC]"
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: "Estimate"
+      placeholder: "Ex: 3h"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
       value: "## ✅ Acceptance Criteria"
 
   - type: textarea

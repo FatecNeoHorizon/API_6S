@@ -54,7 +54,7 @@ Suggested format after publishing the video:
 
 ### Sprint Evolution (Burndown)
 
-<img src="../burndown/src/main/resources/static/burndown.png?v=e528788f8f984fb8ab09a89f6f61fc1c2a432a9f" alt="Sprint 2 burndown">
+<img src="../burndown/src/main/resources/static/sprint-2.png" alt="Sprint 2 burndown">
 
 For the full guide on local usage, execution and CI, see: [Burndown Documentation](../burndown/README.md)
 

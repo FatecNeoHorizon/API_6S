@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import logging
 import uuid
 
+from src.api.schemas.response import success_response
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.load.load_predictions import persist_predictions
 from src.model.prediction_model import Prediction
@@ -214,13 +215,12 @@ async def generate_predictions(
             f"indicators: {indicator_types}"
         )
         
-        return {
-            "status": "STARTED",
+        return success_response({
             "job_id": job_id,
             "consumer_unit_set_id": consumer_unit_set_id,
             "indicator_types": indicator_types,
             "year_range": f"{year_start}-{year_end}",
-        }
+        }, status="STARTED")
     
     except HTTPException:
         raise
@@ -325,12 +325,12 @@ async def get_predictions(
             f"(total: {total_count}, filters: {filter_dict})"
         )
         
-        return {
+        return success_response({
             "total": total_count,
             "skip": skip,
             "limit": limit,
             "predictions": predictions,
-        }
+        })
     
     except Exception as exc:
         logger.exception("[get_predictions] Error: %s", exc)

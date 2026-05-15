@@ -90,11 +90,14 @@ body:
     attributes:
       label: "Domain"
       options:
-        - "[INFRA]"
-        - "[DATA]"
         - "[BACK]"
         - "[FRONT]"
+        - "[INFRA]"
+        - "[DATA]"
+        - "[ML]"
+        - "[SEC]"
         - "[QA]"
+        - "[DOC]"
     validations:
       required: true
 

@@ -75,6 +75,12 @@ class UserUpdateRequest(BaseModel):
 class UserSetActiveRequest(BaseModel):
     active: bool
 
+class CurrentUserResponse(BaseModel):
+    user_id: UUID
+    username: str
+    profile: str
+    first_access_completed: bool
+    active: bool
 
 class LoginRequest(BaseModel):
     email: EmailStr

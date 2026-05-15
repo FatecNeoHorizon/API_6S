@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 
 from src.api.schemas.user_schemas import (
+    CurrentUserResponse,
     FirstAccessRequest,
     FirstAccessResponse,
     ForgotPasswordRequest,
@@ -12,6 +13,7 @@ from src.api.schemas.user_schemas import (
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from src.database.postgres import get_pg_connection
 from src.services.auth_service import (
     first_access,
@@ -24,6 +26,17 @@ from src.services.auth_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+@router.get("/me", response_model=CurrentUserResponse)
+def get_auth_me(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    return CurrentUserResponse(
+        user_id=current_user.user_id,
+        username=current_user.username,
+        profile=current_user.profile_name,
+        first_access_completed=current_user.first_access_completed,
+        active=current_user.active,
+    )
 
 @router.post("/first-access", response_model=FirstAccessResponse)
 def post_first_access(payload: FirstAccessRequest, request: Request):

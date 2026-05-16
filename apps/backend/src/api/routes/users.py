@@ -1,9 +1,10 @@
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
 
+from src.api.dependencies.auth import require_admin
 from src.api.schemas.user_schemas import (
     ProfileResponse, UserCreateRequest, UserCreateResponse,
     UserResult, UserUpdateRequest, UserSetActiveRequest,
@@ -22,7 +23,7 @@ from src.services.user_service import (
     delete_user_service,
 )
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_admin)])
 log = structlog.get_logger()
 
 @router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)

@@ -197,6 +197,9 @@ export function HeatmapFilters() {
       }
       // const payload = unwrapApiData(data);
       // setTamTotal(payload?.tam_total ?? null)
+      console.log("inside fetch")
+      console.log(data)
+      setConvertedConjs(data)
     } catch (error) {
       console.error("[geo/conj] Erro:", error);
     } finally {
@@ -513,7 +516,7 @@ export function HeatmapFilters() {
 
   useEffect(() => {
     setConvertedConjs(mockedDataTest);
-    fetchConj()
+    // fetchConj()
   },[])
 
   

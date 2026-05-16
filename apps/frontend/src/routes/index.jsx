@@ -29,16 +29,13 @@ export function AppRoutes() {
         <Route path="/first-access" element={<PrimeiroAcessoPage />} />
         <Route path="/primeiro-acesso" element={<Navigate to="/first-access" replace />} />
         <Route path="/" element={<Navigate to="/dashboard/indicadores" replace />} />
-        {/* <Route path="/dashboard/*" element={<ProtectedRoute />}> */}
-        <Route path="/dashboard/*">
+        <Route path="/dashboard/*" element={<ProtectedRoute />}>
           <Route path="" element={<DashboardLayout />}>
             <Route index element={<Navigate to="indicadores" replace />} />
             <Route path="indicadores" element={<IndicadoresPage />} />
             <Route path="estrutura-redes" element={<EstruturaRedesPage />} />
-            {/* <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN","MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
-            <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} /> */}
-            <Route path="usuarios" element={<UsuariosPage />} />
-            <Route path="termos" element={<TermsPage />} />
+            <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN","MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
+            <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
             <Route path="*" element={<NotFoundPage />} />
             <Route path="heatmap" element={<HeatmapFilters/>} />
           </Route>

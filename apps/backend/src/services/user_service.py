@@ -35,6 +35,7 @@ from src.repositories.user_repository import (
     set_user_active,
     update_user,
 )
+from src.services.email_service import send_first_access_email
 
 
 def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
@@ -55,7 +56,6 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
                 "username": payload.username.strip().upper(),
                 "email_hash": email_hash,
                 "email_enc": _encrypt_email(normalized_email, settings),
-                "password_hash": _hash_password(payload.password),
                 "profile_id": payload.profile_id,
             }
 
@@ -78,10 +78,21 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
             created_at=result.created_at,
         )
 
+        frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
+        first_access_url = f"{frontend_base_url}/first-access?token={raw_token}"
+        
+        # Send first-access email in both production and non-production environments
+        try:
+            send_first_access_email(to_address=normalized_email, first_access_url=first_access_url)
+        except Exception as exc:
+            # Log the error but don't fail the user creation
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send first-access email to {normalized_email}: {exc}")
+
         if settings.app_env != "prod":
-            frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
             response.dev_first_access_token = raw_token
-            response.dev_first_access_url = f"{frontend_base_url}/first-access?token={raw_token}"
+            response.dev_first_access_url = first_access_url
 
         return response
     except (UserProfileNotFoundError, UserAlreadyExistsError):
@@ -186,10 +197,6 @@ def _encrypt_email(email: str, settings: Settings) -> str:
         raise RuntimeError(
             "A EMAIL_ENCRYPTION_KEY é inválida. Use uma chave Fernet gerada por cryptography.fernet.Fernet.generate_key()."
         ) from exc
-
-
-def _hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def list_profiles_service() -> List[ProfileResult]:

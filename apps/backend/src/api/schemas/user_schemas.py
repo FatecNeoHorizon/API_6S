@@ -25,16 +25,11 @@ class UserBase(BaseModel):
 class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    password: str = Field(..., min_length=8)
     profile_id: UUID
 
     @field_validator("email")
     def validate_email_format(cls, v: EmailStr) -> str:
         return str(v).strip().lower()
-
-    @field_validator("password")
-    def validate_password(cls, v: str) -> str:
-        return password_validator(v)
 
 
 class UserCreateResponse(UserBase):

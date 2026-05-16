@@ -60,10 +60,9 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
             USERNAME,
             EMAIL_HASH,
             EMAIL_ENC,
-            PASSWORD_HASH,
             PROFILE_ID
         )
-        VALUES (%s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s)
         RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT
     """
 
@@ -75,7 +74,6 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
                     data["username"],
                     data["email_hash"],
                     data["email_enc"],
-                    data["password_hash"],
                     str(data["profile_id"]),
                 ),
             )

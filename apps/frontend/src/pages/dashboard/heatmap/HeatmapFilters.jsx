@@ -34,6 +34,7 @@ import {
   Tooltip,
 } from "recharts";
 import { apiClient } from "@/api/client";
+import { getConj } from "../../../api/heatmap";
 import { Heatmap } from "../../../components/heatmap";
 
 const MONTH_NAMES = [
@@ -178,6 +179,30 @@ export function HeatmapFilters() {
     periods_count: null,
     coordinates: null,
   },])
+
+  const unwrapApiData = (response) => response?.data ?? response;
+
+  const fetchConj = async () => {
+    // setDecFecLoading(true);
+    const options = 
+    {
+      year: 2025
+    }
+    try {
+      const data = await getConj(options);
+      if (typeof data === "string") {
+        console.error("[geo/conj] Expected JSON, got text:", data);
+        // setTamTotal(null);
+        return;
+      }
+      // const payload = unwrapApiData(data);
+      // setTamTotal(payload?.tam_total ?? null)
+    } catch (error) {
+      console.error("[geo/conj] Erro:", error);
+    } finally {
+      // setDecFecLoading(false);
+    }
+  }
 
   const mockedCoordinates = [
     [
@@ -488,6 +513,7 @@ export function HeatmapFilters() {
 
   useEffect(() => {
     setConvertedConjs(mockedDataTest);
+    fetchConj()
   },[])
 
   

@@ -186,19 +186,16 @@ export function HeatmapFilters() {
     // setDecFecLoading(true);
     const options = 
     {
-      year: 2025
+      year: 2023
     }
     try {
       const data = await getConj(options);
       if (typeof data === "string") {
         console.error("[geo/conj] Expected JSON, got text:", data);
-        // setTamTotal(null);
+        setConvertedConjs(null)
         return;
       }
-      // const payload = unwrapApiData(data);
       // setTamTotal(payload?.tam_total ?? null)
-      console.log("inside fetch")
-      console.log(data)
       setConvertedConjs(data)
     } catch (error) {
       console.error("[geo/conj] Erro:", error);
@@ -515,8 +512,8 @@ export function HeatmapFilters() {
   ]
 
   useEffect(() => {
-    setConvertedConjs(mockedDataTest);
-    // fetchConj()
+    // setConvertedConjs(mockedDataTest);
+    fetchConj()
   },[])
 
   

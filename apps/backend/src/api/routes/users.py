@@ -1,9 +1,10 @@
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from uuid import UUID
 
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user, require_admin
 from src.api.schemas.user_schemas import (
     ProfileResponse, UserCreateRequest, UserCreateResponse,
     UserResult, UserUpdateRequest, UserSetActiveRequest,
@@ -26,14 +27,14 @@ router = APIRouter(prefix="/users", tags=["users"])
 log = structlog.get_logger()
 
 @router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
-def list_users():
+def list_users(_current_user: AuthenticatedUser = Depends(get_current_user)):
     users = list_users_service()
     log.info(USER_LISTED, count=len(users))
     return users
 
 
 @router.get("/profiles", response_model=List[ProfileResponse], status_code=status.HTTP_200_OK)
-def get_profiles():
+def get_profiles(_current_user: AuthenticatedUser = Depends(get_current_user)):
     try:
         profiles = list_profiles_service()
         log.info("profiles.listed", count=len(profiles))
@@ -43,7 +44,7 @@ def get_profiles():
 
 
 @router.get("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
-def get_user(user_uuid: UUID):
+def get_user(user_uuid: UUID, _current_user: AuthenticatedUser = Depends(get_current_user)):
     try:
         return get_user_by_id_service(user_uuid)
     except UserNotFoundError as exc:
@@ -52,7 +53,7 @@ def get_user(user_uuid: UUID):
 
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreateRequest):
+def create_user(payload: UserCreateRequest, _admin: AuthenticatedUser = Depends(require_admin)):
     try:
         result = create_user_service(payload)
         log.info(USER_CREATED, user_id=str(result.user_uuid), profile_id=str(result.profile_id))
@@ -69,7 +70,7 @@ def create_user(payload: UserCreateRequest):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 @router.patch("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
-def update_user(user_uuid: UUID, payload: UserUpdateRequest):
+def update_user(user_uuid: UUID, payload: UserUpdateRequest, _admin: AuthenticatedUser = Depends(require_admin)):
     try:
         data = {"username": payload.username, "profile_id": payload.profile_id}
         result = update_user_service(user_uuid, data)
@@ -87,7 +88,7 @@ def update_user(user_uuid: UUID, payload: UserUpdateRequest):
 
 
 @router.patch("/{user_uuid}/active", response_model=UserResult, status_code=status.HTTP_200_OK)
-def set_active(user_uuid: UUID, payload: UserSetActiveRequest):
+def set_active(user_uuid: UUID, payload: UserSetActiveRequest, _admin: AuthenticatedUser = Depends(require_admin)):
     try:
         result = set_user_active_service(user_uuid, payload.active)
         log.info(USER_DEACTIVATED, user_id=str(user_uuid), active=payload.active)
@@ -97,7 +98,7 @@ def set_active(user_uuid: UUID, payload: UserSetActiveRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 @router.delete("/{user_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_uuid: UUID):
+def delete_user(user_uuid: UUID, _admin: AuthenticatedUser = Depends(require_admin)):
     try:
         delete_user_service(user_uuid)
         log.info(USER_DELETED, user_id=str(user_uuid))

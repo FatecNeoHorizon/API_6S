@@ -10,6 +10,7 @@ import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage
 import EstruturaRedesPage from "../pages/dashboard/estrutura-redes-page/EstruturaRedesPage";
 import UsuariosPage from "../pages/dashboard/user-management/UsuariosPage";
 import TermsPage from "../pages/dashboard/terms-management/TermsPage";
+import { HeatmapFilters } from "../pages/dashboard/heatmap/HeatmapFilters";
 import ProfilePage from "../pages/dashboard/profile/ProfilePage";
 
 function NotFoundPage() {
@@ -38,6 +39,7 @@ export function AppRoutes() {
             <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN","MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
             <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
             <Route path="*" element={<NotFoundPage />} />
+            <Route path="heatmap" element={<HeatmapFilters/>} />
           </Route>
         </Route>
       </Routes>

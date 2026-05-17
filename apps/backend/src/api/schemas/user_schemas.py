@@ -67,6 +67,26 @@ class UserUpdateRequest(BaseModel):
     profile_id: UUID
 
 
+class UserMeResponse(BaseModel):
+    user_uuid: UUID
+    username: str
+    email: EmailStr
+    profile_name: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserMeUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserSetActiveRequest(BaseModel):
     active: bool
 

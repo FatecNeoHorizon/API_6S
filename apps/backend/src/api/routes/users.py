@@ -7,8 +7,9 @@ from uuid import UUID
 from src.api.dependencies.auth import require_admin
 from src.api.schemas.user_schemas import (
     ProfileResponse, UserCreateRequest, UserCreateResponse,
-    UserResult, UserUpdateRequest, UserSetActiveRequest,
+    UserMeResponse, UserMeUpdateRequest, UserResult, UserUpdateRequest, UserSetActiveRequest,
 )
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from src.config.log_events import (
     USER_CREATED, USER_UPDATED, USER_DEACTIVATED,
     USER_DELETED, USER_NOT_FOUND, USER_CONFLICT, USER_LISTED,
@@ -20,7 +21,8 @@ from src.repositories.user_repository import (
 from src.services.user_service import (
     create_user_service, list_profiles_service, get_user_by_id_service,
     list_users_service, update_user_service, set_user_active_service,
-    delete_user_service,
+    delete_user_service, get_current_user_profile_service,
+    update_current_user_profile_service,
 )
 
 router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_admin)])
@@ -41,6 +43,36 @@ def get_profiles():
         return [ProfileResponse(profile_uuid=p.profile_uuid, profile_name=p.profile_name) for p in profiles]
     except ProfilePersistenceError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Falha ao listar perfis.") from exc
+
+
+@router.get("/me", response_model=UserMeResponse, status_code=status.HTTP_200_OK)
+def get_my_profile(current_user: AuthenticatedUser = Depends(get_current_user)):
+    try:
+        return get_current_user_profile_service(current_user.user_id)
+    except UserNotFoundError as exc:
+        log.warning(USER_NOT_FOUND, user_id=current_user.user_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.patch("/me", response_model=UserMeResponse, status_code=status.HTTP_200_OK)
+def update_my_profile(
+    payload: UserMeUpdateRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    try:
+        result = update_current_user_profile_service(
+            current_user.user_id,
+            username=payload.username,
+            email=str(payload.email),
+        )
+        log.info(USER_UPDATED, user_id=current_user.user_id, fields_changed=["username", "email"])
+        return result
+    except UserNotFoundError as exc:
+        log.warning(USER_NOT_FOUND, user_id=current_user.user_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except UserAlreadyExistsError as exc:
+        log.warning(USER_CONFLICT, user_id=current_user.user_id, reason=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.get("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)

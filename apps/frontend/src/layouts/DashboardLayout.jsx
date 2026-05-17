@@ -175,10 +175,23 @@ export default function DashboardLayout() {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [appLoadIds, setAppLoadIds] = useState(null);
+  const [profileDisplayName, setProfileDisplayName] = useState(null);
 
-  const userDisplayName = getUserDisplayName(getSessionToken()) || "Admin";
+  const userDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
   const userInitials = getUserInitials(userDisplayName);
   const userProfile = getUserProfile(getSessionToken());
+
+  useEffect(() => {
+    const handleProfileUpdated = (event) => {
+      const username = event.detail?.username;
+      if (typeof username === "string" && username.trim()) {
+        setProfileDisplayName(username);
+      }
+    };
+
+    window.addEventListener("profile:updated", handleProfileUpdated);
+    return () => window.removeEventListener("profile:updated", handleProfileUpdated);
+  }, []);
 
   const handleLogout = async () => {
     try {

@@ -207,6 +207,9 @@ def _hash_password(password: str) -> str:
 
 
 def _decrypt_email(email_enc: str, settings: Settings) -> str:
+    if email_enc.startswith("ENCRYPTED::"):
+        return email_enc.removeprefix("ENCRYPTED::")
+
     key = _resolve_email_encryption_key(settings)
     try:
         return Fernet(key).decrypt(email_enc.encode("utf-8")).decode("utf-8")

@@ -120,6 +120,114 @@ def get_user_by_id(conn: PgConnection, user_uuid: UUID) -> Optional[UserResult]:
     )
 
 
+def get_user_profile_by_id(conn: PgConnection, user_uuid: str):
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.EMAIL_ENC,
+            u.PROFILE_ID,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            u.CREATED_AT,
+            u.UPDATED_AT,
+            p.PROFILE_NAME
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.USER_UUID = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "email_enc": row[2],
+        "profile_id": row[3],
+        "active": row[4],
+        "first_access_completed": row[5],
+        "created_at": row[6],
+        "updated_at": row[7],
+        "profile_name": row[8],
+    }
+
+
+def update_user_profile(conn: PgConnection, user_uuid: str, data: dict):
+    query = """
+        WITH updated AS (
+            UPDATE TB_USER
+            SET USERNAME = %s,
+                EMAIL_HASH = %s,
+                EMAIL_ENC = %s,
+                UPDATED_AT = NOW()
+            WHERE USER_UUID = %s
+              AND DELETED_AT IS NULL
+            RETURNING
+                USER_UUID,
+                USERNAME,
+                EMAIL_ENC,
+                PROFILE_ID,
+                ACTIVE,
+                FIRST_ACCESS_COMPLETED,
+                CREATED_AT,
+                UPDATED_AT
+        )
+        SELECT
+            updated.USER_UUID,
+            updated.USERNAME,
+            updated.EMAIL_ENC,
+            updated.PROFILE_ID,
+            updated.ACTIVE,
+            updated.FIRST_ACCESS_COMPLETED,
+            updated.CREATED_AT,
+            updated.UPDATED_AT,
+            p.PROFILE_NAME
+        FROM updated
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = updated.PROFILE_ID
+    """
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    data["username"],
+                    data["email_hash"],
+                    data["email_enc"],
+                    str(user_uuid),
+                ),
+            )
+            row = cursor.fetchone()
+    except UniqueViolation as exc:
+        raise UserAlreadyExistsError("Nome de usuÃ¡rio ou e-mail jÃ¡ cadastrado.") from exc
+    except Exception as exc:
+        raise UserPersistenceError("Falha ao atualizar o perfil do usuÃ¡rio.") from exc
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "email_enc": row[2],
+        "profile_id": row[3],
+        "active": row[4],
+        "first_access_completed": row[5],
+        "created_at": row[6],
+        "updated_at": row[7],
+        "profile_name": row[8],
+    }
+
+
 def list_users(conn: PgConnection) -> List[UserResult]:
     query = """
         SELECT USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT, UPDATED_AT

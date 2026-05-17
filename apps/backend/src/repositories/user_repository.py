@@ -187,6 +187,91 @@ def exists_by_email_hash(conn: PgConnection, email_hash: str) -> bool:
         return cursor.fetchone() is not None
 
 
+def exists_by_email_hash_for_other_user(conn: PgConnection, email_hash: str, user_uuid: str) -> bool:
+    query = """
+        SELECT 1
+        FROM TB_USER
+        WHERE EMAIL_HASH = %s
+          AND USER_UUID <> %s
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (email_hash, str(user_uuid)))
+        return cursor.fetchone() is not None
+
+
+def get_current_user_profile(conn: PgConnection, user_uuid: str) -> dict | None:
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.EMAIL_ENC,
+            p.PROFILE_NAME,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            u.CREATED_AT,
+            u.UPDATED_AT
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.USER_UUID = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "email_enc": row[2],
+        "profile_name": row[3],
+        "active": row[4],
+        "first_access_completed": row[5],
+        "created_at": row[6],
+        "updated_at": row[7],
+    }
+
+
+def update_current_user_profile(conn: PgConnection, user_uuid: str, data: dict) -> dict | None:
+    query = """
+        UPDATE TB_USER
+        SET USERNAME = %s,
+            EMAIL_HASH = %s,
+            EMAIL_ENC = %s,
+            UPDATED_AT = NOW()
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
+        RETURNING USER_UUID
+    """
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                query,
+                (
+                    data["username"],
+                    data["email_hash"],
+                    data["email_enc"],
+                    str(user_uuid),
+                ),
+            )
+            row = cursor.fetchone()
+    except UniqueViolation as exc:
+        raise UserAlreadyExistsError("Nome de usuÃ¡rio ou e-mail jÃ¡ cadastrado.") from exc
+
+    if row is None:
+        return None
+
+    return get_current_user_profile(conn, user_uuid)
+
+
 def update_user(conn: PgConnection, user_uuid: UUID, data: dict) -> Optional[UserResult]:
     query = """
         UPDATE TB_USER

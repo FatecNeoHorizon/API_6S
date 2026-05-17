@@ -791,6 +791,69 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
     }
 
 
+def invalidate_user_sessions(conn: PgConnection, user_id: str) -> list[str]:
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+        RETURNING SESSION_UUID::TEXT
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+    return [row[0] for row in rows]
+
+
+def get_user_sessions(conn: PgConnection, user_id: str) -> list[dict]:
+    query = """
+        SELECT
+            SESSION_UUID,
+            CREATED_AT,
+            SOURCE_IP,
+            USER_AGENT,
+            EXPIRES_AT
+        FROM TB_SESSION
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+          AND DELETED_AT IS NULL
+          AND EXPIRES_AT > NOW()
+        ORDER BY CREATED_AT DESC
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+    return [
+        {
+            "session_uuid": row[0],
+            "created_at": row[1],
+            "source_ip": row[2],
+            "user_agent": row[3],
+            "expires_at": row[4],
+        }
+        for row in rows
+    ]
+
+
+def invalidate_single_session(
+    conn: PgConnection, *, session_uuid: str, user_id: str
+) -> bool:
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE SESSION_UUID = %s
+          AND USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+        RETURNING SESSION_UUID
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (session_uuid, user_id))
+        row = cursor.fetchone()
+    return row is not None
+
+
 def create_password_reset_token(
     conn: PgConnection,
     *,

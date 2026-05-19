@@ -25,6 +25,7 @@ from src.api.routes import consent
 from src.api.routes import terms
 from src.api.routes import admin_terms
 from src.api.routes import predictions
+from src.api.routes import incident_notification
 
 from src.config.lifespan import lifespan
 
@@ -57,6 +58,7 @@ app.include_router(auth.router)
 app.include_router(consent.router)
 app.include_router(terms.router)
 app.include_router(admin_terms.router)
+app.include_router(incident_notification.router)
 
 app.add_exception_handler(Exception, unhandled_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)

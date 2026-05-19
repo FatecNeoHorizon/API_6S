@@ -1,15 +1,16 @@
 import { apiClient } from "./client";
 
 export async function getConj(filter) {
+
   const params = new URLSearchParams(filter)
   let apiData = await apiClient.get(`/geo/conj?${params}`);
-  console.log("inside getConj")
-  console.log(apiData)
-  return apiData.features.map(convertConj)
+  if (apiData) {
+    return apiData.features.map(convertConj)
+  }
+  return null
 }
 
-export function convertConj(apiConj)
-{
+export function convertConj(apiConj) {
   let convertedConj = {
     name: apiConj.properties.name,
     indicator_type_code: apiConj.properties.indicator_type_code,

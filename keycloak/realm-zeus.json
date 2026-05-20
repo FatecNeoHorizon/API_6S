@@ -1,0 +1,30 @@
+{
+  "realm": "zeus",
+  "enabled": true,
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      { "name": "ADMIN",   "description": "Full access — user management, settings, and all data" },
+      { "name": "ANALYST", "description": "Operational access — dashboards, reports, ETL execution" },
+      { "name": "VIEWER",  "description": "Read-only access — dashboard and indicator visualization" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "zeus-app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ]
+}

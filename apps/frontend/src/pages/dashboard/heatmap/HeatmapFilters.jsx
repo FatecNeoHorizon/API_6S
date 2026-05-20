@@ -220,18 +220,6 @@ export function HeatmapFilters() {
   ]
 
   const mockedCoordinatesTwo = [
-    [
-            -45.51313686727258,
-            -22.943924476033715
-        ],
-        [
-            -45.51021288891366,
-            -22.938418193344887
-        ],
-        [
-            -45.504575803430555,
-            -22.936958280700026
-        ],
         [
             -45.49876223858638,
             -22.938541489498107
@@ -504,16 +492,16 @@ export function HeatmapFilters() {
       name: "TRAVERSE TOWN",
       indicator_type_code: "DEC",
       year: 2012,
-      limit: 7,
-      accumulated_value: 5,
+      limit: 10,
+      accumulated_value: 4,
       periods_count: 8,
       coordinates: mockedCoordinatesTwo,
     },
   ]
 
   useEffect(() => {
-    // setConvertedConjs(mockedDataTest);
-    fetchConj()
+    setConvertedConjs(mockedDataTest);
+    // fetchConj()
   },[])
 
   

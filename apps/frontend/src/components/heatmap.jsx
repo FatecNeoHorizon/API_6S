@@ -7,7 +7,31 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet'
 
 export function Heatmap({ convertedConjs }) {
 
-    const purpleOptions = { color: 'purple' }
+    function defineColor(conj) {
+        let colorString = 'gray'
+        if(conj.limit && conj.accumulated_value)
+        {
+            let limit = conj.limit
+            let halfLimit = limit/2
+            let value = conj.accumulated_value
+
+            if(value < halfLimit)
+            {
+                colorString = 'green'
+            }
+
+            if (value >= halfLimit)
+            {
+                colorString = 'orange'
+            }
+
+            if(value >= limit)
+            {
+                colorString = 'red'
+            }
+        }
+        return { color: colorString }
+    }
 
     function invertCoordinates(coordinates) {
         return coordinates.map(([x, y]) => [
@@ -21,7 +45,7 @@ export function Heatmap({ convertedConjs }) {
             let coordinates = conj.coordinates
             coordinates = invertCoordinates(coordinates)
             return (
-                <Polygon pathOptions={purpleOptions} positions={coordinates} />
+                <Polygon pathOptions={defineColor(conj)} positions={coordinates} />
             )
         }
 

@@ -91,7 +91,29 @@
 
 ---
 
-### 4. **[LGPD_DATA_SEPARATION.md](LGPD_DATA_SEPARATION.md)**
+### 4. **[AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md)**
+
+**Who is it for?** Backend and frontend developers, and professors validating the authentication flow
+
+**What is it?** Authentication and authorization architecture based on OAuth 2.0 with PKCE and Keycloak as the centralized identity server
+
+**Contains:**
+- ✅ Full diagram of the Authorization Code Flow with PKCE
+- ✅ Step-by-step flow walkthrough (Frontend → Keycloak → Backend)
+- ✅ Local token validation via JWKS (no Keycloak call per request)
+- ✅ Profile-based authorization (ADMIN, ANALYST, VIEWER)
+- ✅ Keycloak configuration in Docker Compose
+- ✅ Relation to LGPD principles (Art. 6)
+
+**When to read?**
+- 🔐 Implementing or changing any protected route in the backend
+- 🖥️ Integrating the login flow in the frontend
+- 🐳 Setting up Keycloak in the local environment
+- 📋 Reviewing the profile-based authorization model
+
+---
+
+### 5. **[LGPD_DATA_SEPARATION.md](LGPD_DATA_SEPARATION.md)**
 
 **Who is it for?** Backend developers, compliance reviewers, Scrum, and professors validating LGPD architecture
 
@@ -254,6 +276,9 @@ git log feature/123-description
 | "Why does merging close the issue?" | [ISSUE-TRACKING.md](ISSUE-TRACKING.md) |
 | "What are the commit types?" | [CONTRIBUTING.md](CONTRIBUTING.md#accepted-types) |
 | "How do I link an issue in a commit?" | [CONTRIBUTING.md](CONTRIBUTING.md#5️⃣-footer-required) |
+| "How does login work with Keycloak?" | [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) |
+| "How do I validate the token in the backend?" | [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md#-token-validation-in-the-backend) |
+| "Which profile unlocks which route?" | [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md#-profile-based-authorization) |
 
 ---
 

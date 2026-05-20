@@ -30,7 +30,7 @@
 
 ### Sprint Evolution (Burndown)
 
-<img src="burndown/src/main/resources/static/burndown.png?v=local" alt="Sprint 3 Burndown Chart" width="960">
+<img src="../burndown/src/main/resources/static/burndown.png" alt="Sprint 3 Burndown Chart" width="960">
 
 ### Definition of Ready (DoR)
 For a User Story to be ready to start in a sprint, the following criteria must be met:

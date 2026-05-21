@@ -178,6 +178,9 @@ This solution consists of a main application and a support module for tracking p
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
+### 🔐 Security
+[![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+
 ### 📊 Burndown (Support Module)
 [![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
@@ -218,3 +221,4 @@ This solution consists of a main application and a support module for tracking p
 | [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | Dual-database architecture as a structural LGPD compliance measure |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |
+| [Authentication Architecture](docs/AUTH_ARCHITECTURE.md) | OAuth 2.0 + PKCE flow with Keycloak, token validation, and profile-based authorization |

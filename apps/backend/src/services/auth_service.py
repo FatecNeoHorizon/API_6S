@@ -28,6 +28,7 @@ from src.repositories.user_repository import (
     create_user_session,
     get_user_auth_by_email_hash,
     get_valid_password_reset_token,
+    invalidate_user_sessions,
     mark_password_reset_token_used,
     rotate_refresh_token,
     update_user_password,
@@ -221,6 +222,10 @@ def login(
         user_agent=user_agent,
         username=user["username"],
     )
+
+
+def logout(conn, *, user_id: str) -> None:
+    invalidate_user_sessions(conn, user_id)
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:

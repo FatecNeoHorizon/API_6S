@@ -15,7 +15,9 @@ import {
   FileSpreadsheet,
   FileArchive,
   Loader2,
-  Users, 
+  Users,
+  ShieldAlert,
+  Map,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
@@ -26,6 +28,12 @@ const menuItems = [
     label: "Indicadores DEC/FEC e Perdas",
     href: "/dashboard/indicadores",
     icon: BarChart3,
+    allowedProfiles: [],
+  },
+  {
+    label: "Heat Map",
+    href: "/dashboard/heatmap",
+    icon: Map,
     allowedProfiles: [],
   },
   {
@@ -44,6 +52,12 @@ const menuItems = [
     label: "Gestão de Termos",
     href: "/dashboard/termos",
     icon: FileText,
+    allowedProfiles: ["ADMIN"],
+  },
+  {
+    label: "Notificação de Incidente",
+    href: "/dashboard/incident-notification",
+    icon: ShieldAlert,
     allowedProfiles: ["ADMIN"],
   },
 ];
@@ -175,10 +189,23 @@ export default function DashboardLayout() {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [appLoadIds, setAppLoadIds] = useState(null);
+  const [profileDisplayName, setProfileDisplayName] = useState(null);
 
-  const userDisplayName = getUserDisplayName(getSessionToken()) || "Admin";
+  const userDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
   const userInitials = getUserInitials(userDisplayName);
   const userProfile = getUserProfile(getSessionToken());
+
+  useEffect(() => {
+    const handleProfileUpdated = (event) => {
+      const username = event.detail?.username;
+      if (typeof username === "string" && username.trim()) {
+        setProfileDisplayName(username);
+      }
+    };
+
+    window.addEventListener("profile:updated", handleProfileUpdated);
+    return () => window.removeEventListener("profile:updated", handleProfileUpdated);
+  }, []);
 
   const handleLogout = async () => {
     try {

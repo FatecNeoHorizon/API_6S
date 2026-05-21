@@ -25,16 +25,11 @@ class UserBase(BaseModel):
 class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    password: str = Field(..., min_length=8)
     profile_id: UUID
 
     @field_validator("email")
     def validate_email_format(cls, v: EmailStr) -> str:
         return str(v).strip().lower()
-
-    @field_validator("password")
-    def validate_password(cls, v: str) -> str:
-        return password_validator(v)
 
 
 class UserCreateResponse(UserBase):
@@ -67,9 +62,43 @@ class UserResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MyProfileResponse(UserResult):
+    email: EmailStr
+    profile_name: str
+
+
+class MyProfileUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserUpdateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     profile_id: UUID
+
+
+class UserMeResponse(BaseModel):
+    user_uuid: UUID
+    username: str
+    email: EmailStr
+    profile_name: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserMeUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
 
 
 class UserSetActiveRequest(BaseModel):

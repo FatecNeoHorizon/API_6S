@@ -131,9 +131,10 @@ public class BurndownDataMapper {
         logger.debug("[DEBUG MAPPER] Issues do sprint '{}': {} de {} totais",
                 sprintName, sprintIssues.size(), allIssues.size());
  
+        // Total de TODAS as tarefas da sprint (incluindo as que entram depois)
         double totalHours = sprintIssues.stream()
-                                        .mapToDouble(this::resolveEstimateHours)
-                                        .sum();
+                .mapToDouble(this::resolveEstimateHours)
+                .sum();
  
         logger.debug("[DEBUG MAPPER] Total de horas do sprint: {}", totalHours);
  
@@ -161,12 +162,18 @@ public class BurndownDataMapper {
                         IssueContent issue = node.getContent();
                         if (issue.getClosedAt() == null) return false;
                         LocalDate closed = toLocalDate(issue.getClosedAt());
-                        return !closed.isAfter(currentDate);
+                        return !closed.isBefore(start.plusDays(1)) && !closed.isAfter(currentDate);
                     })
                     .mapToDouble(this::resolveEstimateHours)
                     .sum();
     
-            realLine.add(Math.max(totalHours - closedHours, 0));
+            double realRemaining = Math.max(totalHours - closedHours, 0);
+            realLine.add(realRemaining);
+            
+            if (dayIndex == 0) {
+                logger.debug("[DEBUG MAPPER] DIA 1 ({}) - Ideal: {}h | Real: {}h | Fechadas após sprint: {}h",
+                    currentDate, idealRemaining, realRemaining, closedHours);
+            }
     
             dayIndex++;
         }

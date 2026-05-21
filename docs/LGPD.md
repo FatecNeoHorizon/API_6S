@@ -40,6 +40,18 @@ The complete consent history is preserved forever — it is never deleted or upd
 | **Revocation of consent** | New REVOCATION record inserted in `TB_CONSENT_LOG` |
 | **Information** | Policy versions and clauses are stored and versioned |
 
+## Data Protection Officer Contact (Art. 41, §1)
+
+ZEUS discloses the Data Protection Officer (Encarregado pelo Tratamento de Dados Pessoais) contact channel required by LGPD Art. 41.
+
+The disclosed information is:
+
+- DPO identification: `Encarregado pelo Tratamento de Dados Pessoais`
+- Contact email: `dpo@tecsys.com.br`
+- Response commitment: up to 15 business days, following LGPD Art. 18, §4
+
+The purpose of this contact channel is to allow data subjects to exercise LGPD Art. 18 rights, including access, correction, deletion, portability, consent revocation, and requests for information about personal data processing.
+
 ### 🗑️ Right to Erasure — How It Works
 
 Physical deletion is never performed on user data. In the user CRUD currently implemented in the backend, the delete operation is logical only. When a user is removed from the active dataset:

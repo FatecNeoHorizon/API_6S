@@ -631,6 +631,19 @@ def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
     }
 
 
+def invalidate_user_sessions(conn: PgConnection, user_id: str) -> None:
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id,))
+
+
 def create_user_session(
     conn: PgConnection,
     *,
@@ -641,16 +654,7 @@ def create_user_session(
     refresh_token_hash: str,
     refresh_expires_at,
 ) -> str:
-    invalidate_query = """
-        UPDATE TB_SESSION
-        SET INVALIDATED_AT = NOW(),
-            UPDATED_AT = NOW()
-        WHERE USER_ID = %s
-          AND INVALIDATED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(invalidate_query, (user_id,))
+    invalidate_user_sessions(conn, user_id)
 
     insert_query = """
         INSERT INTO TB_SESSION (

@@ -19,3 +19,6 @@ CONSENT_REVOKED = "consent.revoked"
 SESSION_LISTED = "session.listed"
 SESSION_REVOKED = "session.revoked"
 SESSION_INVALIDATED_ALL = "session.invalidated.all"
+
+# Incident notification events
+INCIDENT_NOTIFICATION_SENT = "incident.notification.sent"

@@ -226,6 +226,10 @@ def login(
     )
 
 
+def logout(conn, *, user_id: str) -> None:
+    invalidate_user_sessions(conn, user_id)
+
+
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:
     email_hash = _build_email_hash(email)
     user = get_user_auth_by_email_hash(conn, email_hash)

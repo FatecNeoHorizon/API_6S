@@ -15,7 +15,8 @@ import {
   FileSpreadsheet,
   FileArchive,
   Loader2,
-  Users, 
+  Users,
+  ShieldAlert,
   Map,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +52,12 @@ const menuItems = [
     label: "Gestão de Termos",
     href: "/dashboard/termos",
     icon: FileText,
+    allowedProfiles: ["ADMIN"],
+  },
+  {
+    label: "Notificação de Incidente",
+    href: "/dashboard/incident-notification",
+    icon: ShieldAlert,
     allowedProfiles: ["ADMIN"],
   },
 ];

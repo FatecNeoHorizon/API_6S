@@ -74,6 +74,8 @@ def list_user_consent_history(conn, user_id: str) -> list[dict]:
                 cl.LOG_UUID,
                 cl.ACTION,
                 cl.CREATED_AT AS REGISTERED_AT,
+                cl.SOURCE_IP,
+                cl.USER_AGENT,
                 cl.CHANNEL,
                 pv.VERSION_UUID AS POLICY_VERSION_ID,
                 pv.POLICY_TYPE,

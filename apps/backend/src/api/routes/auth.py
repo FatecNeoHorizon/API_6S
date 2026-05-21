@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request, Response
 
 from src.api.dependencies.auth import AuthenticatedUser, get_current_user_no_consent_check
 from src.api.schemas.user_schemas import (
+    DataExportResponse,
     FirstAccessRequest,
     FirstAccessResponse,
     ForgotPasswordRequest,
@@ -16,6 +17,7 @@ from src.api.schemas.user_schemas import (
 from src.config.rate_limiter import limiter
 from src.database.postgres import get_pg_connection
 from src.services.auth_service import (
+    export_user_data,
     first_access,
     forgot_password,
     login,
@@ -84,3 +86,17 @@ def post_forgot_password(payload: ForgotPasswordRequest):
 def post_reset_password(payload: ResetPasswordRequest):
     with get_pg_connection() as conn:
         return reset_password(conn, payload=payload)
+
+
+@router.get("/me/export", response_model=DataExportResponse)
+def get_my_data_export(
+    current_user: AuthenticatedUser = Depends(get_current_user_no_consent_check),
+):
+    with get_pg_connection() as conn:
+        result = export_user_data(conn, user_id=current_user.user_id)
+
+    return Response(
+        content=result.model_dump_json(indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="my-data-export.json"'},
+    )

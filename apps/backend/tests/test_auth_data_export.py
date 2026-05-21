@@ -22,7 +22,7 @@ def test_export_user_data_returns_complete_portability_package():
 
     with (
         patch("src.services.auth_service.set_current_user") as mock_set_current_user,
-        patch("src.services.auth_service.decrypt_email", return_value="user@example.com"),
+        patch("src.services.auth_service._decrypt_email", return_value="user@example.com"),
         patch(
             "src.services.auth_service.get_user_for_export",
             return_value={

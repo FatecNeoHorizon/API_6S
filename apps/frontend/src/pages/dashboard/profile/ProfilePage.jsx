@@ -302,7 +302,7 @@ export default function ProfilePage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full"
+                className="w-full border-border text-foreground hover:bg-muted hover:text-foreground disabled:opacity-60"
                 onClick={handleExport}
                 disabled={isExporting}
               >

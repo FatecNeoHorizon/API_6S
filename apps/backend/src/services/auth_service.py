@@ -62,9 +62,6 @@ def _create_session_and_token(
 ):
     set_current_user(conn, user_id)
 
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
-    )
     refresh_token = _generate_refresh_token()
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(
         days=settings.jwt_refresh_token_expire_days
@@ -75,7 +72,7 @@ def _create_session_and_token(
         user_id=user_id,
         source_ip=source_ip,
         user_agent=user_agent,
-        expires_at=expires_at,
+        expires_at=refresh_expires_at,
         refresh_token_hash=hash_token(refresh_token),
         refresh_expires_at=refresh_expires_at,
     )

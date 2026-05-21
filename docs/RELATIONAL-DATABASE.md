@@ -27,7 +27,7 @@ Flyway executes migrations in sequential order. The following order must be resp
 ## Table Descriptions
 
 ### `TB_PROFILE`
-Stores user profiles for role-based access control (RBAC). Each user is assigned one profile that defines their permissions within the system.
+Stores user profiles for role-based access control (RBAC). Each user is assigned one profile that defines their permissions within the system. Profile names (ADMIN, ANALYST, VIEWER) are extracted by the backend from the JWT token issued by Keycloak after local signature validation. See [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) for the full authorization flow.
 
 | Column | Type | Rules |
 |---|---|---|
@@ -60,7 +60,7 @@ Stores system users. Email is stored in two fields — one hashed with determini
 ---
 
 ### `TB_SESSION`
-Tracks active user sessions individually. Allows forced logout, active device listing, and automatic expiration — rights the data subject can exercise under LGPD.
+Tracks active user sessions individually. Allows forced logout, active device listing, and automatic expiration — rights the data subject can exercise under LGPD. With Keycloak integration, token lifecycle (expiration, revocation) is delegated to the identity server; this table remains as an application-level audit trail. See [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md).
 
 | Column | Type | Rules |
 |---|---|---|
@@ -91,7 +91,7 @@ Stores password reset requests using single-use tokens, with expiration control 
 ---
 
 ### `TB_AUTH_ATTEMPT`
-Records every authentication attempt. Does not have a FK to `TB_USER` because the attempted email may not exist in the system. Feeds brute force detection logic.
+Records every authentication attempt. Does not have a FK to `TB_USER` because the attempted email may not exist in the system. Feeds brute force detection logic. Brute-force protection is also enforced natively by Keycloak at the identity server level. See [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md).
 
 | Column | Type | Rules |
 |---|---|---|

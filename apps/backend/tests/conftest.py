@@ -22,6 +22,12 @@ def pytest_configure(config):
     except ImportError:
         pass
 
+    # src/config/__init__.py imports setup_middleware at package level, which
+    # triggers pending_consent_middleware → user_repository circular import.
+    # Pre-populate sys.modules so the package __init__ is a no-op during tests.
+    sys.modules.setdefault("src.config.middleware", MagicMock())
+    sys.modules.setdefault("src.config.pending_consent_middleware", MagicMock())
+
 
 @pytest.fixture
 def mock_mongo_client(monkeypatch):

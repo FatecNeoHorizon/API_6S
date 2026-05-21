@@ -63,6 +63,39 @@ def list_pending_clauses(conn, user_id: str) -> list[dict]:
         return cur.fetchall()
 
 
+def list_user_consent_history(conn, user_id: str) -> list[dict]:
+    """
+    Lists immutable consent events for one authenticated user.
+    """
+    with dict_cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT
+                cl.LOG_UUID,
+                cl.ACTION,
+                cl.CREATED_AT AS REGISTERED_AT,
+                cl.CHANNEL,
+                pv.VERSION_UUID AS POLICY_VERSION_ID,
+                pv.POLICY_TYPE,
+                pv.VERSION AS POLICY_VERSION,
+                pc.CLAUSE_UUID,
+                pc.CODE AS CLAUSE_CODE,
+                pc.TITLE AS CLAUSE_TITLE,
+                pc.MANDATORY
+            FROM TB_CONSENT_LOG cl
+            JOIN TB_POLICY_CLAUSE pc
+              ON pc.CLAUSE_UUID = cl.CLAUSE_ID
+            JOIN TB_POLICY_VERSION pv
+              ON pv.VERSION_UUID = COALESCE(cl.POLICY_VERSION_ID, pc.POLICY_VERSION_ID)
+            WHERE cl.USER_ID = %s
+            ORDER BY cl.CREATED_AT DESC, cl.LOG_UUID DESC
+            """,
+            (user_id,),
+        )
+
+        return cur.fetchall()
+
+
 def list_current_mandatory_clauses(conn) -> list[dict]:
     """
     Lists all mandatory clauses from currently effective policy versions.

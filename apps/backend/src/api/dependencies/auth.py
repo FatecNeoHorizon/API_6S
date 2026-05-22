@@ -79,3 +79,11 @@ def require_admin(
         raise HTTPException(status_code=403, detail="admin_required")
 
     return current_user
+
+def require_admin_or_manager(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> AuthenticatedUser:
+    if current_user.profile_name not in ["ADMIN", "MANAGER"]:
+        raise HTTPException(status_code=403, detail="admin_or_manager_required")
+
+    return current_user

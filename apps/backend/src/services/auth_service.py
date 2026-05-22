@@ -28,8 +28,9 @@ from src.repositories.user_repository import (
     create_password_reset_token,
     create_user_session,
     get_user_auth_by_email_hash,
-    log_auth_attempt,
     get_valid_password_reset_token,
+    invalidate_user_sessions,
+    log_auth_attempt,
     mark_password_reset_token_used,
     rotate_refresh_token,
     update_user_password,
@@ -98,9 +99,8 @@ def _record_failed_auth_attempt_and_commit(
         blocked=blocked,
     )
 
-    # Login failures are followed by HTTPException.
-    # The route connection manager rolls back on exceptions,
-    # so the audit row must be committed before raising.
+    # Failed logins are followed by HTTPException. The request-level connection
+    # manager rolls back on exceptions, so commit the audit row before raising.
     conn.commit()
 
 
@@ -133,7 +133,6 @@ def _create_session_and_token(
         refresh_expires_at=refresh_expires_at,
     )
 
-    # Ensure session_id is a valid UUID string
     if not is_valid_uuid(session_id):
         raise HTTPException(
             status_code=500,
@@ -312,6 +311,10 @@ def login(
     )
 
     return response
+
+
+def logout(conn, *, user_id: str) -> None:
+    invalidate_user_sessions(conn, user_id)
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:

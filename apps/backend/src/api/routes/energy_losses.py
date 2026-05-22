@@ -1,4 +1,4 @@
-from src.api.dependencies.auth import get_current_user, AuthenticatedUser
+from src.api.dependencies.auth import get_current_user, AuthenticatedUser, require_admin
 from fastapi import APIRouter, Depends
 from pathlib import Path
 from src.control import energy_losses_tariff_procedures
@@ -35,6 +35,6 @@ async def get_energy_losses(
     return energy_losses_tariff_procedures.Energy_losses_tariff_procedures().getAll(filter_dict)
 
 @router.get("/test-energy-losses-file-extraction")
-async def test_energy_losses_file_extraction():
+async def test_energy_losses_file_extraction(    admin: AuthenticatedUser = Depends(require_admin)):
     path = get_latest_xlsx_path()
     return extract_losses_preview(path, limit=50)

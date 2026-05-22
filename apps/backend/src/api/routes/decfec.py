@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
+from fastapi import APIRouter, HTTPException, Depends
 from pathlib import Path
 from src.control import distribution_indices_procedures
 from src.etl.extract.extract_limits import extract_limits_preview
@@ -50,8 +51,9 @@ async def get_dec_fec(
     year_min: int | None = None,
     period_min: int | None = None,
     year_max: int | None = None,
-    period_max: int | None = None
-):
+    period_max: int | None = None,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+    ):
     filter_dict = {
         "agent_acronym": agent_acronym,
         "cnpj_number": cnpj_number,

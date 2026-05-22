@@ -97,8 +97,15 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = Field(default="")
     jwt_algorithm: str = Field(default="HS256")
-    jwt_access_token_expire_minutes: int = Field(default=60)
+    jwt_access_token_expire_minutes: int = Field(default=15)
     jwt_refresh_token_expire_days: int = Field(default=7)
+
+    # SMTP Email Configuration
+    smtp_host: str = Field(default="")
+    smtp_port: int = Field(default=587)
+    smtp_user: str = Field(default="")
+    smtp_password: str = Field(default="")
+    smtp_from: str = Field(default="")
 
     # Model & Forecasting Configuration
     model_forecast_months: int = Field(default=12, description="Number of months to forecast ahead")

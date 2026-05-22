@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
+from bson.objectid import ObjectId
 
 from src.database.connection import get_db
 
@@ -76,3 +77,28 @@ def get_conj(
 
     except Exception:
         raise HTTPException(status_code=500, detail="Error reading CONJ collection")
+    
+@router.put("/update-conj")
+def update_conj(
+    id: Optional[str] = Query(default=None),
+    update_index: Optional[int] = Query(default=None),
+    new_value: Optional[float] = Query(default=None),
+    new_name: Optional[str] = Query(default=None),
+    db: Database = Depends(get_db),
+):
+    try:
+        filter = {'_id': ObjectId(id)}
+
+        annual_str = f"annual_summaries.{update_index}.accumulated_value"
+
+        cursor = db["conj"].find_one_and_update(
+            filter,
+            {
+                "$set": {
+                "name": new_name,
+                annual_str: new_value
+                }
+            }
+        )
+    except Exception:
+         raise HTTPException(status_code=500, detail="Error updating CONJ collection")

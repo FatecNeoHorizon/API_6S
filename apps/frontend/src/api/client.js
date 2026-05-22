@@ -1,13 +1,17 @@
+import { getSessionToken } from "./consent";
 import { waitForPendingConsentAcceptance } from "./pendingConsentInterceptor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function request(path, options = {}, retryAfterConsent = true) {
+  const token = getSessionToken();
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options?.method ?? "GET",
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options?.headers,
     },
   });
@@ -36,12 +40,22 @@ async function request(path, options = {}, retryAfterConsent = true) {
   return responseBody;
 }
 
-async function postFormRequest(path, formData, options = {}, retryAfterConsent = true) {
+async function postFormRequest(
+  path,
+  formData,
+  options = {},
+  retryAfterConsent = true,
+) {
+  const token = getSessionToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     body: formData,
     // Do not set Content-Type for FormData; browser will set the correct boundary
     ...options,
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options?.headers,
+    },
   });
 
   if (!response.ok) {

@@ -76,6 +76,20 @@ class MyProfileUpdateRequest(BaseModel):
         return str(v).strip().lower()
 
 
+class MyProfileResponse(UserResult):
+    email: EmailStr
+    profile_name: str
+
+
+class MyProfileUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserUpdateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     profile_id: UUID
@@ -101,9 +115,35 @@ class UserMeUpdateRequest(BaseModel):
         return str(v).strip().lower()
 
 
+class UserMeResponse(BaseModel):
+    user_uuid: UUID
+    username: str
+    email: EmailStr
+    profile_name: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserMeUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserSetActiveRequest(BaseModel):
     active: bool
 
+class CurrentUserResponse(BaseModel):
+    user_id: UUID
+    username: str
+    profile: str
+    first_access_completed: bool
+    active: bool
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -174,3 +214,11 @@ class ResetPasswordRequest(BaseModel):
 
 class ResetPasswordResponse(BaseModel):
     detail: str
+
+
+class SessionResponse(BaseModel):
+    session_uuid: UUID
+    created_at: datetime
+    source_ip: str | None
+    user_agent: str | None
+    expires_at: datetime

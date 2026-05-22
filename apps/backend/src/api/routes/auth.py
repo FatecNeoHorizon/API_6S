@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user_no_consent_check
 from src.api.schemas.user_schemas import (
     FirstAccessRequest,
     FirstAccessResponse,
@@ -7,14 +8,13 @@ from src.api.schemas.user_schemas import (
     ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
-    LogoutResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
+from src.config.rate_limiter import limiter
 from src.database.postgres import get_pg_connection
-from src.api.dependencies.auth import AuthenticatedUser, get_current_user_no_consent_check
 from src.services.auth_service import (
     first_access,
     forgot_password,
@@ -29,7 +29,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/first-access", response_model=FirstAccessResponse)
-def post_first_access(payload: FirstAccessRequest, request: Request):
+@limiter.limit("5/minute")
+def post_first_access(request: Request, payload: FirstAccessRequest):
     source_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
 
@@ -43,7 +44,8 @@ def post_first_access(payload: FirstAccessRequest, request: Request):
 
 
 @router.post("/login", response_model=LoginResponse)
-def post_login(payload: LoginRequest, request: Request):
+@limiter.limit("10/minute")
+def post_login(request: Request, payload: LoginRequest):
     source_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
 
@@ -55,27 +57,20 @@ def post_login(payload: LoginRequest, request: Request):
             user_agent=user_agent,
         )
 
-@router.post(
-    "/logout",
-    response_model=LogoutResponse,
-    summary="Logout authenticated user",
-    description=(
-        "Invalidates the current authenticated server-side session by setting "
-        "TB_SESSION.INVALIDATED_AT. The endpoint requires a valid Bearer token, "
-        "does not expose sensitive data and can be used even when the user has "
-        "pending consent."
-    ),
-)
+
+@router.post("/logout", status_code=204)
 def post_logout(
+    request: Request,
     current_user: AuthenticatedUser = Depends(get_current_user_no_consent_check),
 ):
     with get_pg_connection() as conn:
-        return logout(
+        logout(
             conn,
             user_id=current_user.user_id,
             session_id=current_user.session_id,
         )
-    
+    return Response(status_code=204)
+
 
 @router.post("/refresh", response_model=RefreshTokenResponse)
 def post_refresh(payload: RefreshTokenRequest):

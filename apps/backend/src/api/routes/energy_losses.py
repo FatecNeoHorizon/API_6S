@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from src.api.dependencies.auth import get_current_user, AuthenticatedUser
+from fastapi import APIRouter, Depends
 from pathlib import Path
 from src.control import energy_losses_tariff_procedures
 from src.etl.extract.extract_energy_losses import extract_losses_preview
@@ -21,7 +22,8 @@ async def get_energy_losses(
     state: str | None = None,
     uf: str | None = None,
     process_date_min: str | None = None,
-    process_date_max: str | None = None
+    process_date_max: str | None = None,
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     filter_dict = {
         "distributor": distributor,

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from typing import Optional
 from datetime import datetime, timezone
 import logging
@@ -109,6 +110,7 @@ async def get_forecast_info(
     consumer_unit_set_id: str,
     year_start: int = Query(2015, description="Start year for reference"),
     year_end: int = Query(2024, description="End year for reference"),
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Get metadata about a consumer unit for forecasting.

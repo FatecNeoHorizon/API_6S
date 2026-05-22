@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user, require_admin
+from fastapi import APIRouter, HTTPException, Depends
 from pymongo.database import Database
 from pathlib import Path
 from src.database.connection import get_db
@@ -18,7 +19,7 @@ def get_latest_gdb_path() -> Path:
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 @router.get("/test-geodatabase-extraction")
-async def test_geodatabase_extraction(db: Database = Depends(get_db)):
+async def test_geodatabase_extraction(db: Database = Depends(get_db),     admin: AuthenticatedUser = Depends(require_admin)):
     path = get_latest_gdb_path()
     load_id = generate_load_id()
     insert_load_history(db, build_load_document(load_id, "gdb", source_file=str(path)))

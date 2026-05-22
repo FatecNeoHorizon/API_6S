@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from src.api.dependencies.auth import AuthenticatedUser, require_admin
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, Depends
 from src.control.upload_procedures import process_uploaded_zip, create_upload_dir
 from src.database.connection import get_db
 from src.services.upload_service import (
@@ -21,6 +22,7 @@ async def upload_files(
     gdb: UploadFile | None = File(default=None),
     indicadores_continuidade: UploadFile | None = File(default=None),
     indicadores_continuidade_limite: UploadFile | None = File(default=None),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     files = {
         "energy_losses": energy_losses,
@@ -53,7 +55,7 @@ async def upload_files(
 
 
 @router.get("/batch/{batch_id}")
-def get_batch_status_endpoint(batch_id: str):
+def get_batch_status_endpoint(batch_id: str,    admin: AuthenticatedUser = Depends(require_admin),):
     db = get_db()
     result = fetch_batch_status(db, batch_id)
 
@@ -64,7 +66,7 @@ def get_batch_status_endpoint(batch_id: str):
 
 
 @router.get("/status/{load_id}")
-def get_upload_status(load_id: str):
+def get_upload_status(load_id: str,    admin: AuthenticatedUser = Depends(require_admin)):
     db = get_db()
     status = fetch_upload_status(db, load_id)
     if not status:

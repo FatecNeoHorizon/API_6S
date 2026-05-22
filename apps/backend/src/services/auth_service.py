@@ -5,11 +5,15 @@ import structlog
 from fastapi import HTTPException, status
 
 from src.api.schemas.user_schemas import (
+    ConsentExportItem,
+    DataExportResponse,
     FirstAccessRequest,
     ForgotPasswordResponse,
+    IdentityExport,
     LoginRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    SessionExportItem,
 )
 from src.config.log_events import SESSION_INVALIDATED_ALL, SESSION_LISTED, SESSION_REVOKED
 from src.config.auth_security import (
@@ -20,15 +24,20 @@ from src.config.auth_security import (
     verify_password,
 )
 from src.config.email_hasher import EmailHasher
+from src.config.log_events import DATA_EXPORT_REQUESTED
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection, set_current_user
+from src.repositories.consent_repository import list_user_consent_history
+from src.services.user_service import _decrypt_email
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     complete_first_access,
     consume_valid_first_access_token,
     create_password_reset_token,
     create_user_session,
+    get_sessions_for_export,
     get_user_auth_by_email_hash,
+    get_user_for_export,
     get_user_sessions,
     get_valid_password_reset_token,
     invalidate_single_session,
@@ -298,6 +307,74 @@ def reset_password(conn, *, payload: ResetPasswordRequest) -> dict:
         )
 
     return {"detail": "password_reset_successfully"}
+
+
+def export_user_data(conn, *, user_id: str) -> DataExportResponse:
+    set_current_user(conn, user_id)
+
+    user = get_user_for_export(conn, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="user_not_found",
+        )
+
+    if user["anonymized_at"] is not None:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="user_data_no_longer_exists",
+        )
+
+    identity = IdentityExport(
+        user_id=user["user_uuid"],
+        username=user["username"],
+        email=_decrypt_email(user["email_enc"], settings),
+        profile=user["profile_name"],
+        active=user["active"],
+        first_access_completed=user["first_access_completed"],
+        created_at=user["created_at"],
+        updated_at=user["updated_at"],
+    )
+
+    consent_history = [
+        ConsentExportItem(
+            consent_log_id=row["log_uuid"],
+            clause_id=row["clause_uuid"],
+            clause_code=row["clause_code"],
+            clause_title=row["clause_title"],
+            policy_version_id=row["policy_version_id"],
+            policy_type=row["policy_type"],
+            policy_version=row["policy_version"],
+            action=row["action"],
+            timestamp=row["registered_at"],
+            source_ip=row["source_ip"],
+            user_agent=row["user_agent"],
+            channel=row["channel"],
+        )
+        for row in list_user_consent_history(conn, user_id)
+    ]
+
+    session_history = [
+        SessionExportItem(
+            session_id=row["session_uuid"],
+            source_ip=row["source_ip"],
+            user_agent=row["user_agent"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            expires_at=row["expires_at"],
+            invalidated_at=row["invalidated_at"],
+        )
+        for row in get_sessions_for_export(conn, user_id)
+    ]
+
+    log.info(DATA_EXPORT_REQUESTED, user_id=user_id)
+
+    return DataExportResponse(
+        exported_at=datetime.now(timezone.utc),
+        identity=identity,
+        consent_history=consent_history,
+        session_history=session_history,
+    )
 
 
 def list_sessions_service(conn, *, user_id: str) -> list[dict]:

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Depends
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from typing import Optional, List
 from datetime import datetime, timezone
 import logging
@@ -234,6 +235,7 @@ async def generate_predictions(
 
 @router.get("/", response_model=dict)
 async def get_predictions(
+    current_user: AuthenticatedUser = Depends(get_current_user),
     consumer_unit_set_id: Optional[str] = Query(
         None,
         description="Filter by consumer unit ID (e.g., '16648')"

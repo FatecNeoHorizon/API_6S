@@ -174,3 +174,11 @@ class ResetPasswordRequest(BaseModel):
 
 class ResetPasswordResponse(BaseModel):
     detail: str
+
+
+class SessionResponse(BaseModel):
+    session_uuid: UUID
+    created_at: datetime
+    source_ip: str | None
+    user_agent: str | None
+    expires_at: datetime

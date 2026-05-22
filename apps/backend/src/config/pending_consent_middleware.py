@@ -17,6 +17,7 @@ EXEMPT_PREFIXES = (
     "/auth/first-access",
     "/auth/forgot-password",
     "/auth/reset-password",
+    "/auth/sessions",
     "/docs",
     "/redoc",
     "/openapi.json",

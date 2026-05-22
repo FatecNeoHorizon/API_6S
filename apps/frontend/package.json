@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "leaflet": "^1.9.4",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -49,12 +48,14 @@
     "exceljs": "^4.4.0",
     "input-otp": "^1.4.2",
     "jszip": "^3.10.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.577.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.4",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.71.2",
+    "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^4.7.3",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.0",

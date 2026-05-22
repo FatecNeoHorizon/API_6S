@@ -18,6 +18,7 @@ from src.repositories.user_repository import (
     ProfilePersistenceError, UserAlreadyExistsError, UserNotFoundError,
     UserPersistenceError, UserProfileNotFoundError,
 )
+from src.services.auth_service import admin_invalidate_user_sessions_service
 from src.services.user_service import (
     create_user_service, list_profiles_service, get_user_by_id_service,
     list_users_service, update_user_service, set_user_active_service,
@@ -120,14 +121,29 @@ def update_user(user_uuid: UUID, payload: UserUpdateRequest):
 
 
 @router.patch("/{user_uuid}/active", response_model=UserResult, status_code=status.HTTP_200_OK)
-def set_active(user_uuid: UUID, payload: UserSetActiveRequest):
+def set_active(
+    user_uuid: UUID,
+    payload: UserSetActiveRequest,
+    current_user: AuthenticatedUser = Depends(require_admin),
+):
     try:
-        result = set_user_active_service(user_uuid, payload.active)
+        result = set_user_active_service(user_uuid, payload.active, acting_user_id=current_user.user_id)
         log.info(USER_DEACTIVATED, user_id=str(user_uuid), active=payload.active)
         return result
     except UserNotFoundError as exc:
         log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.delete("/{user_uuid}/sessions", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_sessions(
+    user_uuid: UUID,
+    current_user: AuthenticatedUser = Depends(require_admin),
+):
+    admin_invalidate_user_sessions_service(
+        target_user_id=str(user_uuid),
+        acting_user_id=current_user.user_id,
+    )
 
 @router.delete("/{user_uuid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_uuid: UUID):

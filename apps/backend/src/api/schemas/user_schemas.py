@@ -104,6 +104,12 @@ class UserMeUpdateRequest(BaseModel):
 class UserSetActiveRequest(BaseModel):
     active: bool
 
+class CurrentUserResponse(BaseModel):
+    user_id: UUID
+    username: str
+    profile: str
+    first_access_completed: bool
+    active: bool
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -218,3 +224,11 @@ class DataExportResponse(BaseModel):
     identity: IdentityExport
     consent_history: list[ConsentExportItem]
     session_history: list[SessionExportItem]
+
+
+class SessionResponse(BaseModel):
+    session_uuid: UUID
+    created_at: datetime
+    source_ip: str | None
+    user_agent: str | None
+    expires_at: datetime

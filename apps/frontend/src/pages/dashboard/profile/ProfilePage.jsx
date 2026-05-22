@@ -8,6 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const dpoContact = {
+  name: "Encarregado pelo Tratamento de Dados Pessoais",
+  email: "dpo@tecsys.com.br",
+  response_time: "Até 15 dias úteis, conforme LGPD Art. 18, §4",
+};
 
 function getApiErrorMessage(error, fallbackMessage) {
   const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail;
@@ -335,6 +340,17 @@ export default function ProfilePage() {
               </Button>
             </CardContent>
           </Card>
+
+          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Encarregado de Dados</p>
+            <p className="mt-1">
+              {dpoContact.name} ·{" "}
+              <a className="font-medium text-primary hover:underline" href={`mailto:${dpoContact.email}`}>
+                {dpoContact.email}
+              </a>
+            </p>
+            <p className="mt-1">{dpoContact.response_time}</p>
+          </div>
         </aside>
       </div>
     </div>

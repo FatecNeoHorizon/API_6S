@@ -12,6 +12,7 @@ import UsuariosPage from "../pages/dashboard/user-management/UsuariosPage";
 import TermsPage from "../pages/dashboard/terms-management/TermsPage";
 import { HeatmapFilters } from "../pages/dashboard/heatmap/HeatmapFilters";
 import ProfilePage from "../pages/dashboard/profile/ProfilePage";
+import IncidentNotificationPage from "../pages/dashboard/incident-notification/IncidentNotificationPage";
 
 function NotFoundPage() {
   return (
@@ -38,6 +39,7 @@ export function AppRoutes() {
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN","MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
             <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
+            <Route path="incident-notification" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><IncidentNotificationPage /></RoleRequiredRoute>} />
             <Route path="*" element={<NotFoundPage />} />
             <Route path="heatmap" element={<HeatmapFilters/>} />
           </Route>

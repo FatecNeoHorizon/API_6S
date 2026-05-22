@@ -1,10 +1,10 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Depends
-from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from typing import Optional, List
 from datetime import datetime, timezone
 import logging
 import uuid
 
+from src.api.dependencies.auth import AuthenticatedUser, require_admin, get_current_user
 from src.api.schemas.response import success_response
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.load.load_predictions import persist_predictions
@@ -158,6 +158,7 @@ async def generate_predictions(
     ),
     year_start: int = Query(2015, description="Start year for training data"),
     year_end: int = Query(2024, description="End year for training data"),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """
     Trigger prediction generation and persistence in the background.
@@ -235,8 +236,8 @@ async def generate_predictions(
 
 @router.get("/", response_model=dict)
 async def get_predictions(
-    current_user: AuthenticatedUser = Depends(get_current_user),
-    consumer_unit_set_id: Optional[str] = Query(
+        admin: AuthenticatedUser = Depends(require_admin),
+        consumer_unit_set_id: Optional[str] = Query(
         None,
         description="Filter by consumer unit ID (e.g., '16648')"
     ),

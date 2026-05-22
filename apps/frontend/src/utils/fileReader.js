@@ -1,7 +1,7 @@
 /**
  * Utilidade para ler arquivos (CSV, XLSX, ZIP) e extrair suas colunas
  */
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 
 /**
@@ -58,41 +58,36 @@ export const readCSVFile = async (file) => {
 export const readXLSXFile = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(e.target.result);
+
         console.group(`📊 ${file.name}`);
         console.log('Tipo: XLSX');
-        console.log('Sheets:', workbook.SheetNames.length);
-        
+        console.log('Sheets:', workbook.worksheets.length);
+
         const sheets = {};
-        workbook.SheetNames.forEach((sheetName) => {
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          
-          // Pega as colunas a partir das chaves do primeiro objeto
-          const columns = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
-          const rows = jsonData.length;
-          
+        workbook.eachSheet((worksheet) => {
+          const sheetName = worksheet.name;
+
+          const columns = [];
+          worksheet.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+            columns.push(String(cell.value ?? ''));
+          });
+
+          const rows = Math.max(0, worksheet.actualRowCount - 1);
+
           console.log(`  Sheet '${sheetName}':`);
           console.log(`    Colunas: ${columns.length}`);
           console.log('    ', columns);
           console.log(`    Linhas: ${rows}`);
-          
-          sheets[sheetName] = {
-            columns: columns,
-            rows: rows
-          };
+
+          sheets[sheetName] = { columns, rows };
         });
         console.groupEnd();
-        
-        resolve({
-          file: file.name,
-          type: 'XLSX',
-          sheets: sheets
-        });
+
+        resolve({ file: file.name, type: 'XLSX', sheets });
       } catch (error) {
         console.error('❌ Erro ao processar XLSX:', error);
         reject(error);

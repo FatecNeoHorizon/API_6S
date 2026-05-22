@@ -6,6 +6,7 @@ services:
       - backend
       - frontend
       - full
+      - tools
     restart: always
     env_file:
       - envs/.env.postgres.${APP_ENV:-dev}
@@ -20,6 +21,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    profiles:
+      - tools
+    restart: always
+    ports:
+      - "5050:80"
+    volumes:
+      - ./envs/pgadmin-servers.json:/pgadmin4/servers.json
+    env_file:
+      - envs/.env.pgadmin.${APP_ENV:-dev}
+    networks:
+      - db_network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   flyway:
     image: flyway/flyway:12.4.0-alpine
@@ -27,6 +46,7 @@ services:
       - backend
       - frontend
       - full
+      - tools
     command: migrate
     env_file:
       - envs/.env.postgres.${APP_ENV:-dev}
@@ -113,6 +133,22 @@ services:
       mongo:
         condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: keycloak
+    profiles:
+      - auth
+      - full
+    command: start-dev --import-realm
+    env_file:
+      - envs/.env.keycloak.${APP_ENV:-dev}
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    networks:
+      - app_network
 
   frontend:
     build:

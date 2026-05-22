@@ -178,6 +178,9 @@ This solution consists of a main application and a support module for tracking p
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
+### 🔐 Security
+[![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+
 ### 📊 Burndown (Support Module)
 [![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
@@ -201,6 +204,7 @@ This solution consists of a main application and a support module for tracking p
 | [Commit and Branch Standards](docs/CONTRIBUTING.md) | Conventional Commits, branch naming and Git hooks |
 | [Issue Tracking](docs/ISSUE-TRACKING.md) | How to trace issues, branches and PRs |
 | [LGPD](docs/LGPD.md) | LGPD guidelines and data privacy compliance |
+| [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | ROPA entry and professor-validated argument for PostgreSQL/MongoDB separation |
 
 ---
 
@@ -214,5 +218,7 @@ This solution consists of a main application and a support module for tracking p
 | [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
 | [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
 | [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
+| [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | Dual-database architecture as a structural LGPD compliance measure |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |
+| [Authentication Architecture](docs/AUTH_ARCHITECTURE.md) | OAuth 2.0 + PKCE flow with Keycloak, token validation, and profile-based authorization |

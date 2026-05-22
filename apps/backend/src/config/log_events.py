@@ -14,3 +14,6 @@ POLICY_CLAUSE_CREATED = "policy.clause.created"
 # Consent events
 CONSENT_REGISTERED = "consent.registered"
 CONSENT_REVOKED = "consent.revoked"
+
+# Incident notification events
+INCIDENT_NOTIFICATION_SENT = "incident.notification.sent"

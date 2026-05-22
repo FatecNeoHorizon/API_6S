@@ -752,6 +752,7 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
             u.ACTIVE,
             u.FIRST_ACCESS_COMPLETED,
             p.PROFILE_NAME,
+            u.USERNAME,
             s.INVALIDATED_AT,
             s.EXPIRES_AT,
             s.DELETED_AT,
@@ -772,18 +773,18 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
         return None
 
     # Check conditions
-    if row[5] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
+    if row[6] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
         return None
-    
-    if row[6] is not None:  # EXPIRES_AT exists
+
+    if row[7] is not None:  # EXPIRES_AT exists
         now = datetime.now(timezone.utc)
-        if row[6] <= now:  # Check if expired
+        if row[7] <= now:  # Check if expired
             return None
-    
-    if row[7] is not None:  # DELETED_AT is not NULL → session was soft-deleted
+
+    if row[8] is not None:  # DELETED_AT is not NULL → session was soft-deleted
         return None
-    
-    if row[8] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
+
+    if row[9] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
         return None
 
     return {
@@ -792,6 +793,7 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
         "active": row[2],
         "first_access_completed": row[3],
         "profile_name": row[4],
+        "username": row[5],
     }
 
 

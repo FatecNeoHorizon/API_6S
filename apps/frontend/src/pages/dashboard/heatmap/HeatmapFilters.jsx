@@ -505,7 +505,6 @@ export function HeatmapFilters() {
   }, [])
 
 
-
   const handleMonthRangeChange = (range) => {
     setMonthRange(range);
     // setSelectedPeriod(null);
@@ -555,33 +554,6 @@ export function HeatmapFilters() {
       </div>
 
       <Heatmap convertedConjs={convertedConjs} />
-      <Card className="max-w-[10vw] bg-card border-border">
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">
-            Legenda
-          </div>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm text-muted-foreground">
-              🔴 Critical
-            </span>
-          </div>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm text-muted-foreground">
-              🟠 Attention
-            </span>
-          </div>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm text-muted-foreground">
-              🟢 Normal
-            </span>
-          </div>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm text-muted-foreground">
-              ⚪ No Data
-            </span>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 

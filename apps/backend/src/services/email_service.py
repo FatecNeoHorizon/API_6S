@@ -103,3 +103,56 @@ Se você não solicitou este acesso, ignore este email.
     except Exception as e:
         logger.error(f"Failed to send first-access email: {e}")
         raise
+
+
+def send_bulk_incident_notification(
+    to_addresses: list,
+    subject: str,
+    body_html: str,
+    body_text: str,
+) -> dict:
+    """
+    Send a notification email to all addresses in the list.
+    Returns a dict with 'sent' and 'failed' counts.
+    Failures per recipient are logged but do not abort the batch.
+    """
+    settings = Settings()
+
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password or not settings.smtp_from:
+        logger.warning("SMTP settings not configured. Skipping bulk incident notification.")
+        return {"sent": 0, "failed": len(to_addresses)}
+
+    sent = 0
+    failed = 0
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+            server.starttls()
+            server.login(settings.smtp_user, settings.smtp_password)
+
+            for address in to_addresses:
+                try:
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = subject
+                    msg["From"] = settings.smtp_from
+                    msg["To"] = address
+                    msg.attach(MIMEText(body_text, "plain"))
+                    msg.attach(MIMEText(body_html, "html"))
+                    server.send_message(msg)
+                    sent += 1
+                except Exception as exc:
+                    logger.error(f"Failed to send incident notification to {address}: {exc}")
+                    failed += 1
+
+    except smtplib.SMTPAuthenticationError as exc:
+        logger.error(f"SMTP authentication failed for bulk send: {exc}")
+        return {"sent": 0, "failed": len(to_addresses)}
+    except smtplib.SMTPException as exc:
+        logger.error(f"SMTP error in bulk send: {exc}")
+        return {"sent": sent, "failed": failed + (len(to_addresses) - sent - failed)}
+    except Exception as exc:
+        logger.error(f"Unexpected error in bulk send: {exc}")
+        return {"sent": sent, "failed": failed + (len(to_addresses) - sent - failed)}
+
+    logger.info(f"Bulk incident notification complete. sent={sent}, failed={failed}")
+    return {"sent": sent, "failed": failed}

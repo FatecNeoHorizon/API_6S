@@ -45,9 +45,17 @@ FLYWAY_URL=jdbc:postgresql://postgres:5432/zeus
 FLYWAY_USER=postgres
 FLYWAY_PASSWORD=your_strong_password
 
+# Keycloak
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=your_strong_password
+KEYCLOAK_REALM=zeus
+KEYCLOAK_CLIENT_ID=zeus-app
+KEYCLOAK_CLIENT_SECRET=
+
 # URLs
 FRONTEND_URL=http://localhost:5173
 BACKEND_URL=http://localhost:8000
+KEYCLOAK_URL=http://localhost:8080
 ```
 
 > Never commit the `.env` file. It is already listed in `.gitignore`.
@@ -68,8 +76,11 @@ docker compose --profile backend up --build -d
 # Frontend development
 docker compose --profile frontend up --build -d
 
-# Full stack
+# Full stack (includes Keycloak)
 docker compose --profile full up --build -d
+
+# Keycloak only (identity server + app network)
+docker compose --profile auth up -d
 
 # MongoDB admin tools only
 docker compose --profile tools up -d
@@ -77,15 +88,19 @@ docker compose --profile tools up -d
 
 Profile matrix:
 
-- `backend`: `postgres`, `flyway`, `mongo`, `backend`
-- `frontend`: backend stack + `frontend` (`postgres`, `flyway`, `mongo`, `backend`, `frontend`)
-- `full`: all services
-- `tools`: `mongo`, `mongo-express`
+| Profile | Services |
+|:---|:---|
+| `backend` | `postgres`, `flyway`, `mongo`, `backend` |
+| `frontend` | backend stack + `frontend` |
+| `auth` | `keycloak` |
+| `full` | all services |
+| `tools` | `mongo`, `mongo-express`, `pgadmin` |
 
 Services started:
 
 - `frontend` at `http://localhost:5173`
 - `backend` at `http://localhost:8000`
+- `keycloak` at `http://localhost:8180`
 - `postgres` at `localhost:5432`
 - `mongo` at `localhost:27017`
 
@@ -105,7 +120,23 @@ The following steps run automatically on first startup:
 3. Backend starts only after PostgreSQL and MongoDB are healthy, and after Flyway completes successfully
 4. Frontend starts after the backend is available
 
-### 3. View logs (optional)
+### 3. Configure Keycloak (first run only)
+
+Keycloak runs with the `auth` or `full` profile and is available at `http://localhost:8180`.
+
+On first startup, the `zeus` realm is imported automatically from `keycloak/realm-zeus.json`. It includes:
+- The `zeus-app` client (public, PKCE-only, redirect to `http://localhost:5173/*`)
+- Realm roles: `ADMIN`, `ANALYST`, `VIEWER`
+
+The only manual step is creating users and assigning roles:
+
+1. Access `http://localhost:8180/admin` with the credentials in `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`
+2. Select the `zeus` realm
+3. Go to **Users → Add user**, create the user, then go to **Role Mapping** and assign the appropriate role
+
+> For the full authentication and authorization flow, see [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md).
+
+### 4. View logs (optional)
 ```bash
 docker compose logs -f
 ```
@@ -120,7 +151,7 @@ To view Flyway migration logs specifically:
 docker compose logs flyway
 ```
 
-### 4. Stop the environment
+### 5. Stop the environment
 ```bash
 docker compose down
 ```
@@ -132,7 +163,7 @@ docker compose down -v
 
 > Use `docker compose down -v` whenever a migration fails or you need to reset the database to a clean state. This forces Flyway to rerun all migrations from scratch.
 
-### 5. Restart a single service (optional)
+### 6. Restart a single service (optional)
 ```bash
 docker compose --profile backend up -d --build backend
 ```
@@ -140,7 +171,7 @@ docker compose --profile backend up -d --build backend
 docker compose --profile frontend restart frontend
 ```
 
-### 6. Database structure
+### 7. Database structure
 
 The sensitive data database runs on PostgreSQL 15 and is managed exclusively through Flyway migrations located in `database/migrations/`.
 

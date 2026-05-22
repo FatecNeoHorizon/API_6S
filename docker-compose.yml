@@ -134,6 +134,22 @@ services:
         condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: keycloak
+    profiles:
+      - auth
+      - full
+    command: start-dev --import-realm
+    env_file:
+      - envs/.env.keycloak.${APP_ENV:-dev}
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    networks:
+      - app_network
+
   frontend:
     build:
       context: ./apps/frontend

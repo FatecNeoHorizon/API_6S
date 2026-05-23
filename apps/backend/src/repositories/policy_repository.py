@@ -73,6 +73,7 @@ def create_policy_version(
     policy_type: str,
     content: str,
     effective_from,
+    description: str | None,
 ):
     with dict_cursor(conn) as cur:
         cur.execute(
@@ -81,18 +82,20 @@ def create_policy_version(
                 VERSION,
                 POLICY_TYPE,
                 CONTENT,
+                DESCRIPTION,
                 EFFECTIVE_FROM
             )
-            VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING
                 VERSION_UUID,
                 VERSION,
                 POLICY_TYPE,
                 CONTENT,
+                DESCRIPTION,
                 EFFECTIVE_FROM,
                 CREATED_AT
             """,
-            (version, policy_type, content, effective_from),
+            (version, policy_type, content, description, effective_from),
         )
 
         return cur.fetchone()
@@ -102,25 +105,63 @@ def list_policy_versions(conn) -> list[dict]:
     with dict_cursor(conn) as cur:
         cur.execute(
             """
+            WITH versions_with_counts AS (
+                SELECT
+                    pv.VERSION_UUID,
+                    pv.VERSION,
+                    pv.POLICY_TYPE,
+                    pv.CONTENT,
+                    pv.DESCRIPTION,
+                    pv.EFFECTIVE_FROM,
+                    pv.CREATED_AT,
+                    COUNT(c.CLAUSE_UUID) AS CLAUSE_COUNT
+                FROM TB_POLICY_VERSION pv
+                LEFT JOIN TB_POLICY_CLAUSE c
+                  ON c.POLICY_VERSION_ID = pv.VERSION_UUID
+                 AND c.DELETED_AT IS NULL
+                WHERE pv.DELETED_AT IS NULL
+                GROUP BY
+                    pv.VERSION_UUID,
+                    pv.VERSION,
+                    pv.POLICY_TYPE,
+                    pv.CONTENT,
+                    pv.DESCRIPTION,
+                    pv.EFFECTIVE_FROM,
+                    pv.CREATED_AT
+            ),
+            current_versions AS (
+                SELECT VERSION_UUID
+                FROM (
+                    SELECT
+                        VERSION_UUID,
+                        POLICY_TYPE,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY POLICY_TYPE
+                            ORDER BY EFFECTIVE_FROM DESC, CREATED_AT DESC
+                        ) AS rn
+                    FROM versions_with_counts
+                    WHERE EFFECTIVE_FROM <= NOW()
+                ) ranked
+                WHERE rn = 1
+            )
             SELECT
-                pv.VERSION_UUID,
-                pv.VERSION,
-                pv.POLICY_TYPE,
-                pv.EFFECTIVE_FROM,
-                pv.CREATED_AT,
-                COUNT(c.CLAUSE_UUID) AS CLAUSE_COUNT
-            FROM TB_POLICY_VERSION pv
-            LEFT JOIN TB_POLICY_CLAUSE c
-              ON c.POLICY_VERSION_ID = pv.VERSION_UUID
-             AND c.DELETED_AT IS NULL
-            WHERE pv.DELETED_AT IS NULL
-            GROUP BY
-                pv.VERSION_UUID,
-                pv.VERSION,
-                pv.POLICY_TYPE,
-                pv.EFFECTIVE_FROM,
-                pv.CREATED_AT
-            ORDER BY pv.EFFECTIVE_FROM DESC
+                v.VERSION_UUID,
+                v.VERSION,
+                v.POLICY_TYPE,
+                v.CONTENT,
+                v.DESCRIPTION,
+                v.EFFECTIVE_FROM,
+                v.CREATED_AT,
+                v.CLAUSE_COUNT,
+                CASE
+                    WHEN v.EFFECTIVE_FROM > NOW() THEN 'scheduled'
+                    WHEN cv.VERSION_UUID IS NOT NULL THEN 'current'
+                    ELSE 'expired'
+                END AS STATUS
+            FROM versions_with_counts v
+            LEFT JOIN current_versions cv
+              ON cv.VERSION_UUID = v.VERSION_UUID
+            ORDER BY v.EFFECTIVE_FROM DESC, v.CREATED_AT DESC
             """
         )
 
@@ -131,16 +172,50 @@ def get_policy_version(conn, version_id: str) -> dict | None:
     with dict_cursor(conn) as cur:
         cur.execute(
             """
+            WITH all_versions AS (
+                SELECT
+                    VERSION_UUID,
+                    VERSION,
+                    POLICY_TYPE,
+                    CONTENT,
+                    DESCRIPTION,
+                    EFFECTIVE_FROM,
+                    CREATED_AT
+                FROM TB_POLICY_VERSION
+                WHERE DELETED_AT IS NULL
+            ),
+            current_versions AS (
+                SELECT VERSION_UUID
+                FROM (
+                    SELECT
+                        VERSION_UUID,
+                        POLICY_TYPE,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY POLICY_TYPE
+                            ORDER BY EFFECTIVE_FROM DESC, CREATED_AT DESC
+                        ) AS rn
+                    FROM all_versions
+                    WHERE EFFECTIVE_FROM <= NOW()
+                ) ranked
+                WHERE rn = 1
+            )
             SELECT
-                VERSION_UUID,
-                VERSION,
-                POLICY_TYPE,
-                CONTENT,
-                EFFECTIVE_FROM,
-                CREATED_AT
-            FROM TB_POLICY_VERSION
-            WHERE VERSION_UUID = %s
-              AND DELETED_AT IS NULL
+                v.VERSION_UUID,
+                v.VERSION,
+                v.POLICY_TYPE,
+                v.CONTENT,
+                v.DESCRIPTION,
+                v.EFFECTIVE_FROM,
+                v.CREATED_AT,
+                CASE
+                    WHEN v.EFFECTIVE_FROM > NOW() THEN 'scheduled'
+                    WHEN cv.VERSION_UUID IS NOT NULL THEN 'current'
+                    ELSE 'expired'
+                END AS STATUS
+            FROM all_versions v
+            LEFT JOIN current_versions cv
+              ON cv.VERSION_UUID = v.VERSION_UUID
+            WHERE v.VERSION_UUID = %s
             """,
             (version_id,),
         )

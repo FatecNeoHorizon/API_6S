@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user, require_admin
+from fastapi import APIRouter, HTTPException, Depends
 from pathlib import Path
 from src.control import distribution_indices_procedures
 from src.etl.extract.extract_limits import extract_limits_preview
@@ -50,8 +51,9 @@ async def get_dec_fec(
     year_min: int | None = None,
     period_min: int | None = None,
     year_max: int | None = None,
-    period_max: int | None = None
-):
+    period_max: int | None = None,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+    ):
     filter_dict = {
         "agent_acronym": agent_acronym,
         "cnpj_number": cnpj_number,
@@ -62,12 +64,12 @@ async def get_dec_fec(
     return distribution_indices_procedures.Distribution_indices_procedures().getAll(filter_dict)
 
 @router.get("/test-decfec-file-extraction")
-async def test_decfec_file_extraction():
+async def test_decfec_file_extraction(    admin: AuthenticatedUser = Depends(require_admin)):
     path = get_latest_csv_path("indicadores-continuidade-coletivos-2020*.csv")
     return extract_decfec_preview(path, limit=50)
 
 @router.get("/test-limits-file-extraction")
-async def test_limits_file_extraction():
+async def test_limits_file_extraction(admin: AuthenticatedUser = Depends(require_admin)):
     # For limits, check if there's a specific file or fall back to searching in tmp
     try:
         path = get_latest_csv_path("indicadores-continuidade-coletivos-limite*.csv")

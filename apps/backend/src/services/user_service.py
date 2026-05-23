@@ -6,6 +6,7 @@ from typing import List
 from uuid import UUID
 
 import bcrypt
+import structlog
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
 from psycopg2 import IntegrityError, OperationalError
@@ -14,6 +15,7 @@ from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.auth_security import hash_token
 from src.config.email_hasher import EmailHasher
 from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
+from src.config.log_events import SESSION_INVALIDATED_ALL
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection
 from src.database.postgres import set_current_user
@@ -33,6 +35,7 @@ from src.repositories.user_repository import (
     exists_by_username,
     get_current_user_profile,
     get_user_by_id,
+    invalidate_user_sessions,
     list_profiles,
     list_users,
     set_user_active,
@@ -151,10 +154,22 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
         raise UserNotFoundError("Usuário não encontrado.")
     return result
 
-def set_user_active_service(user_uuid: UUID, active: bool) -> UserResult:
+_log = structlog.get_logger()
+
+
+def set_user_active_service(user_uuid: UUID, active: bool, acting_user_id: str | None = None) -> UserResult:
     try:
         with get_pg_connection() as conn:
             result = set_user_active(conn, user_uuid, active)
+            if result is not None and not active:
+                invalidated = invalidate_user_sessions(conn, str(user_uuid))
+                for session_uuid in invalidated:
+                    _log.info(
+                        SESSION_INVALIDATED_ALL,
+                        acting_user_id=acting_user_id or str(user_uuid),
+                        target_session_uuid=session_uuid,
+                        reason="ADMIN_DEACTIVATION",
+                    )
     except IntegrityError as exc:
         handle_db_integrity_error(exc, context="set_user_active_service")
         raise HTTPException(status_code=409, detail="conflict")

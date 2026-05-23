@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import secrets
 
+import structlog
 from fastapi import HTTPException, status
 
 from src.api.schemas.user_schemas import (
@@ -10,6 +11,7 @@ from src.api.schemas.user_schemas import (
     RefreshTokenRequest,
     ResetPasswordRequest,
 )
+from src.config.log_events import SESSION_INVALIDATED_ALL, SESSION_LISTED, SESSION_REVOKED
 from src.config.auth_security import (
     create_access_token,
     hash_password,
@@ -19,7 +21,7 @@ from src.config.auth_security import (
 )
 from src.config.email_hasher import EmailHasher
 from src.config.settings import Settings
-from src.database.postgres import set_current_user
+from src.database.postgres import get_pg_connection, set_current_user
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     complete_first_access,
@@ -27,7 +29,9 @@ from src.repositories.user_repository import (
     create_password_reset_token,
     create_user_session,
     get_user_auth_by_email_hash,
+    get_user_sessions,
     get_valid_password_reset_token,
+    invalidate_single_session,
     invalidate_user_sessions,
     mark_password_reset_token_used,
     rotate_refresh_token,
@@ -36,6 +40,7 @@ from src.repositories.user_repository import (
 
 
 settings = Settings()
+log = structlog.get_logger()
 
 
 def _build_email_hash(email: str) -> str:
@@ -57,9 +62,6 @@ def _create_session_and_token(
 ):
     set_current_user(conn, user_id)
 
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
-    )
     refresh_token = _generate_refresh_token()
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(
         days=settings.jwt_refresh_token_expire_days
@@ -70,7 +72,7 @@ def _create_session_and_token(
         user_id=user_id,
         source_ip=source_ip,
         user_agent=user_agent,
-        expires_at=expires_at,
+        expires_at=refresh_expires_at,
         refresh_token_hash=hash_token(refresh_token),
         refresh_expires_at=refresh_expires_at,
     )
@@ -286,4 +288,57 @@ def reset_password(conn, *, payload: ResetPasswordRequest) -> dict:
 
     mark_password_reset_token_used(conn, str(reset_data["reset_uuid"]))
 
+    invalidated = invalidate_user_sessions(conn, user_id)
+    for session_uuid in invalidated:
+        log.info(
+            SESSION_INVALIDATED_ALL,
+            acting_user_id=user_id,
+            target_session_uuid=session_uuid,
+            reason="PASSWORD_CHANGE",
+        )
+
     return {"detail": "password_reset_successfully"}
+
+
+def list_sessions_service(conn, *, user_id: str) -> list[dict]:
+    sessions = get_user_sessions(conn, user_id)
+    log.info(SESSION_LISTED, acting_user_id=user_id, count=len(sessions))
+    return sessions
+
+
+def revoke_session_service(
+    conn, *, session_uuid: str, current_session_id: str, acting_user_id: str
+) -> None:
+    if session_uuid == current_session_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_revoke_current_session",
+        )
+
+    revoked = invalidate_single_session(
+        conn, session_uuid=session_uuid, user_id=acting_user_id
+    )
+    if not revoked:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="session_not_found",
+        )
+
+    log.info(
+        SESSION_REVOKED,
+        acting_user_id=acting_user_id,
+        target_session_uuid=session_uuid,
+        reason="USER_REVOCATION",
+    )
+
+
+def admin_invalidate_user_sessions_service(*, target_user_id: str, acting_user_id: str) -> None:
+    with get_pg_connection() as conn:
+        invalidated = invalidate_user_sessions(conn, target_user_id)
+    for session_uuid in invalidated:
+        log.info(
+            SESSION_INVALIDATED_ALL,
+            acting_user_id=acting_user_id,
+            target_session_uuid=session_uuid,
+            reason="ADMIN_DEACTIVATION",
+        )

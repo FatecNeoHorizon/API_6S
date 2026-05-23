@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from datetime import datetime, timezone
 import logging
 
+from src.api.dependencies.auth import AuthenticatedUser, require_admin, get_current_user
+from src.api.schemas.response import success_response
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.load.load_predictions import persist_predictions
 from src.config.settings import Settings
@@ -19,7 +21,7 @@ async def forecast_unit_timeseries(
     year_end: int = Query(2024, description="End year for training data"),
     indicator_types: Optional[list[str]] = Query(None, description="Indicator types: DEC, FEC, or both"),
     save_models: bool = Query(True, description="Save trained models to disk"),
-
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     try:
         # Normalize indicator types
@@ -79,8 +81,7 @@ async def forecast_unit_timeseries(
             logger.exception("[forecast_unit_timeseries] Failed to persist predictions: %s", e)
         
         # Return response with only newly inserted predictions count
-        return {
-            "success": result.get("success"),
+        return success_response({
             "consumer_unit_id": result.get("consumer_unit_id"),
             "metrics": result.get("metrics"),
             "persistence": {
@@ -90,7 +91,7 @@ async def forecast_unit_timeseries(
             },
             "forecasts": result.get("forecasts"),
             "models_directory": result.get("models_directory"),
-        }
+        })
 
     except ValueError as exc:
         raise HTTPException(
@@ -109,6 +110,7 @@ async def get_forecast_info(
     consumer_unit_set_id: str,
     year_start: int = Query(2015, description="Start year for reference"),
     year_end: int = Query(2024, description="End year for reference"),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """
     Get metadata about a consumer unit for forecasting.
@@ -152,7 +154,7 @@ async def get_forecast_info(
                     "record_count": 0,
                 }
         
-        return {
+        return success_response({
             "consumer_unit_id": consumer_unit_set_id,
             "year_range": {
                 "start": year_start,
@@ -160,7 +162,7 @@ async def get_forecast_info(
             },
             "indicators": indicators_available,
             "ready_for_forecast": any(ind["available"] for ind in indicators_available.values()),
-        }
+        })
     
     except Exception as exc:
         raise HTTPException(
@@ -175,6 +177,7 @@ async def trigger_manual_retrain(
     year_start: int = Query(2015, description="Start year for retraining data"),
     year_end: int = Query(2024, description="End year for retraining data"),
     indicator_types: Optional[list[str]] = Query(None, description="Indicator types: DEC, FEC, or both"),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """
     Manually trigger model retraining for a consumer unit (async).
@@ -235,13 +238,12 @@ async def trigger_manual_retrain(
 
         logger.info(f"Manual retrain triggered for {consumer_unit_set_id}: {load_id}")
 
-        return {
-            "success": True,
+        return success_response({
             "message": f"Retraining completed for consumer unit {consumer_unit_set_id}",
             "consumer_unit_id": consumer_unit_set_id,
             "indicators": indicator_types,
             "metrics": result.get("metrics", {}),
-        }
+        })
 
     except ValueError as exc:
         raise HTTPException(

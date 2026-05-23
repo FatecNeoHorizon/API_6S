@@ -116,96 +116,15 @@ const getApiErrorMessage = (error, fallbackMessage) => {
 }
 
 const createUserRequest = async (payload) => {
-  if (!API_BASE_URL) {
-    const error = new Error("VITE_API_URL não configurada")
-    error.status = 500
-    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
-    throw error
-  }
-
-  const response = await fetch(`${API_BASE_URL}/users/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const contentType = response.headers.get("content-type")
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text()
-
-  if (!response.ok) {
-    const error = new Error(`Erro na API: ${response.status}`)
-    error.status = response.status
-    error.data = responseBody
-    throw error
-  }
-
-  return responseBody
+  return apiClient.post("/users/", payload)
 }
 
 const updateUserRequest = async (userId, payload) => {
-  if (!API_BASE_URL) {
-    const error = new Error("VITE_API_URL não configurada")
-    error.status = 500
-    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
-    throw error
-  }
-
-  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const contentType = response.headers.get("content-type")
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text()
-
-  if (!response.ok) {
-    const error = new Error(`Erro na API: ${response.status}`)
-    error.status = response.status
-    error.data = responseBody
-    throw error
-  }
-
-  return responseBody
+  return apiClient.patch(`/users/${userId}`, payload)
 }
 
 const setUserActiveRequest = async (userId, active) => {
-  if (!API_BASE_URL) {
-    const error = new Error("VITE_API_URL não configurada")
-    error.status = 500
-    error.data = { detail: "Configuração da API ausente (VITE_API_URL)." }
-    throw error
-  }
-
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/active`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ active }),
-  })
-
-  const contentType = response.headers.get("content-type")
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text()
-
-  if (!response.ok) {
-    const error = new Error(`Erro na API: ${response.status}`)
-    error.status = response.status
-    error.data = responseBody
-    throw error
-  }
-
-  return responseBody
+  return apiClient.patch(`/users/${userId}/active`, { active })
 }
 
 export default function UsuariosPage() {
@@ -233,7 +152,6 @@ export default function UsuariosPage() {
   const [createForm, setCreateForm] = useState({
     username: "",
     email: "",
-    password: "",
     profile_id: "",
   })
   const [createError, setCreateError] = useState("")
@@ -324,7 +242,6 @@ export default function UsuariosPage() {
     setCreateForm({
       username: "",
       email: "",
-      password: "",
       profile_id: "",
     })
     setCreateError("")
@@ -345,10 +262,9 @@ export default function UsuariosPage() {
   const handleCreateUser = async () => {
     const username = createForm.username.trim()
     const email = createForm.email.trim()
-    const password = createForm.password
     const profile_id = createForm.profile_id
 
-    if (!username || !email || !password || !profile_id) {
+    if (!username || !email || !profile_id) {
       setCreateError("Preencha todos os campos obrigatórios.")
       return
     }
@@ -365,7 +281,6 @@ export default function UsuariosPage() {
       await createUserRequest({
         username,
         email,
-        password,
         profile_id,
       })
 
@@ -840,14 +755,13 @@ export default function UsuariosPage() {
                   size="icon"
                   onClick={handleCloseCreateModal}
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label="Fechar modal de criação"
                   disabled={isCreatingUser}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
               <CardDescription className="text-muted-foreground">
-                Cadastre um usuário com perfil e senha temporária.
+                Cadastre um usuário com perfil. O usuário definirá a senha no primeiro acesso.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -901,35 +815,6 @@ export default function UsuariosPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="create-user-password">
-                  Senha Temporária
-                </label>
-                <div className="relative">
-                  <Input
-                    id="create-user-password"
-                    name="password"
-                    type={showCreatePassword ? "text" : "password"}
-                    value={createForm.password}
-                    onChange={handleCreateFormChange}
-                    placeholder="Digite a senha temporária"
-                    className="border-border bg-input pr-10 text-foreground"
-                    disabled={isCreatingUser}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowCreatePassword((prev) => !prev)}
-                    aria-label={showCreatePassword ? "Ocultar senha" : "Mostrar senha"}
-                    disabled={isCreatingUser}
-                  >
-                    {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
               </div>
 
               {createError && (

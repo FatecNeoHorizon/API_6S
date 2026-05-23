@@ -85,6 +85,41 @@ def get_pending_consent(conn, user_id: str) -> list[dict]:
     return format_pending_clauses(rows)
 
 
+def format_consent_history(rows: list[dict]) -> list[dict]:
+    return [
+        {
+            "log_uuid": row["log_uuid"],
+            "action": row["action"],
+            "registered_at": row["registered_at"],
+            "channel": row["channel"],
+            "policy_version_id": row["policy_version_id"],
+            "policy_type": row["policy_type"],
+            "policy_version": row["policy_version"],
+            "clause_uuid": row["clause_uuid"],
+            "clause_code": row["clause_code"],
+            "clause_title": row["clause_title"],
+            "mandatory": row["mandatory"],
+        }
+        for row in rows
+    ]
+
+
+def get_user_consent_history(conn, user_id: str) -> list[dict]:
+    """
+    Returns immutable consent history for the authenticated user.
+    """
+    try:
+        rows = consent_repository.list_user_consent_history(conn, user_id)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="get_user_consent_history")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="get_user_consent_history")
+        raise HTTPException(status_code=503, detail="database_unavailable")
+
+    return format_consent_history(rows)
+
+
 def _get_action_value(action_item) -> str:
     action = getattr(action_item, "action", None)
 

@@ -6,6 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getPendingConsent, submitConsent, getSessionToken } from "@/api/consent"
 import { getTerms } from "@/api/terms"
 
+const dpoContact = {
+  name: "Encarregado pelo Tratamento de Dados Pessoais",
+  email: "dpo@tecsys.com.br",
+  response_time: "Até 15 dias úteis, conforme LGPD Art. 18, §4",
+}
+
 function filterCurrentTerms(terms) {
   const now = new Date()
   const grouped = {}
@@ -358,6 +364,16 @@ export default function ConsentPage() {
           )}
 
           <div className="mt-6 pt-6 border-t border-border text-center">
+            <div className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-left text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Encarregado de Dados (DPO)</p>
+              <p className="mt-1">
+                {dpoContact.name} ·{" "}
+                <a className="font-medium text-primary hover:underline" href={`mailto:${dpoContact.email}`}>
+                  {dpoContact.email}
+                </a>
+              </p>
+              <p className="mt-1">{dpoContact.response_time}</p>
+            </div>
             <p className="text-xs text-muted-foreground">
               Tecsys do Brasil - Todos os direitos reservados
             </p>

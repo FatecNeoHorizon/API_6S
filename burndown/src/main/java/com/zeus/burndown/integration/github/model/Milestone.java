@@ -12,6 +12,9 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Milestone {
     
+    @JsonProperty("title")
+    private String title;
+
     @JsonProperty("createdAt")
     private OffsetDateTime createdAt;
 

@@ -28,6 +28,10 @@
 | -- | ------ | --------------- | --------------- | ----- |
 | US10 | [Physical SAM Calculation](https://github.com/FatecNeoHorizon/API_6S/wiki/US10-%E2%80%94-Physical-SAM-Calculation) | 3 | Sprint 2 | Delivered ahead of the original roadmap as additional scope, using the TAM calculation as the base for the serviceable market indicator. |
 
+### Sprint Evolution (Burndown)
+
+<img src="../burndown/src/main/resources/static/burndown.png" alt="Sprint 3 Burndown Chart" width="960">
+
 ### Definition of Ready (DoR)
 For a User Story to be ready to start in a sprint, the following criteria must be met:
 - **Title, description and objective clear: story with defined scope**

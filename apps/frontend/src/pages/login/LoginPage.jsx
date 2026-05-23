@@ -53,7 +53,10 @@ export default function LoginPage() {
 
     try {
       const response = await login({ email: email.trim(), password })
-      saveClientSession(response.access_token, { remember: rememberMe })
+      saveClientSession(response.access_token, {
+        remember: rememberMe,
+        refreshToken: response.refresh_token,
+      })
 
       if (response.pending_consent) {
         navigate("/consent")

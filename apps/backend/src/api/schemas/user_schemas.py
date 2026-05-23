@@ -25,16 +25,11 @@ class UserBase(BaseModel):
 class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    password: str = Field(..., min_length=8)
     profile_id: UUID
 
     @field_validator("email")
     def validate_email_format(cls, v: EmailStr) -> str:
         return str(v).strip().lower()
-
-    @field_validator("password")
-    def validate_password(cls, v: str) -> str:
-        return password_validator(v)
 
 
 class UserCreateResponse(UserBase):
@@ -67,14 +62,54 @@ class UserResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MyProfileResponse(UserResult):
+    email: EmailStr
+    profile_name: str
+
+
+class MyProfileUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserUpdateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     profile_id: UUID
 
 
+class UserMeResponse(BaseModel):
+    user_uuid: UUID
+    username: str
+    email: EmailStr
+    profile_name: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserMeUpdateRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+    @field_validator("email")
+    def normalize_email(cls, v: EmailStr) -> str:
+        return str(v).strip().lower()
+
+
 class UserSetActiveRequest(BaseModel):
     active: bool
 
+class CurrentUserResponse(BaseModel):
+    user_id: UUID
+    username: str
+    profile: str
+    first_access_completed: bool
+    active: bool
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -87,6 +122,7 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     pending_consent: bool
     pending_clauses: list[dict]
@@ -103,9 +139,20 @@ class FirstAccessRequest(BaseModel):
 
 class FirstAccessResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     pending_consent: bool
     pending_clauses: list[dict]
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=20)
+
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -133,3 +180,55 @@ class ResetPasswordRequest(BaseModel):
 
 class ResetPasswordResponse(BaseModel):
     detail: str
+
+
+class IdentityExport(BaseModel):
+    user_id: UUID
+    username: str
+    email: str
+    profile: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConsentExportItem(BaseModel):
+    consent_log_id: UUID
+    clause_id: UUID
+    clause_code: str
+    clause_title: str
+    policy_version_id: UUID
+    policy_type: str
+    policy_version: str
+    action: str
+    timestamp: datetime
+    source_ip: str
+    user_agent: str
+    channel: str | None
+
+
+class SessionExportItem(BaseModel):
+    session_id: UUID
+    source_ip: str
+    user_agent: str
+    created_at: datetime
+    updated_at: datetime
+    expires_at: datetime | None
+    invalidated_at: datetime | None = None
+
+
+class DataExportResponse(BaseModel):
+    export_version: str = "1.0"
+    exported_at: datetime
+    identity: IdentityExport
+    consent_history: list[ConsentExportItem]
+    session_history: list[SessionExportItem]
+
+
+class SessionResponse(BaseModel):
+    session_uuid: UUID
+    created_at: datetime
+    source_ip: str | None
+    user_agent: str | None
+    expires_at: datetime

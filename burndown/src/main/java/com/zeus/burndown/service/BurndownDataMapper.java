@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
 import com.zeus.burndown.integration.github.model.IssueContent;
+import com.zeus.burndown.integration.github.model.Milestone;
 import com.zeus.burndown.integration.github.model.ProjectItemNode;
 import com.zeus.burndown.model.BurndownData;
 
@@ -36,8 +37,8 @@ public class BurndownDataMapper {
     }
  
     private static final List<SprintPeriod> SPRINTS = List.of(
-            new SprintPeriod("Sprint 1", 16, 3, 6, 4),   // 16/03 - 05/04
-            new SprintPeriod("Sprint 2", 13, 4, 4, 5),   // 13/04 - 03/05
+            new SprintPeriod("Sprint 1", 16, 3, 5, 4),   // 16/03 - 05/04
+            new SprintPeriod("Sprint 2", 13, 4, 3, 5),   // 13/04 - 03/05
             new SprintPeriod("Sprint 3", 11, 5, 31, 5)   // 11/05 - 31/05
     );
  
@@ -47,7 +48,7 @@ public class BurndownDataMapper {
  
         List<BurndownData> result = new ArrayList<>();
  
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now();;
         SprintPeriod activeSprint = findActiveSprint(today);
  
         logger.debug("[DEBUG MAPPER] ====================================");
@@ -122,17 +123,18 @@ public class BurndownDataMapper {
 
         List<ProjectItemNode> sprintIssues = allIssues.stream()
             .filter(node -> {
-                LocalDate created = toLocalDate(node.getContent().getCreatedAt());
-                return !created.isAfter(end);
+                Milestone milestone = node.getContent().getMilestone();
+                return milestone != null && sprintName.equals(milestone.getTitle());
             })
             .collect(Collectors.toList());
  
         logger.debug("[DEBUG MAPPER] Issues do sprint '{}': {} de {} totais",
                 sprintName, sprintIssues.size(), allIssues.size());
  
+        // Total de TODAS as tarefas da sprint (incluindo as que entram depois)
         double totalHours = sprintIssues.stream()
-                                        .mapToDouble(this::resolveEstimateHours)
-                                        .sum();
+                .mapToDouble(this::resolveEstimateHours)
+                .sum();
  
         logger.debug("[DEBUG MAPPER] Total de horas do sprint: {}", totalHours);
  
@@ -160,16 +162,22 @@ public class BurndownDataMapper {
                         IssueContent issue = node.getContent();
                         if (issue.getClosedAt() == null) return false;
                         LocalDate closed = toLocalDate(issue.getClosedAt());
-                        return !closed.isAfter(currentDate);
+                        return !closed.isBefore(start.plusDays(1)) && !closed.isAfter(currentDate);
                     })
                     .mapToDouble(this::resolveEstimateHours)
                     .sum();
     
-            realLine.add(Math.max(totalHours - closedHours, 0));
+            double realRemaining = Math.max(totalHours - closedHours, 0);
+            realLine.add(realRemaining);
+            
+            if (dayIndex == 0) {
+                logger.debug("[DEBUG MAPPER] DIA 1 ({}) - Ideal: {}h | Real: {}h | Fechadas após sprint: {}h",
+                    currentDate, idealRemaining, realRemaining, closedHours);
+            }
     
             dayIndex++;
         }
- 
+
         BurndownData burndown = new BurndownData();
         burndown.setSprintName(sprintName);
         burndown.setStartDate(start);

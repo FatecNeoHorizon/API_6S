@@ -36,6 +36,7 @@ def post_policy_version(
             policy_type=payload.policy_type.value,
             content=payload.content,
             effective_from=payload.effective_from,
+            description=payload.description,
         )
 
         log.info(
@@ -55,6 +56,14 @@ def get_policy_versions(
         set_current_user(conn, admin.user_id)
         return list_policy_versions(conn)
 
+@router.get("/versions/{version_id}")
+def get_version(
+    version_id: UUID,
+    admin: AuthenticatedUser = Depends(require_admin),
+):
+    with get_pg_connection() as conn:
+        set_current_user(conn, admin.user_id)
+        return get_policy_version(conn, str(version_id))
 
 @router.post("/versions/{version_id}/clauses", status_code=201)
 def post_clause(

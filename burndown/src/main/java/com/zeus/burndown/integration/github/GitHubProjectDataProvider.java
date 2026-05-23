@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import com.zeus.burndown.dto.response.GraphQLResponse;
 import com.zeus.burndown.integration.github.model.GitHubProjectQueryData;
 import com.zeus.burndown.integration.github.model.ProjectItemNode;
@@ -44,6 +46,7 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
                       closedAt
                       state
                       milestone {
+                        title
                         createdAt
                         dueOn
                       }
@@ -86,7 +89,7 @@ public class GitHubProjectDataProvider implements ProjectDataProvider {
                 throw new RuntimeException("GraphQL response is null");
             }
             if (response.getData() == null) {
-                throw new RuntimeException("GraphQL returned no data");
+                throw new RuntimeException("GraphQL returned no data. Errors: " + response.getErrors());
             }
 
             GitHubProjectQueryData pageData = response.getData();

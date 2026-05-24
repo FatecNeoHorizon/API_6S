@@ -500,8 +500,8 @@ export function HeatmapFilters() {
   ]
 
   useEffect(() => {
-    // setConvertedConjs(mockedDataTest);
-    fetchConj()
+    setConvertedConjs(mockedDataTest);
+    // fetchConj()
   }, [])
 
 

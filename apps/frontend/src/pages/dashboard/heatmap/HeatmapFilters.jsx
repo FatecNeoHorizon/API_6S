@@ -24,6 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar"
 import {
   LineChart,
   Line,
@@ -168,7 +169,11 @@ function MonthRangePicker({ value, onChange }) {
 
 export function HeatmapFilters() {
   const [selectedTab, setSelectedTab] = useState("DEC");
-  const [monthRange, setMonthRange] = useState({ from: null, to: null });
+  // const [monthRange, setMonthRange] = useState({ from: null, to: null });
+  const [decFecPopoverOpen, setDecFecPopoverOpen] = useState(false);
+  // const [selectedPeriod, setSelectedPeriod] = useState(null);
+
+  const [date, setDate] = useState(new Date())
 
   const [convertedConjs, setConvertedConjs] = useState([{
     name: null,
@@ -180,7 +185,9 @@ export function HeatmapFilters() {
     coordinates: null,
   },])
 
-  const unwrapApiData = (response) => response?.data ?? response;
+  // const unwrapApiData = (response) => response?.data ?? response;
+  // const formatMonthLabel = (m) =>
+  //   m ? `${MONTH_NAMES[m.month - 1]}/${m.year}` : "—";
 
   const fetchConj = async () => {
     // setDecFecLoading(true);
@@ -548,10 +555,31 @@ export function HeatmapFilters() {
           </Button>
         </div>
 
-        <MonthRangePicker
-          value={monthRange}
-          onChange={handleMonthRangeChange}
-        />
+        <Popover
+          open={decFecPopoverOpen}
+          onOpenChange={setDecFecPopoverOpen}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border text-foreground hover:bg-muted"
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              "Personalizado"
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="select-none transition-colors text-foreground"
+              captionLayout="dropdown"
+            />
+          </PopoverContent>
+        </Popover>
+
       </div>
 
       <Heatmap convertedConjs={convertedConjs} />

@@ -112,7 +112,8 @@ class TestLogoutService:
 
         mock_set_current_user.assert_called_once_with(conn, "user-abc")
         mock_invalidate.assert_called_once_with(
-            conn, "11111111-1111-1111-1111-111111111111"
+            conn,
+            "11111111-1111-1111-1111-111111111111",
         )
 
     def test_logout_raises_401_when_session_cannot_be_invalidated(self):
@@ -141,15 +142,16 @@ class TestGetActiveSessionAfterInvalidation:
         conn, cursor = _make_conn()
 
         cursor.fetchone.return_value = (
-            "session-uuid",
-            "user-uuid",
-            True,
-            True,
-            "OPERATOR",
-            "2024-01-01",  # INVALIDATED_AT is not None.
-            None,
-            None,
-            None,
+            "session-uuid",   # row[0] s.SESSION_UUID
+            "user-uuid",      # row[1] u.USER_UUID
+            True,             # row[2] u.ACTIVE
+            True,             # row[3] u.FIRST_ACCESS_COMPLETED
+            "OPERATOR",       # row[4] p.PROFILE_NAME
+            "operator_user",  # row[5] u.USERNAME
+            "2024-01-01",     # row[6] s.INVALIDATED_AT is not None
+            None,             # row[7] s.EXPIRES_AT
+            None,             # row[8] s.DELETED_AT
+            None,             # row[9] u.DELETED_AT
         )
 
         result = get_active_session_user(conn, "session-uuid")

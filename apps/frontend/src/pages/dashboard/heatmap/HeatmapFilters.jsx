@@ -167,7 +167,7 @@ function MonthRangePicker({ value, onChange }) {
 }
 
 export function HeatmapFilters() {
-  const [selectedTab, setSelectedTab] = useState("dec");
+  const [selectedTab, setSelectedTab] = useState("DEC");
   const [monthRange, setMonthRange] = useState({ from: null, to: null });
 
   const [convertedConjs, setConvertedConjs] = useState([{
@@ -186,7 +186,8 @@ export function HeatmapFilters() {
     // setDecFecLoading(true);
     const options =
     {
-      year: 2023
+      year: 2023,
+      indicator_type_code: selectedTab
     }
     try {
       const data = await getConj(options);
@@ -502,7 +503,7 @@ export function HeatmapFilters() {
   useEffect(() => {
     // setConvertedConjs(mockedDataTest);
     fetchConj()
-  }, [])
+  }, [selectedTab])
 
 
   const handleMonthRangeChange = (range) => {
@@ -522,10 +523,10 @@ export function HeatmapFilters() {
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="flex gap-2">
           <Button
-            variant={selectedTab === "dec" ? "default" : "outline"}
-            onClick={() => setSelectedTab("dec")}
+            variant={selectedTab === "DEC" ? "default" : "outline"}
+            onClick={() => setSelectedTab("DEC")}
             className={
-              selectedTab === "dec"
+              selectedTab === "DEC"
                 ? "bg-primary text-primary-foreground"
                 : "border-border text-foreground hover:bg-muted"
             }
@@ -534,10 +535,10 @@ export function HeatmapFilters() {
             DEC
           </Button>
           <Button
-            variant={selectedTab === "fec" ? "default" : "outline"}
-            onClick={() => setSelectedTab("fec")}
+            variant={selectedTab === "FEC" ? "default" : "outline"}
+            onClick={() => setSelectedTab("FEC")}
             className={
-              selectedTab === "fec"
+              selectedTab === "FEC"
                 ? "bg-primary text-primary-foreground"
                 : "border-border text-foreground hover:bg-muted"
             }

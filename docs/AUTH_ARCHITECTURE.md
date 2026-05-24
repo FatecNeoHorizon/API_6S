@@ -149,11 +149,11 @@ Access profiles determine which routes and resources each user can use:
 
 | Profile | Access Level |
 |:---|:---|
-| **ADMIN** | Full access — user management, settings, and all data |
-| **ANALYST** | Operational access — dashboards, reports, ETL execution |
-| **VIEWER** | Read-only access — dashboard and indicator visualization |
+| **ADMIN** | Full access — user management, LGPD, terms, uploads, and all analytics |
+| **MANAGER** | Operational access — system operation, uploads and analytics. No access to users, terms, or LGPD routes |
+| **ANALYST** | Read-only access — dashboards, heatmap, network structure, and own data. No administrative management or upload |
 
-Profiles are currently managed in the `TB_PROFILE` table in PostgreSQL. Migration of profiles to Keycloak **realm roles** is planned — in that scenario, the JWT token will carry the profile directly, removing the need for an additional database query during validation.
+Profiles are managed in the `TB_PROFILE` table in PostgreSQL and mirrored as realm roles in Keycloak. The JWT token carries the role directly via `realm_access.roles`, allowing the backend to enforce authorization without an extra database query.
 
 ---
 
@@ -162,23 +162,35 @@ Profiles are currently managed in the `TB_PROFILE` table in PostgreSQL. Migratio
 Keycloak runs as an additional service in the project's `docker-compose.yml`, alongside the backend and frontend:
 
 ```yaml
+keycloak-postgres:
+  image: postgres:15-alpine
+  env_file:
+    - envs/.env.keycloak-postgres.${APP_ENV:-dev}
+  volumes:
+    - keycloak_postgres_data:/var/lib/postgresql/data
+  networks:
+    - keycloak_network
+
 keycloak:
-  image: quay.io/keycloak/keycloak:latest
-  environment:
-    KEYCLOAK_ADMIN: admin
-    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    KC_DB: postgres
-    KC_DB_URL: jdbc:postgresql://db:5432/keycloak
-    KC_DB_USERNAME: ${POSTGRES_USER}
-    KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
-  command: start-dev
+  image: quay.io/keycloak/keycloak:26.2
+  command: start-dev --import-realm
+  env_file:
+    - envs/.env.keycloak.${APP_ENV:-dev}
   ports:
-    - "8180:8180"
+    - "8180:8080"
+  volumes:
+    - ./keycloak:/opt/keycloak/data/import
+  networks:
+    - app_network
+    - keycloak_network
   depends_on:
-    - db
+    keycloak-postgres:
+      condition: service_healthy
 ```
 
-> **Production note:** replace `start-dev` with `start` and configure `KC_HOSTNAME`, TLS certificate, and a dedicated database for Keycloak.
+Environment files: `envs/.env.keycloak.dev` (admin credentials + `KC_DB_*`) and `envs/.env.keycloak-postgres.dev` (dedicated PostgreSQL credentials).
+
+> **Production note:** replace `start-dev` with `start` and configure `KC_HOSTNAME`, TLS certificate, and rotate all credentials.
 
 ---
 

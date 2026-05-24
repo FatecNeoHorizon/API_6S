@@ -644,6 +644,24 @@ def invalidate_user_sessions(conn: PgConnection, user_id: str) -> None:
         cursor.execute(query, (user_id,))
 
 
+def invalidate_session(conn: PgConnection, session_id: str) -> bool:
+    if not is_valid_uuid(session_id):
+        return False
+
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE SESSION_UUID = %s
+          AND INVALIDATED_AT IS NULL
+          AND DELETED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(session_id),))
+        return cursor.rowcount > 0
+
+
 def create_user_session(
     conn: PgConnection,
     *,
@@ -684,12 +702,11 @@ def create_user_session(
         )
         row = cursor.fetchone()
 
-    # Ensure we have a valid UUID
     if row is None or row[0] is None:
         raise ValueError("Failed to create session: no UUID returned")
 
     session_uuid = str(row[0])
-    # Validate UUID format.
+
     if not is_valid_uuid(session_uuid):
         raise ValueError(f"Invalid session UUID format: {session_uuid}")
 
@@ -752,6 +769,7 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
             u.ACTIVE,
             u.FIRST_ACCESS_COMPLETED,
             p.PROFILE_NAME,
+            u.USERNAME,
             s.INVALIDATED_AT,
             s.EXPIRES_AT,
             s.DELETED_AT,
@@ -772,18 +790,18 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
         return None
 
     # Check conditions
-    if row[5] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
+    if row[6] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
         return None
-    
-    if row[6] is not None:  # EXPIRES_AT exists
+
+    if row[7] is not None:  # EXPIRES_AT exists
         now = datetime.now(timezone.utc)
-        if row[6] <= now:  # Check if expired
+        if row[7] <= now:  # Check if expired
             return None
-    
-    if row[7] is not None:  # DELETED_AT is not NULL → session was soft-deleted
+
+    if row[8] is not None:  # DELETED_AT is not NULL → session was soft-deleted
         return None
-    
-    if row[8] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
+
+    if row[9] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
         return None
 
     return {
@@ -792,7 +810,71 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
         "active": row[2],
         "first_access_completed": row[3],
         "profile_name": row[4],
+        "username": row[5],
     }
+
+
+def invalidate_user_sessions(conn: PgConnection, user_id: str) -> list[str]:
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+        RETURNING SESSION_UUID::TEXT
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+    return [row[0] for row in rows]
+
+
+def get_user_sessions(conn: PgConnection, user_id: str) -> list[dict]:
+    query = """
+        SELECT
+            SESSION_UUID,
+            CREATED_AT,
+            SOURCE_IP,
+            USER_AGENT,
+            EXPIRES_AT
+        FROM TB_SESSION
+        WHERE USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+          AND DELETED_AT IS NULL
+          AND EXPIRES_AT > NOW()
+        ORDER BY CREATED_AT DESC
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+    return [
+        {
+            "session_uuid": row[0],
+            "created_at": row[1],
+            "source_ip": row[2],
+            "user_agent": row[3],
+            "expires_at": row[4],
+        }
+        for row in rows
+    ]
+
+
+def invalidate_single_session(
+    conn: PgConnection, *, session_uuid: str, user_id: str
+) -> bool:
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE SESSION_UUID = %s
+          AND USER_ID = %s
+          AND INVALIDATED_AT IS NULL
+        RETURNING SESSION_UUID
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (session_uuid, user_id))
+        row = cursor.fetchone()
+    return row is not None
 
 
 def create_password_reset_token(
@@ -874,3 +956,77 @@ def update_user_password(
 
     with conn.cursor() as cursor:
         cursor.execute(query, (password_hash, str(user_id)))
+
+
+def get_user_for_export(conn: PgConnection, user_id: str) -> dict | None:
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.EMAIL_ENC,
+            u.ACTIVE,
+            u.FIRST_ACCESS_COMPLETED,
+            u.CREATED_AT,
+            u.UPDATED_AT,
+            u.ANONYMIZED_AT,
+            p.PROFILE_NAME
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.USER_UUID = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_id),))
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "email_enc": row[2],
+        "active": row[3],
+        "first_access_completed": row[4],
+        "created_at": row[5],
+        "updated_at": row[6],
+        "anonymized_at": row[7],
+        "profile_name": row[8],
+    }
+
+
+def get_sessions_for_export(conn: PgConnection, user_id: str) -> list[dict]:
+    query = """
+        SELECT
+            SESSION_UUID,
+            SOURCE_IP,
+            USER_AGENT,
+            CREATED_AT,
+            UPDATED_AT,
+            EXPIRES_AT,
+            INVALIDATED_AT
+        FROM TB_SESSION
+        WHERE USER_ID = %s
+          AND DELETED_AT IS NULL
+        ORDER BY CREATED_AT DESC, SESSION_UUID DESC
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_id),))
+        rows = cursor.fetchall()
+
+    return [
+        {
+            "session_uuid": row[0],
+            "source_ip": row[1],
+            "user_agent": row[2],
+            "created_at": row[3],
+            "updated_at": row[4],
+            "expires_at": row[5],
+            "invalidated_at": row[6],
+        }
+        for row in rows
+    ]

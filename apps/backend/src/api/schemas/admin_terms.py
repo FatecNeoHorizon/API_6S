@@ -14,6 +14,7 @@ class CreatePolicyVersionIn(BaseModel):
     policy_type: PolicyType
     content: str = Field(min_length=1)
     effective_from: datetime
+    description: str | None = None
 
 
 class CreateClauseIn(BaseModel):

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import logging
 import uuid
 
-from src.api.dependencies.auth import AuthenticatedUser, require_admin
+from src.api.dependencies.auth import AuthenticatedUser, require_admin, get_current_user
 from src.api.schemas.response import success_response
 from src.control.timeseries_forecast_procedures import TimeSeriesForecastProcedures
 from src.etl.load.load_predictions import persist_predictions

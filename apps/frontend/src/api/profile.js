@@ -8,3 +8,7 @@ export function getMyProfile() {
 export function updateMyProfile(payload) {
   return apiClient.patch("/users/me", payload, getAuthOptions());
 }
+
+export function exportMyData() {
+  return apiClient.get("/auth/me/export", getAuthOptions());
+}

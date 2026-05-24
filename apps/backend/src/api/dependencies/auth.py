@@ -16,7 +16,10 @@ security = HTTPBearer(auto_error=False)
 class AuthenticatedUser:
     user_id: str
     session_id: str
+    username: str
     profile_name: str
+    first_access_completed: bool
+    active: bool
 
 
 def get_current_user_no_consent_check(
@@ -49,7 +52,10 @@ def get_current_user_no_consent_check(
     return AuthenticatedUser(
         user_id=str(session_user["user_uuid"]),
         session_id=str(session_user["session_uuid"]),
+        username=session_user["username"],
         profile_name=session_user["profile_name"],
+        first_access_completed=session_user["first_access_completed"],
+        active=session_user["active"],
     )
 
 

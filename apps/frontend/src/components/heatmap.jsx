@@ -45,10 +45,8 @@ export function Heatmap({ convertedConjs }) {
 
     function mappedPolygons(conj) {
         if (conj.coordinates) {
-            // let coordinates = conj.coordinates
-            let {coordinates, ...rest} = conj
+            let coordinates = conj.coordinates
             coordinates = invertCoordinates(coordinates)
-            let informationString = JSON.stringify(rest)
             return (
                 <Polygon pathOptions={defineColor(conj)} positions={coordinates}>
                      <Tooltip>

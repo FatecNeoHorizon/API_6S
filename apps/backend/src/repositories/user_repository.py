@@ -644,6 +644,24 @@ def invalidate_user_sessions(conn: PgConnection, user_id: str) -> None:
         cursor.execute(query, (user_id,))
 
 
+def invalidate_session(conn: PgConnection, session_id: str) -> bool:
+    if not is_valid_uuid(session_id):
+        return False
+
+    query = """
+        UPDATE TB_SESSION
+        SET INVALIDATED_AT = NOW(),
+            UPDATED_AT = NOW()
+        WHERE SESSION_UUID = %s
+          AND INVALIDATED_AT IS NULL
+          AND DELETED_AT IS NULL
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(session_id),))
+        return cursor.rowcount > 0
+
+
 def create_user_session(
     conn: PgConnection,
     *,
@@ -684,12 +702,11 @@ def create_user_session(
         )
         row = cursor.fetchone()
 
-    # Ensure we have a valid UUID
     if row is None or row[0] is None:
         raise ValueError("Failed to create session: no UUID returned")
 
     session_uuid = str(row[0])
-    # Validate UUID format.
+
     if not is_valid_uuid(session_uuid):
         raise ValueError(f"Invalid session UUID format: {session_uuid}")
 

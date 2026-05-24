@@ -88,7 +88,11 @@ def post_logout(
     current_user: AuthenticatedUser = Depends(get_current_user_no_consent_check),
 ):
     with get_pg_connection() as conn:
-        logout(conn, user_id=current_user.user_id)
+        logout(
+            conn,
+            user_id=current_user.user_id,
+            session_id=current_user.session_id,
+        )
     return Response(status_code=204)
 
 

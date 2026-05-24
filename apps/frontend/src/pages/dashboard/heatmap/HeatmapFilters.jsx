@@ -40,11 +40,9 @@ import { Heatmap } from "../../../components/heatmap";
 
 export function HeatmapFilters() {
   const [selectedTab, setSelectedTab] = useState("DEC");
-  const [decFecPopoverOpen, setDecFecPopoverOpen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedYear, setSelectedYear] = useState(null)
-  const [selectedMonth, setSelectedMonth] = useState(null)
 
   const [convertedConjs, setConvertedConjs] = useState([{
     name: null,
@@ -58,6 +56,8 @@ export function HeatmapFilters() {
 
   const fetchConj = async () => {
     // setDecFecLoading(true);
+    const selectedYear = selectedDate.getFullYear()
+    const selectedMonth = selectedDate.getMonth() + 1
     const options =
     {
       year: selectedYear ? selectedYear : 2023,
@@ -375,10 +375,6 @@ export function HeatmapFilters() {
   ]
 
   useEffect(() => {
-
-    setSelectedMonth(selectedDate.getMonth() + 1)
-    setSelectedYear(selectedDate.getFullYear())
-
     fetchConj()
     // setConvertedConjs(mockedDataTest);
   }, [selectedTab, selectedDate])
@@ -415,14 +411,13 @@ export function HeatmapFilters() {
 
         <div>
           <Popover
-            open={decFecPopoverOpen}
-            onOpenChange={setDecFecPopoverOpen}
+            open={isPopoverOpen}
+            onOpenChange={setIsPopoverOpen}
             className="gap-2 bg-primary text-primary-foreground"
           >
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                size="sm"
                 className="gap-2 border-border text-foreground hover:bg-muted"
               >
                 <CalendarIcon className="w-4 h-4 mr-2" />
@@ -433,7 +428,10 @@ export function HeatmapFilters() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={(chosenDate) => {
+                  setSelectedDate(chosenDate)
+                  setIsPopoverOpen(false)
+                } }
                 className="select-none transition-colors text-foreground"
                 captionLayout="dropdown"
               />

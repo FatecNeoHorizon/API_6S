@@ -173,7 +173,9 @@ export function HeatmapFilters() {
   const [decFecPopoverOpen, setDecFecPopoverOpen] = useState(false);
   // const [selectedPeriod, setSelectedPeriod] = useState(null);
 
-  const [date, setDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedYear, setSelectedYear] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState(null)
 
   const [convertedConjs, setConvertedConjs] = useState([{
     name: null,
@@ -193,7 +195,7 @@ export function HeatmapFilters() {
     // setDecFecLoading(true);
     const options =
     {
-      year: 2023,
+      year: selectedYear ? selectedYear : 2023,
       indicator_type_code: selectedTab
     }
     try {
@@ -508,9 +510,13 @@ export function HeatmapFilters() {
   ]
 
   useEffect(() => {
-    // setConvertedConjs(mockedDataTest);
+
+    setSelectedMonth(selectedDate.getMonth() + 1)
+    setSelectedYear(selectedDate.getFullYear())
+
     fetchConj()
-  }, [selectedTab])
+    // setConvertedConjs(mockedDataTest);
+  }, [selectedTab, selectedDate])
 
 
   const handleMonthRangeChange = (range) => {
@@ -572,8 +578,8 @@ export function HeatmapFilters() {
           <PopoverContent className="w-auto p-0" align="end">
             <Calendar
               mode="single"
-              selected={date}
-              onSelect={setDate}
+              selected={selectedDate}
+              onSelect={setSelectedDate}
               className="select-none transition-colors text-foreground"
               captionLayout="dropdown"
             />

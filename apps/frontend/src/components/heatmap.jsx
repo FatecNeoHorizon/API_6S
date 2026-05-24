@@ -50,13 +50,13 @@ export function Heatmap({ convertedConjs }) {
             return (
                 <Polygon pathOptions={defineColor(conj)} positions={coordinates}>
                      <Tooltip>
-                        Name: {conj.name}
+                        Name: {conj.name ? conj.name : "-"}
                         <br />
-                        Indicator Type: {conj.indicator_type_code}
+                        Indicator Type: {conj.indicator_type_code ? conj.indicator_type_code : "-"}
                         <br />
-                        Limit: {conj.limit}
+                        Limit: {conj.limit ? conj.limit : "-"}
                         <br />
-                        Accumulated Value: {conj.accumulated_value}
+                        Accumulated Value: {conj.accumulated_value ? conj.accumulated_value : "-"}
                      </Tooltip>
                 </Polygon>
             )

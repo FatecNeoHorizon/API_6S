@@ -110,6 +110,12 @@ class Settings(BaseSettings):
     # Model & Forecasting Configuration
     model_forecast_months: int = Field(default=12, description="Number of months to forecast ahead")
 
+    # LGPD Compliance: Log Retention Policy (Art. 7, LGPD)
+    access_log_retention_days: int = Field(
+        default=90,
+        description="Retention period in days for authentication and access logs (LGPD requirement)"
+    )
+
     model_config = ConfigDict(
         case_sensitive=False,
         extra="ignore",

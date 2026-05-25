@@ -600,27 +600,24 @@ export default function IndicadoresPage() {
   };
 
   // ── Preview DEC/FEC handlers ─────────────────────────────────────────────────────────
-  const fetchPreviewDecFec = async (from, to) => {
-
+  const fetchPreviewDecFec = async () => {
     const params = new URLSearchParams({
       consumer_unit_set_id: 16648,
-      year_start: 2014,
-      year_end: 2024,
-      save_models: false,
+      limit: 1000,
     });
 
-    const url = `/timeseries/forecast-unit?${params.toString()}`;
-    console.log("[get-dec-fec] Fetching:", url);
+    const url = `/predictions/?${params.toString()}`;
+    console.log("[get-preview-dec-fec] Fetching:", url);
     setDecFecLoading(true);
     try {
-      const data = await apiClient.post(url);
+      const data = await apiClient.get(url);
       if (typeof data === "string") {
         console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
         setpreviewChartData([])
         return;
       }
       const payload = unwrapApiData(data);
-      setpreviewChartData(buildPreviewChartData(payload?.forecasts ?? []))
+      setpreviewChartData(buildPreviewChartData(payload?.predictions ?? []))
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
@@ -636,7 +633,7 @@ export default function IndicadoresPage() {
     fetchDecFec(from, to);
     fetchTamTotal();
     fetchSamTotal(from, to);
-    fetchPreviewDecFec(from, to);
+    fetchPreviewDecFec();
   };
 
   const handleMonthRangeChange = (range) => {
@@ -647,7 +644,7 @@ export default function IndicadoresPage() {
       setDecFecPopoverOpen(false);
       fetchTamTotal();
       fetchSamTotal(range.from, range.to);
-      fetchPreviewDecFec(range.from, range.to);
+      fetchPreviewDecFec();
     }
   };
 

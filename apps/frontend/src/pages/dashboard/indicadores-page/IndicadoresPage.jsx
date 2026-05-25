@@ -539,6 +539,7 @@ export default function IndicadoresPage() {
   const [samTotal, setSamTotal] = useState(null);
   const [samLoading, setSamLoading] = useState(false);
   const [samYear, setSamYear] = useState(null);
+  const [samIndicator, setSamIndicator] = useState("DEC");
 
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
@@ -564,9 +565,9 @@ export default function IndicadoresPage() {
     }
   }
 
-  const fetchSamTotal = async (from) => {
+  const fetchSamTotal = async (from, indicator = samIndicator) => {
 
-    const params = new URLSearchParams({ year: from.year })
+    const params = new URLSearchParams({ year: from.year, indicator })
     const url = `/tam-sam/sam?${params.toString()}`;
     setSamLoading(true);
     try {
@@ -579,7 +580,8 @@ export default function IndicadoresPage() {
       }
       const payload = unwrapApiData(data);
       setSamTotal(payload?.sam_total ?? payload)
-      setSamYear(from.year)
+      setSamYear(payload?.year ?? from.year)
+      setSamIndicator(payload?.indicator ?? indicator)
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
@@ -666,6 +668,13 @@ export default function IndicadoresPage() {
       fetchTamTotal();
       fetchSamTotal(range.from);
       fetchPreviewDecFec();
+    }
+  };
+
+  const handleSamIndicatorChange = (indicator) => {
+    setSamIndicator(indicator);
+    if (monthRange.from) {
+      fetchSamTotal(monthRange.from, indicator);
     }
   };
 
@@ -948,7 +957,24 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
                       {samYear !== null ? `Ano ${samYear}` : "Selecione um ano"}
+                      {" · "}{samIndicator}
                     </span>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    {["DEC", "FEC"].map((indicator) => (
+                      <button
+                        key={indicator}
+                        type="button"
+                        className={`rounded px-2 py-1 text-xs ${
+                          samIndicator === indicator
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                        onClick={() => handleSamIndicatorChange(indicator)}
+                      >
+                        {indicator}
+                      </button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

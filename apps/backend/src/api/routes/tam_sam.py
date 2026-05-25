@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 
 from src.api.schemas.response import success_response
 from src.control.tam_sam_procedures import Tam_sam_procedures
@@ -25,11 +27,18 @@ async def get_tam_total(current_user: AuthenticatedUser = Depends(get_current_us
     return success_response(result)
 
 @router.get("/sam")
-async def get_sam_total(year: int, current_user: AuthenticatedUser = Depends(get_current_user)):
+async def get_sam_total(
+    year: int,
+    indicator: Literal["DEC", "FEC"] = Query(
+        ...,
+        description="Indicador usado para avaliar elegibilidade no SAM.",
+    ),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     
-    result = Tam_sam_procedures().get_sam_total(year)
+    result = Tam_sam_procedures().get_sam_total(year, indicator)
 
-    return success_response({"sam_total": result})
+    return success_response({"sam_total": result, "year": year, "indicator": indicator})
 
 @router.get("/sam-top-ten")
 async def get_sam_top_ten(year: int, indicator_type_code: str, current_user: AuthenticatedUser = Depends(get_current_user)):

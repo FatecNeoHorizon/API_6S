@@ -449,12 +449,8 @@ def set_user_active(
 
 def delete_user(conn: PgConnection, user_uuid: UUID) -> bool:
     query = """
-        UPDATE TB_USER
-        SET DELETED_AT = NOW(),
-            ACTIVE = FALSE,
-            UPDATED_AT = NOW()
+        DELETE FROM TB_USER
         WHERE USER_UUID = %s
-          AND DELETED_AT IS NULL
     """
 
     with conn.cursor() as cursor:

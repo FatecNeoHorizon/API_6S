@@ -93,6 +93,8 @@ const getStatusClassName = (active) => {
   return active ? "bg-chart-1/10 text-chart-1" : "bg-muted text-muted-foreground"
 }
 
+import { deleteUserRequest } from "@/api/users"
+
 const getApiErrorMessage = (error, fallbackMessage) => {
   const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
 
@@ -380,25 +382,12 @@ export default function UsuariosPage() {
     setIsConfirmingDeleteAction(true)
 
     try {
-      if (selectedUser.active) {
-        await setUserActiveRequest(selectedUser.user_uuid, false)
-        toast.success("Usuário desativado com sucesso")
-      } else {
-        await setUserActiveRequest(selectedUser.user_uuid, true)
-        toast.success("Usuário reativado com sucesso")
-      }
-
+      await deleteUserRequest(selectedUser.user_uuid)
+      toast.success("Usuário excluído com sucesso")
       closeDeleteModal()
       await loadUsersAndProfiles()
     } catch (error) {
-      toast.error(
-        getApiErrorMessage(
-          error,
-          selectedUser.active
-            ? "Não foi possível desativar o usuário. Tente novamente."
-            : "Não foi possível reativar o usuário. Tente novamente.",
-        ),
-      )
+      toast.error(getApiErrorMessage(error, "Não foi possível excluir o usuário. Tente novamente."))
       setIsConfirmingDeleteAction(false)
     }
   }
@@ -408,15 +397,24 @@ export default function UsuariosPage() {
   )
 
   const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
-  const deleteActionButtonLabel = selectedUser?.active ? "Desativar Usuário" : "Reativar Usuário"
+  const deleteActionButtonLabel = "Excluir Usuário"
+
+  const handleCardKeyDown = (e, filter) => {
+    if (e.key === "Enter" || e.key === " ") {
+      setStatusFilter(filter)
+    }
+  }
 
   return (
     <>
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg"
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             onClick={() => setStatusFilter("all")}
+            onKeyDown={(e) => handleCardKeyDown(e, "all")}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total de Usuários</CardTitle>
@@ -426,8 +424,11 @@ export default function UsuariosPage() {
             </CardContent>
           </Card>
           <Card
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg"
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             onClick={() => setStatusFilter("active")}
+            onKeyDown={(e) => handleCardKeyDown(e, "active")}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Ativos</CardTitle>
@@ -437,8 +438,11 @@ export default function UsuariosPage() {
             </CardContent>
           </Card>
           <Card
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg"
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             onClick={() => setStatusFilter("inactive")}
+            onKeyDown={(e) => handleCardKeyDown(e, "inactive")}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Inativos</CardTitle>
@@ -855,65 +859,64 @@ export default function UsuariosPage() {
       )}
 
       {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-sm border-border bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className={`rounded-lg p-2 ${selectedUser.active ? "bg-destructive/10" : "bg-chart-1/10"}`}>
-                  {selectedUser.active ? (
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                  ) : (
-                    <RotateCcw className="h-5 w-5 text-chart-1" />
-                  )}
-                </div>
-                <div>
-                  <CardTitle className="text-foreground">
-                    {selectedUser.active ? "Confirmar Desativação" : "Confirmar Reativação"}
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    {selectedUser.active
-                      ? "Esta ação realiza soft delete (desativação lógica)"
-                      : "O usuário voltará para status ativo"}
-                  </CardDescription>
-                </div>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={closeDeleteModal}
+        >
+          <div
+            className="relative w-full max-w-md rounded-lg bg-card p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              onClick={closeDeleteModal}
+              disabled={isConfirmingDeleteAction}
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 rounded-full bg-destructive/10 p-3">
+                <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                {selectedUser.active
-                  ? "Tem certeza que deseja desativar o usuário "
-                  : "Tem certeza que deseja reativar o usuário "}
-                <strong className="text-foreground">{selectedUser.username}</strong>?
+              <h3 className="mb-2 text-xl font-semibold text-foreground">Excluir Usuário</h3>
+              <p className="mb-6 text-muted-foreground">
+                Você tem certeza que deseja excluir o usuário{" "}
+                <strong className="font-medium text-foreground">{selectedUser.username}</strong>?
+                <br />
+                Esta ação não pode ser desfeita.
               </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-border text-foreground hover:bg-muted"
-                  onClick={closeDeleteModal}
-                  disabled={isConfirmingDeleteAction}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  variant={selectedUser.active ? "destructive" : "default"}
-                  className={`flex-1 ${selectedUser.active ? "" : "bg-chart-1 text-background hover:bg-chart-1/90"}`}
-                  onClick={handleConfirmDelete}
-                  disabled={isConfirmingDeleteAction}
-                >
-                  {isConfirmingDeleteAction ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    deleteActionButtonLabel
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeDeleteModal}
+                disabled={isConfirmingDeleteAction}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isConfirmingDeleteAction}
+                className="w-full sm:w-auto"
+              >
+                {isConfirmingDeleteAction ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  deleteActionButtonLabel
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </>

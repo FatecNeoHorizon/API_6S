@@ -459,6 +459,17 @@ const buildPreviewChartData = (data) => {
     }));
 };
 
+const buildPreviewMetrics = (data) =>
+  ["DEC", "FEC"].reduce((metrics, indicator) => {
+    const record = data.find(
+      (item) =>
+        item.indicator === indicator &&
+        Number.isFinite(item.validation_metrics?.mae),
+    );
+    if (record) metrics[indicator] = record.validation_metrics;
+    return metrics;
+  }, {});
+
 // ─── Helpers Perdas ───────────────────────────────────────────────────────────
 const toISODate = (d) => d.toISOString().split("T")[0];
 
@@ -528,6 +539,7 @@ export default function IndicadoresPage() {
 
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
+  const [previewMetrics, setPreviewMetrics] = useState({})
 
   const fetchTamTotal = async () => {
     const url = `/tam-sam/tam`;
@@ -614,10 +626,13 @@ export default function IndicadoresPage() {
       if (typeof data === "string") {
         console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
         setpreviewChartData([])
+        setPreviewMetrics({})
         return;
       }
       const payload = unwrapApiData(data);
-      setpreviewChartData(buildPreviewChartData(payload?.predictions ?? []))
+      const predictions = payload?.predictions ?? [];
+      setpreviewChartData(buildPreviewChartData(predictions))
+      setPreviewMetrics(buildPreviewMetrics(predictions))
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
@@ -1041,6 +1056,30 @@ export default function IndicadoresPage() {
                       FEC (interrupções)
                     </span>
                   </div>
+                </div>
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    Validacao do modelo (MAE)
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm text-foreground">
+                    <span>
+                      DEC:{" "}
+                      {Number.isFinite(previewMetrics.DEC?.mae)
+                        ? previewMetrics.DEC.mae.toFixed(4)
+                        : "indisponivel"}
+                    </span>
+                    <span>
+                      FEC:{" "}
+                      {Number.isFinite(previewMetrics.FEC?.mae)
+                        ? previewMetrics.FEC.mae.toFixed(4)
+                        : "indisponivel"}
+                    </span>
+                  </div>
+                  {!previewMetrics.DEC && !previewMetrics.FEC && previewChartData.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Metricas nao disponiveis para previsoes salvas anteriormente.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

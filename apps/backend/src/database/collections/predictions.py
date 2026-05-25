@@ -48,6 +48,10 @@ def setup_predictions(db):
                             "bsonType": "date",
                             "description": "Timestamp when prediction was generated"
                         },
+                        "validation_metrics": {
+                            "bsonType": ["object", "null"],
+                            "description": "Validation metrics for the fitted indicator model, including MAE."
+                        },
                     }
                 }
             },
@@ -102,6 +106,10 @@ def setup_predictions(db):
                         "generated_on": {
                             "bsonType": "date",
                             "description": "Timestamp when prediction was generated"
+                        },
+                        "validation_metrics": {
+                            "bsonType": ["object", "null"],
+                            "description": "Validation metrics for the fitted indicator model, including MAE."
                         },
                     }
                 }

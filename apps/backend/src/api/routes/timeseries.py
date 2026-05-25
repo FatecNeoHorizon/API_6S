@@ -131,6 +131,7 @@ async def forecast_unit_timeseries(
                     "forecast_value": forecast.get("forecast_value"),
                     "model": "RandomForestRegressor",
                     "generated_on": datetime.now(timezone.utc),
+                    "validation_metrics": result.get("metrics", {}).get(forecast.get("indicator")),
                 }
                 all_predictions.append(pred)
             

@@ -536,6 +536,7 @@ export default function IndicadoresPage() {
   // TAM/SAM
   const [tamTotal, setTamTotal] = useState(null);
   const [samTotal, setSamTotal] = useState(null);
+  const [samYear, setSamYear] = useState(null);
 
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
@@ -560,7 +561,7 @@ export default function IndicadoresPage() {
     }
   }
 
-  const fetchSamTotal = async (from, to) => {
+  const fetchSamTotal = async (from) => {
 
     const params = new URLSearchParams({ year: from.year })
     const url = `/tam-sam/sam?${params.toString()}`;
@@ -570,10 +571,12 @@ export default function IndicadoresPage() {
       if (typeof data === "string") {
         console.error("[tam-sam] Expected JSON, got text:", data);
         setSamTotal(null);
+        setSamYear(null);
         return;
       }
       const payload = unwrapApiData(data);
       setSamTotal(payload?.sam_total ?? payload)
+      setSamYear(from.year)
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
@@ -647,7 +650,7 @@ export default function IndicadoresPage() {
     setMonthRange({ from, to });
     fetchDecFec(from, to);
     fetchTamTotal();
-    fetchSamTotal(from, to);
+    fetchSamTotal(from);
     fetchPreviewDecFec();
   };
 
@@ -658,7 +661,7 @@ export default function IndicadoresPage() {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
       fetchTamTotal();
-      fetchSamTotal(range.from, range.to);
+      fetchSamTotal(range.from);
       fetchPreviewDecFec();
     }
   };
@@ -923,7 +926,7 @@ export default function IndicadoresPage() {
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                      Total geral
                     </span>
                   </div>
                 </CardContent>
@@ -941,7 +944,7 @@ export default function IndicadoresPage() {
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                      {samYear !== null ? `Ano ${samYear}` : "Selecione um ano"}
                     </span>
                   </div>
                 </CardContent>

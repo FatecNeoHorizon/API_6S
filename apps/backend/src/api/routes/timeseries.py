@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Depends
 from typing import Optional
 from datetime import datetime, timezone
 import logging
+import threading
+import uuid
 
 from src.api.dependencies.auth import AuthenticatedUser, require_admin, get_current_user
 from src.api.schemas.response import success_response
@@ -13,6 +15,64 @@ from src.database.connection import get_client
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/timeseries", tags=["timeseries"])
+_retrain_jobs: dict[str, dict] = {}
+_retrain_jobs_lock = threading.Lock()
+
+
+def _set_retrain_job(job_id: str, **updates) -> None:
+    with _retrain_jobs_lock:
+        _retrain_jobs[job_id].update(updates)
+
+
+def _run_manual_retrain_job(
+    job_id: str,
+    consumer_unit_set_id: str,
+    year_start: int,
+    year_end: int,
+    indicator_types: list[str],
+) -> None:
+    _set_retrain_job(
+        job_id,
+        status="PROCESSING",
+        started_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+    try:
+        result = TimeSeriesForecastProcedures().forecast_for_unit(
+            consumer_unit_set_id=consumer_unit_set_id,
+            year_start=year_start,
+            year_end=year_end,
+            indicator_types=indicator_types,
+            save_models=True,
+        )
+        completed_at = datetime.now(timezone.utc).isoformat()
+        if not result.get("success"):
+            _set_retrain_job(
+                job_id,
+                status="FAILED",
+                completed_at=completed_at,
+                partial=result.get("partial", False),
+                metrics=result.get("metrics", {}),
+                error=result.get("message", "Retraining failed"),
+            )
+            return
+
+        _set_retrain_job(
+            job_id,
+            status="COMPLETED",
+            completed_at=completed_at,
+            partial=False,
+            metrics=result.get("metrics", {}),
+        )
+    except Exception as exc:
+        logger.exception("Manual retrain job failed for %s: %s", consumer_unit_set_id, exc)
+        _set_retrain_job(
+            job_id,
+            status="FAILED",
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            error="Internal error while retraining model",
+        )
+
 
 @router.post("/forecast-unit")
 async def forecast_unit_timeseries(
@@ -179,8 +239,9 @@ async def get_forecast_info(
         )
 
 
-@router.post("/retrain")
+@router.post("/retrain", status_code=202)
 async def trigger_manual_retrain(
+    background_tasks: BackgroundTasks,
     consumer_unit_set_id: str = Query(..., description="Consumer unit ID (e.g., '16648')"),
     year_start: int = Query(2015, description="Start year for retraining data"),
     year_end: int = Query(2024, description="End year for retraining data"),
@@ -199,18 +260,21 @@ async def trigger_manual_retrain(
     - `year_end`: End year for training data (default: 2024)
     - `indicator_types`: List of indicators to retrain (default: ["DEC", "FEC"])
 
-    **Response:**
+    **Response (HTTP 202 Accepted):**
     ```json
     {
         "success": true,
-        "message": "Retraining scheduled for consumer unit 16648",
-        "consumer_unit_id": "16648",
-        "indicators": ["DEC", "FEC"]
+        "data": {
+            "status": "QUEUED",
+            "job_id": "<uuid>",
+            "consumer_unit_id": "16648",
+            "indicators": ["DEC", "FEC"]
+        }
     }
     ```
 
-    **Note:** Retraining happens in the background. Check logs or re-query the forecast endpoint
-    to see updated model metrics.
+    **Note:** Retraining happens in the background. Check `GET /timeseries/retrain/{job_id}`
+    to read job status and resulting model metrics.
     """
     try:
         # Normalize indicator types
@@ -225,32 +289,35 @@ async def trigger_manual_retrain(
                 f"Invalid indicator types: {invalid}. Valid options: {valid_indicators}"
             )
 
-        # Train and save models for this consumer unit
-        # Using a synthetic load_id for manual triggers
-        load_id = f"manual_retrain_{consumer_unit_set_id}_{int(__import__('time').time())}"
+        job_id = uuid.uuid4().hex
+        queued_at = datetime.now(timezone.utc).isoformat()
+        with _retrain_jobs_lock:
+            _retrain_jobs[job_id] = {
+                "job_id": job_id,
+                "status": "QUEUED",
+                "consumer_unit_id": consumer_unit_set_id,
+                "indicators": indicator_types,
+                "year_range": f"{year_start}-{year_end}",
+                "queued_at": queued_at,
+            }
 
-        procedures = TimeSeriesForecastProcedures()
-        result = procedures.forecast_for_unit(
-            consumer_unit_set_id=consumer_unit_set_id,
-            year_start=year_start,
-            year_end=year_end,
-            indicator_types=indicator_types,
-            save_models=True,
+        background_tasks.add_task(
+            _run_manual_retrain_job,
+            job_id,
+            consumer_unit_set_id,
+            year_start,
+            year_end,
+            indicator_types,
         )
 
-        if not result.get("success"):
-            raise HTTPException(
-                status_code=400,
-                detail=result.get("message", "Retraining failed"),
-            )
-
-        logger.info(f"Manual retrain triggered for {consumer_unit_set_id}: {load_id}")
+        logger.info("Manual retrain scheduled for %s: %s", consumer_unit_set_id, job_id)
 
         return success_response({
-            "message": f"Retraining completed for consumer unit {consumer_unit_set_id}",
+            "message": f"Retraining scheduled for consumer unit {consumer_unit_set_id}",
+            "job_id": job_id,
+            "status": "QUEUED",
             "consumer_unit_id": consumer_unit_set_id,
             "indicators": indicator_types,
-            "metrics": result.get("metrics", {}),
         })
 
     except ValueError as exc:
@@ -258,9 +325,25 @@ async def trigger_manual_retrain(
             status_code=400,
             detail=str(exc),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception(f"Error triggering retrain for {consumer_unit_set_id}")
         raise HTTPException(
             status_code=500,
             detail=f"Internal error: {str(exc)}",
         )
+
+
+@router.get("/retrain/{job_id}")
+async def get_manual_retrain_status(
+    job_id: str,
+    admin: AuthenticatedUser = Depends(require_admin),
+):
+    with _retrain_jobs_lock:
+        job = _retrain_jobs.get(job_id)
+
+    if job is None:
+        raise HTTPException(status_code=404, detail="Retrain job not found")
+
+    return success_response(job)

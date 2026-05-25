@@ -29,6 +29,53 @@ Consent is managed at the clause level — each user can accept or revoke indivi
 
 The complete consent history is preserved forever — it is never deleted or updated. This allows proving at any point in time what the user accepted and when.
 
+### Append-Only Consent History
+
+User consent is recorded through an append-only event model in `TB_CONSENT_LOG`. The system does not store consent as a single mutable flag. Instead, every acceptance or revocation creates a new event, preserving the full consent timeline.
+
+This model supports the controller’s burden of proof under LGPD Art. 8, §5, and the accountability principle under Art. 6, X, because the system can demonstrate when consent was given, which clause was accepted, which policy version applied, and whether the user later revoked or re-accepted consent.
+
+`TB_CONSENT_LOG` is a shared table for all users. Each record is linked to a specific user through `USER_ID`, and to the applicable legal content through `CLAUSE_ID` and `POLICY_VERSION_ID`.
+
+The current consent state is derived from the latest event for each `USER_ID + CLAUSE_ID` combination:
+
+```sql
+SELECT
+    ACTION,
+    POLICY_VERSION_ID,
+    CREATED_AT
+FROM TB_CONSENT_LOG
+WHERE USER_ID = :user_id
+  AND CLAUSE_ID = :clause_id
+ORDER BY CREATED_AT DESC, LOG_UUID DESC
+LIMIT 1;
+```
+
+If the latest action is `CONSENT_ACCEPTED`, the clause is considered accepted. If the latest action is `CONSENT_REVOKED`, or if no event exists, the clause is considered pending.
+
+The system does not need to list all users to find a specific person’s consent history. It retrieves the required records directly by filtering `TB_CONSENT_LOG` by `USER_ID`.
+
+### Pending Consent Enforcement
+
+The operational consent state is derived through `V_PENDING_CONSENT`, which identifies mandatory clauses that still require user acceptance.
+
+This pending consent logic is used by the authentication flow, authorization dependencies and middleware. If a user has unresolved mandatory consent, protected routes may be blocked until the required clauses are accepted.
+
+Thus:
+
+- `TB_CONSENT_LOG` stores the immutable evidence history;
+- `TB_POLICY_VERSION` and `TB_POLICY_CLAUSE` store the legal and textual context;
+- `V_PENDING_CONSENT` derives the current pending-consent state;
+- authentication and middleware enforce access restrictions when consent is pending.
+
+### Tamper Resistance and Retention
+
+Consent records are protected as append-only evidence. Existing consent events must not be updated or deleted. Revocation or re-acceptance must be represented by inserting a new event.
+
+This preserves the evidentiary sequence required for LGPD compliance and legal defense.
+
+After anonymization, the consent history may be preserved as non-identifying institutional evidence, provided that the remaining `USER_ID` can no longer identify a natural person. This supports LGPD Art. 12 regarding anonymized data and Art. 16 regarding justified post-termination retention for legal compliance and defense of rights.
+
 ## 👤 Data Subject Rights (Art. 18, LGPD)
 
 | Right | Implementation |
@@ -39,6 +86,18 @@ The complete consent history is preserved forever — it is never deleted or upd
 | **Portability** | Data can be exported from the application layer |
 | **Revocation of consent** | New REVOCATION record inserted in `TB_CONSENT_LOG` |
 | **Information** | Policy versions and clauses are stored and versioned |
+
+## Data Protection Officer Contact (Art. 41, §1)
+
+ZEUS discloses the Data Protection Officer (Encarregado pelo Tratamento de Dados Pessoais) contact channel required by LGPD Art. 41.
+
+The disclosed information is:
+
+- DPO identification: `Encarregado pelo Tratamento de Dados Pessoais`
+- Contact email: `dpo@tecsys.com.br`
+- Response commitment: up to 15 business days, following LGPD Art. 18, §4
+
+The purpose of this contact channel is to allow data subjects to exercise LGPD Art. 18 rights, including access, correction, deletion, portability, consent revocation, and requests for information about personal data processing.
 
 ### 🗑️ Right to Erasure — How It Works
 

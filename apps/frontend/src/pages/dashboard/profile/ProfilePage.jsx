@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Mail, Save, Shield, Trash2, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { getMyProfile, updateMyProfile } from "@/api/profile";
+import { exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const dpoContact = {
+  name: "Encarregado pelo Tratamento de Dados Pessoais",
+  email: "dpo@tecsys.com.br",
+  response_time: "Até 15 dias úteis, conforme LGPD Art. 18, §4",
+};
 
 function getApiErrorMessage(error, fallbackMessage) {
   const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail;
@@ -48,6 +53,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({ username: "", email: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -94,6 +100,25 @@ export default function ProfilePage() {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const data = await exportMyData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "my-data-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Exportacao concluida.");
+    } catch {
+      toast.error("Nao foi possivel exportar seus dados. Tente novamente.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -268,6 +293,30 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Download className="h-4 w-4 text-primary" />
+                Portabilidade de dados
+              </CardTitle>
+              <CardDescription>
+                Exporte todos os seus dados pessoais armazenados na plataforma (LGPD Art. 18-V).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-border text-foreground hover:bg-muted hover:text-foreground disabled:opacity-60"
+                onClick={handleExport}
+                disabled={isExporting}
+              >
+                {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isExporting ? "Exportando..." : "Exportar meus dados"}
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="rounded-lg border-destructive/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-destructive">
@@ -291,6 +340,17 @@ export default function ProfilePage() {
               </Button>
             </CardContent>
           </Card>
+
+          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Encarregado de Dados</p>
+            <p className="mt-1">
+              {dpoContact.name} ·{" "}
+              <a className="font-medium text-primary hover:underline" href={`mailto:${dpoContact.email}`}>
+                {dpoContact.email}
+              </a>
+            </p>
+            <p className="mt-1">{dpoContact.response_time}</p>
+          </div>
         </aside>
       </div>
     </div>

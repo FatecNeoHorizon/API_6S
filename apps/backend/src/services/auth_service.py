@@ -1,15 +1,21 @@
 from datetime import datetime, timedelta, timezone
 import secrets
 
+import structlog
 from fastapi import HTTPException, status
 
 from src.api.schemas.user_schemas import (
+    ConsentExportItem,
+    DataExportResponse,
     FirstAccessRequest,
     ForgotPasswordResponse,
+    IdentityExport,
     LoginRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    SessionExportItem,
 )
+from src.config.log_events import SESSION_INVALIDATED_ALL, SESSION_LISTED, SESSION_REVOKED
 from src.config.auth_security import (
     create_access_token,
     hash_password,
@@ -18,17 +24,25 @@ from src.config.auth_security import (
     verify_password,
 )
 from src.config.email_hasher import EmailHasher
+from src.config.log_events import DATA_EXPORT_REQUESTED
 from src.config.settings import Settings
-from src.database.postgres import set_current_user
+from src.database.postgres import get_pg_connection, set_current_user
+from src.repositories.consent_repository import list_user_consent_history
+from src.services.user_service import _decrypt_email
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     complete_first_access,
     consume_valid_first_access_token,
     create_password_reset_token,
     create_user_session,
+    get_sessions_for_export,
     get_user_auth_by_email_hash,
+    get_user_for_export,
+    get_user_sessions,
     get_valid_password_reset_token,
+    invalidate_single_session,
     invalidate_user_sessions,
+    invalidate_session,
     mark_password_reset_token_used,
     rotate_refresh_token,
     update_user_password,
@@ -36,6 +50,7 @@ from src.repositories.user_repository import (
 
 
 settings = Settings()
+log = structlog.get_logger()
 
 
 def _build_email_hash(email: str) -> str:
@@ -57,9 +72,6 @@ def _create_session_and_token(
 ):
     set_current_user(conn, user_id)
 
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
-    )
     refresh_token = _generate_refresh_token()
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(
         days=settings.jwt_refresh_token_expire_days
@@ -70,7 +82,7 @@ def _create_session_and_token(
         user_id=user_id,
         source_ip=source_ip,
         user_agent=user_agent,
-        expires_at=expires_at,
+        expires_at=refresh_expires_at,
         refresh_token_hash=hash_token(refresh_token),
         refresh_expires_at=refresh_expires_at,
     )
@@ -224,8 +236,29 @@ def login(
     )
 
 
-def logout(conn, *, user_id: str) -> None:
-    invalidate_user_sessions(conn, user_id)
+def logout(conn, *, user_id: str, session_id: str) -> None:
+    set_current_user(conn, user_id)
+
+    was_invalidated = invalidate_session(conn, session_id)
+
+    if not was_invalidated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_session",
+        )
+
+
+def logout(conn, *, user_id: str, session_id: str) -> None:
+    set_current_user(conn, user_id)
+
+    was_invalidated = invalidate_session(conn, session_id)
+
+    if not was_invalidated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_session",
+        )
+
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:
@@ -286,4 +319,125 @@ def reset_password(conn, *, payload: ResetPasswordRequest) -> dict:
 
     mark_password_reset_token_used(conn, str(reset_data["reset_uuid"]))
 
+    invalidated = invalidate_user_sessions(conn, user_id)
+    for session_uuid in invalidated:
+        log.info(
+            SESSION_INVALIDATED_ALL,
+            acting_user_id=user_id,
+            target_session_uuid=session_uuid,
+            reason="PASSWORD_CHANGE",
+        )
+
     return {"detail": "password_reset_successfully"}
+
+
+def export_user_data(conn, *, user_id: str) -> DataExportResponse:
+    set_current_user(conn, user_id)
+
+    user = get_user_for_export(conn, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="user_not_found",
+        )
+
+    if user["anonymized_at"] is not None:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="user_data_no_longer_exists",
+        )
+
+    identity = IdentityExport(
+        user_id=user["user_uuid"],
+        username=user["username"],
+        email=_decrypt_email(user["email_enc"], settings),
+        profile=user["profile_name"],
+        active=user["active"],
+        first_access_completed=user["first_access_completed"],
+        created_at=user["created_at"],
+        updated_at=user["updated_at"],
+    )
+
+    consent_history = [
+        ConsentExportItem(
+            consent_log_id=row["log_uuid"],
+            clause_id=row["clause_uuid"],
+            clause_code=row["clause_code"],
+            clause_title=row["clause_title"],
+            policy_version_id=row["policy_version_id"],
+            policy_type=row["policy_type"],
+            policy_version=row["policy_version"],
+            action=row["action"],
+            timestamp=row["registered_at"],
+            source_ip=row["source_ip"],
+            user_agent=row["user_agent"],
+            channel=row["channel"],
+        )
+        for row in list_user_consent_history(conn, user_id)
+    ]
+
+    session_history = [
+        SessionExportItem(
+            session_id=row["session_uuid"],
+            source_ip=row["source_ip"],
+            user_agent=row["user_agent"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            expires_at=row["expires_at"],
+            invalidated_at=row["invalidated_at"],
+        )
+        for row in get_sessions_for_export(conn, user_id)
+    ]
+
+    log.info(DATA_EXPORT_REQUESTED, user_id=user_id)
+
+    return DataExportResponse(
+        exported_at=datetime.now(timezone.utc),
+        identity=identity,
+        consent_history=consent_history,
+        session_history=session_history,
+    )
+
+
+def list_sessions_service(conn, *, user_id: str) -> list[dict]:
+    sessions = get_user_sessions(conn, user_id)
+    log.info(SESSION_LISTED, acting_user_id=user_id, count=len(sessions))
+    return sessions
+
+
+def revoke_session_service(
+    conn, *, session_uuid: str, current_session_id: str, acting_user_id: str
+) -> None:
+    if session_uuid == current_session_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_revoke_current_session",
+        )
+
+    revoked = invalidate_single_session(
+        conn, session_uuid=session_uuid, user_id=acting_user_id
+    )
+    if not revoked:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="session_not_found",
+        )
+
+    log.info(
+        SESSION_REVOKED,
+        acting_user_id=acting_user_id,
+        target_session_uuid=session_uuid,
+        reason="USER_REVOCATION",
+    )
+
+
+def admin_invalidate_user_sessions_service(*, target_user_id: str, acting_user_id: str) -> None:
+    with get_pg_connection() as conn:
+        invalidated = invalidate_user_sessions(conn, target_user_id)
+    for session_uuid in invalidated:
+        log.info(
+            SESSION_INVALIDATED_ALL,
+            acting_user_id=acting_user_id,
+            target_session_uuid=session_uuid,
+            reason="ADMIN_DEACTIVATION",
+        )

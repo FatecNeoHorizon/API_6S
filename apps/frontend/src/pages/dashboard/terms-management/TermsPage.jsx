@@ -48,8 +48,10 @@ const normalizeTerm = (term) => ({
   policy_version_id: term.policy_version_id,
   version: term.version,
   policy_type: term.policy_type,
+  description: term.description ?? "",
   effective_from: term.effective_from,
   created_at: term.created_at,
+  status: term.status,
   clauses: term.clauses ?? [],
   content: term.content ?? "",
   clause_count: term.clause_count ?? term.clauses?.length ?? 0,
@@ -75,26 +77,17 @@ const toDatetimeLocalString = (date) => {
   return new Date(date.getTime() - offsetInMs).toISOString().slice(0, 16);
 };
 
-const getStatus = (effectiveFrom, allVersionsOfSameType) => {
-  const today = new Date();
-  const date = new Date(effectiveFrom);
-
-  if (date > today) {
+const getStatus = (status) => {
+  if (status === StatusFilter.scheduled) {
     return {
       key: StatusFilter.scheduled,
-      label: "Agendado",
+      label: "Em vigor a partir de",
       className: "bg-muted text-muted-foreground",
       icon: <Clock className="w-3 h-3" />,
     };
   }
 
-  const isCurrent = !allVersionsOfSameType.some(
-    (v) =>
-      new Date(v.effective_from) > date &&
-      new Date(v.effective_from) <= today
-  );
-
-  if (isCurrent) {
+  if (status === StatusFilter.current) {
     return {
       key: StatusFilter.current,
       label: "Vigente",
@@ -105,7 +98,7 @@ const getStatus = (effectiveFrom, allVersionsOfSameType) => {
 
   return {
     key: StatusFilter.expired,
-    label: "Expirado",
+    label: "Substituída",
     className: "bg-muted text-muted-foreground",
     icon: <X className="w-3 h-3" />,
   };
@@ -116,13 +109,13 @@ const buildPaginatedTermsResponse = ({ page, pageSize, searchTerm, statusFilter,
 
   const filtered = sourceTerms.filter((term) => {
     const termTypeLabel = TermType[term.policy_type] || term.policy_type;
-    const sameType = sourceTerms.filter((t) => t.policy_type === term.policy_type);
-    const status = getStatus(term.effective_from, sameType);
+    const status = getStatus(term.status);
     const matchesStatus = statusFilter === StatusFilter.all || status.key === statusFilter;
 
     const matchesSearch =
       termTypeLabel.toLowerCase().includes(normalizedSearch) ||
-      term.version.toLowerCase().includes(normalizedSearch);
+      term.version.toLowerCase().includes(normalizedSearch) ||
+      (term.description ?? "").toLowerCase().includes(normalizedSearch);
 
     return matchesSearch && matchesStatus;
   });
@@ -173,6 +166,7 @@ export default function TermsPage() {
   const [createForm, setCreateForm] = useState({
     policy_type: "PRIVACY_POLICY",
     version: "",
+    description: "",
     effective_from: "",
     content: "",
   });
@@ -281,6 +275,7 @@ export default function TermsPage() {
     setCreateForm({
       policy_type: "PRIVACY_POLICY",
       version: "",
+      description: "",
       effective_from: "",
       content: "",
     });
@@ -377,6 +372,7 @@ export default function TermsPage() {
   const handleCreateVersion = async () => {
     const version = createForm.version.trim();
     const content = createForm.content.trim();
+    const description = createForm.description.trim();
     const effectiveFrom = createForm.effective_from;
     const policyType = createForm.policy_type;
 
@@ -404,6 +400,7 @@ export default function TermsPage() {
       const versionResponse = await createTermsVersion({
         version,
         policy_type: policyType,
+        description: description || null,
         content,
         effective_from: parsedEffectiveFrom.toISOString(),
       });
@@ -501,7 +498,7 @@ export default function TermsPage() {
       // If the version is scheduled, refresh the versions list so clause_count updates
       try {
         const term = allTerms.find((t) => t.policy_version_id === addClauseVersionId);
-        if (term && new Date(term.effective_from) > new Date()) {
+        if (term?.status === StatusFilter.scheduled) {
           await loadTerms();
         }
       } catch (e) {
@@ -573,11 +570,10 @@ export default function TermsPage() {
   const stats = allTerms.reduce(
     (acc, term) => {
       acc.total += 1;
-      const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
-      const { label } = getStatus(term.effective_from, sameType);
-      if (label === "Vigente") acc.vigentes += 1;
-      if (label === "Agendado") acc.agendados += 1;
-      if (label === "Expirado") acc.expirados += 1;
+      const { key } = getStatus(term.status);
+      if (key === StatusFilter.current) acc.vigentes += 1;
+      if (key === StatusFilter.scheduled) acc.agendados += 1;
+      if (key === StatusFilter.expired) acc.expirados += 1;
       return acc;
     },
     { total: 0, vigentes: 0, agendados: 0, expirados: 0 }
@@ -632,7 +628,7 @@ export default function TermsPage() {
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Termos Agendados
+              Com Vigência Futura
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -648,7 +644,7 @@ export default function TermsPage() {
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Termos Expirados
+              Versões Substituídas
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -663,7 +659,7 @@ export default function TermsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por tipo ou versão..."
+          placeholder="Buscar por tipo, versão ou descrição..."
           value={searchTerm}
           onChange={handleSearchChange}
           className="border-border bg-input pl-10 text-foreground placeholder:text-muted-foreground"
@@ -683,8 +679,8 @@ export default function TermsPage() {
           >
             <option value={StatusFilter.all}>Todos</option>
             <option value={StatusFilter.current}>Vigentes</option>
-            <option value={StatusFilter.scheduled}>Agendados</option>
-            <option value={StatusFilter.expired}>Expirados</option>
+            <option value={StatusFilter.scheduled}>Vigência futura</option>
+            <option value={StatusFilter.expired}>Substituídas</option>
           </select>
         </div>
 
@@ -753,6 +749,21 @@ export default function TermsPage() {
                   value={createForm.version}
                   onChange={handleCreateFormChange}
                   placeholder="Ex: 1.0.0"
+                  className="border-border bg-input text-foreground"
+                  disabled={isCreatingVersion}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="create-description">
+                  Descrição administrativa
+                </label>
+                <Input
+                  id="create-description"
+                  name="description"
+                  value={createForm.description}
+                  onChange={handleCreateFormChange}
+                  placeholder="Ex: Atualização da política para nova regra interna"
                   className="border-border bg-input text-foreground"
                   disabled={isCreatingVersion}
                 />
@@ -1196,9 +1207,9 @@ export default function TermsPage() {
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle className="text-foreground">Versões Publicadas</CardTitle>
+              <CardTitle className="text-foreground">Histórico de Versões</CardTitle>
               <CardDescription className="text-muted-foreground">
-                Gerencie os Termos de Uso e Políticas de Privacidade.
+                Gerencie versões de termos conforme sua data de vigência.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
@@ -1254,10 +1265,7 @@ export default function TermsPage() {
 
                 {!loading &&
                   termsPage.data.map((term) => {
-                    const sameType = allTerms.filter(
-                      (t) => t.policy_type === term.policy_type
-                    );
-                    const status = getStatus(term.effective_from, sameType);
+                    const status = getStatus(term.status);
                     const isOpen = openRowId === term.policy_version_id;
 
                     return (
@@ -1301,7 +1309,7 @@ export default function TermsPage() {
                                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                                   <div className="flex-1">
                                     <h3 className="mb-3 text-sm font-semibold text-foreground">Detalhes da Versão</h3>
-                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                                       <div>
                                         <p className="text-xs text-muted-foreground">Tipo</p>
                                         <p className="text-sm font-medium text-foreground">
@@ -1311,6 +1319,12 @@ export default function TermsPage() {
                                       <div>
                                         <p className="text-xs text-muted-foreground">Versão</p>
                                         <p className="text-sm font-medium text-foreground">{term.version}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Descrição</p>
+                                        <p className="text-sm font-medium text-foreground">
+                                          {term.description || "Sem descrição"}
+                                        </p>
                                       </div>
                                       <div>
                                         <p className="text-xs text-muted-foreground">Data de Vigência</p>
@@ -1330,8 +1344,7 @@ export default function TermsPage() {
 
                                 {/* Aviso de Versão em Vigência ou Expirada */}
                                 {(() => {
-                                  const sameType = allTerms.filter((t) => t.policy_type === term.policy_type);
-                                  const status = getStatus(term.effective_from, sameType);
+                                  const status = getStatus(term.status);
 
                                   if (status.key === StatusFilter.current) {
                                     return (
@@ -1349,7 +1362,7 @@ export default function TermsPage() {
                                       <div className="mb-4 flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                                         <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                         <p>
-                                          Esta versão está expirada. Não é possível adicionar ou modificar cláusulas de termos expirados.
+                                          Esta versão foi substituída por uma versão mais recente. Não é possível adicionar ou modificar cláusulas de versões substituídas.
                                         </p>
                                       </div>
                                     );
@@ -1375,9 +1388,7 @@ export default function TermsPage() {
                                       </Button>
 
                                       {(() => {
-                                        const today = new Date();
-                                        const effectiveDate = new Date(term.effective_from);
-                                        const canAddClauses = effectiveDate > today;
+                                        const canAddClauses = term.status === StatusFilter.scheduled;
                                         return canAddClauses ? (
                                           <Button
                                             type="button"

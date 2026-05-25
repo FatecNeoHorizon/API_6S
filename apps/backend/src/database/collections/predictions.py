@@ -114,24 +114,41 @@ def setup_predictions(db):
     
     # Ensure indexes exist and handle possible conflicts with pre-existing indexes
     desired_indexes = {
-        "idx_natural_key": [("consumer_unit_set_id", ASCENDING), ("indicator", ASCENDING), ("forecast_year", ASCENDING), ("forecast_period", ASCENDING)],
-        "idx_unit_indicator": [("consumer_unit_set_id", ASCENDING), ("indicator", ASCENDING)],
-        "idx_forecast_year_period": [("forecast_year", ASCENDING), ("forecast_period", ASCENDING)],
+        "idx_natural_key": {
+            "keys": [("consumer_unit_set_id", ASCENDING), ("indicator", ASCENDING), ("forecast_year", ASCENDING), ("forecast_period", ASCENDING)],
+            "unique": True,
+        },
+        "idx_unit_indicator": {
+            "keys": [("consumer_unit_set_id", ASCENDING), ("indicator", ASCENDING)],
+            "unique": False,
+        },
+        "idx_forecast_year_period": {
+            "keys": [("forecast_year", ASCENDING), ("forecast_period", ASCENDING)],
+            "unique": False,
+        },
     }
 
     existing_indexes = col.index_information()
 
-    for name, key_spec in desired_indexes.items():
-        # Compare existing index fields (if any) with desired fields; drop if different
+    for name, index_spec in desired_indexes.items():
+        key_spec = index_spec["keys"]
+        desired_unique = index_spec["unique"]
+
+        # Rebuild indexes whose fields or uniqueness no longer match the schema contract.
         if name in existing_indexes:
             existing_fields = [t[0] for t in existing_indexes[name]["key"]]
             desired_fields = [t[0] for t in key_spec]
-            if existing_fields != desired_fields:
+            existing_unique = bool(existing_indexes[name].get("unique", False))
+            if existing_fields != desired_fields or existing_unique != desired_unique:
                 try:
                     col.drop_index(name)
                 except Exception:
                     # best-effort: if drop fails, continue and let create_index raise informative error
                     pass
 
-        # Create index (idempotent if same specification)
-        col.create_index(key_spec, name=name, background=True)
+        create_options = {"name": name, "background": True}
+        if desired_unique:
+            create_options["unique"] = True
+
+        # If duplicate natural keys already exist, MongoDB rejects this unique index creation.
+        col.create_index(key_spec, **create_options)

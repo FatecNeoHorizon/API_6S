@@ -92,6 +92,7 @@ def format_consent_history(rows: list[dict]) -> list[dict]:
             "action": row["action"],
             "registered_at": row["registered_at"],
             "channel": row["channel"],
+            "consent_hash": row["consent_hash"],
             "policy_version_id": row["policy_version_id"],
             "policy_type": row["policy_type"],
             "policy_version": row["policy_version"],

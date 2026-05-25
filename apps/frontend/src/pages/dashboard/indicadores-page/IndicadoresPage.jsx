@@ -535,16 +535,19 @@ export default function IndicadoresPage() {
 
   // TAM/SAM
   const [tamTotal, setTamTotal] = useState(null);
+  const [tamLoading, setTamLoading] = useState(false);
   const [samTotal, setSamTotal] = useState(null);
+  const [samLoading, setSamLoading] = useState(false);
   const [samYear, setSamYear] = useState(null);
 
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
   const [previewMetrics, setPreviewMetrics] = useState({})
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const fetchTamTotal = async () => {
     const url = `/tam-sam/tam`;
-    setDecFecLoading(true);
+    setTamLoading(true);
     try {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
@@ -557,7 +560,7 @@ export default function IndicadoresPage() {
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setTamLoading(false);
     }
   }
 
@@ -565,7 +568,7 @@ export default function IndicadoresPage() {
 
     const params = new URLSearchParams({ year: from.year })
     const url = `/tam-sam/sam?${params.toString()}`;
-    setDecFecLoading(true);
+    setSamLoading(true);
     try {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
@@ -580,7 +583,7 @@ export default function IndicadoresPage() {
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setSamLoading(false);
     }
   }
 
@@ -623,7 +626,7 @@ export default function IndicadoresPage() {
 
     const url = `/predictions/?${params.toString()}`;
     console.log("[get-preview-dec-fec] Fetching:", url);
-    setDecFecLoading(true);
+    setPreviewLoading(true);
     try {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
@@ -639,7 +642,7 @@ export default function IndicadoresPage() {
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setPreviewLoading(false);
     }
   };
 
@@ -922,7 +925,7 @@ export default function IndicadoresPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
-                    {decFecLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
+                    {tamLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
@@ -940,7 +943,7 @@ export default function IndicadoresPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
-                    {decFecLoading ? "..." : samTotal !== null ? samTotal : "—"}
+                    {samLoading ? "..." : samTotal !== null ? samTotal : "—"}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
@@ -1093,7 +1096,9 @@ export default function IndicadoresPage() {
                   Previsão DEC/FEC
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  {decFecPeriodLabel
+                  {previewLoading
+                    ? "Carregando previsão..."
+                    : decFecPeriodLabel
                     ? `Previsão · ${decFecPeriodLabel}`
                     : "Selecione um período"}
                 </CardDescription>

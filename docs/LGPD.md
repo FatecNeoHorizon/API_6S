@@ -29,6 +29,68 @@ Consent is managed at the clause level — each user can accept or revoke indivi
 
 The complete consent history is preserved forever — it is never deleted or updated. This allows proving at any point in time what the user accepted and when.
 
+### Consent Proof and Evidence Hash
+
+Consent is recorded as an append-only event history in `TB_CONSENT_LOG`. The system does not use a mutable consent flag. Each acceptance or revocation creates a new event linked to `USER_ID`, `CLAUSE_ID`, `POLICY_VERSION_ID`, `ACTION` and `CREATED_AT`.
+
+This model supports LGPD Art. 8 because it preserves evidence that consent was free, informed, specific and unambiguous. It also supports the controller’s burden of proof under Art. 8, §5 and the accountability principle under Art. 6, X.
+
+To strengthen the proof model, each consent event should also store a deterministic `CONSENT_HASH`. This hash is calculated from the core evidentiary fields of the row:
+
+```text
+USER_ID + CLAUSE_ID + POLICY_VERSION_ID + ACTION + CREATED_AT
+```
+
+The hash is stored alongside the consent event and works as an additional integrity check. If any of these fields are changed after insertion, recalculating the hash will expose the mismatch.
+
+The consent hash complements the existing append-only protection. The append-only trigger prevents `UPDATE` and `DELETE` operations on `TB_CONSENT_LOG`; the hash provides a verifiable seal over the main values of the event.
+
+A simplified verification query is:
+
+```sql
+SELECT
+    LOG_UUID,
+    CONSENT_HASH,
+    fn_compute_consent_log_hash(
+        USER_ID,
+        CLAUSE_ID,
+        POLICY_VERSION_ID,
+        ACTION,
+        CREATED_AT
+    ) AS RECALCULATED_HASH,
+    CONSENT_HASH = fn_compute_consent_log_hash(
+        USER_ID,
+        CLAUSE_ID,
+        POLICY_VERSION_ID,
+        ACTION,
+        CREATED_AT
+    ) AS HASH_VALID
+FROM TB_CONSENT_LOG
+WHERE USER_ID = :user_id;
+```
+
+The complete evidence chain is reconstructed by joining:
+
+```text
+TB_CONSENT_LOG
+TB_POLICY_CLAUSE
+TB_POLICY_VERSION
+```
+
+This allows the system to prove who consented, which clause was accepted or revoked, which policy version applied, when the event occurred and whether the stored evidence remains consistent.
+
+`TB_CONSENT_LOG` is a shared table for all users. The consent history of a specific person is retrieved directly through `USER_ID`; the system does not need to list all users to find the required individual.
+
+The consent proof model is therefore based on:
+
+- clause-level consent records;
+- policy version traceability;
+- append-only storage;
+- deterministic evidence hash;
+- pending-consent enforcement through `V_PENDING_CONSENT`;
+- post-anonymization preservation when legally justified under LGPD Art. 12 and Art. 16.
+
+
 ## 👤 Data Subject Rights (Art. 18, LGPD)
 
 | Right | Implementation |

@@ -81,7 +81,7 @@ class Tam_sam_procedures:
         )
 
         if not doc:
-            return self.calculate_and_persist_tam_total()
+            return None
 
         calculated_on = doc.get("calculated_on")
         if isinstance(calculated_on, datetime):

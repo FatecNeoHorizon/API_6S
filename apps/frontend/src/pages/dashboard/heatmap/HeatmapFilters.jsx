@@ -380,8 +380,8 @@ export function HeatmapFilters() {
   }, [selectedTab, selectedDate])
 
   return (
-    <div className="grid grid-cols-[3fr_7fr] gap-4">
-      <div className="grid grid-cols-2 gap-4 justify-between">
+    <div className="grid grid-cols-[2fr_8fr] gap-4 flex-nowrap">
+      <div className="grid grid-flow-col grid-rows-15 gap-4 justify-between">
         <div className="col-span-2 gap-2">
           <Button
             variant={selectedTab === "DEC" ? "default" : "outline"}
@@ -409,7 +409,7 @@ export function HeatmapFilters() {
           </Button>
         </div>
 
-        <div>
+        <div className="row-start-2">
           <Popover
             open={isPopoverOpen}
             onOpenChange={setIsPopoverOpen}

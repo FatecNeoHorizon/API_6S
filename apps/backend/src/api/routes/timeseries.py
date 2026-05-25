@@ -76,9 +76,15 @@ async def forecast_unit_timeseries(
             
             if all_predictions:
                 persist_metrics = persist_predictions(predictions_collection, all_predictions)
+                if persist_metrics.get("rejected", 0) > 0:
+                    raise RuntimeError("One or more predictions were rejected during persistence")
                 logger.info(f"[forecast_unit_timeseries] Predictions persisted: {persist_metrics}")
         except Exception as e:
             logger.exception("[forecast_unit_timeseries] Failed to persist predictions: %s", e)
+            raise HTTPException(
+                status_code=500,
+                detail="Forecast calculated but predictions could not be persisted",
+            ) from e
         
         # Return response with only newly inserted predictions count
         return success_response({
@@ -98,6 +104,8 @@ async def forecast_unit_timeseries(
             status_code=400,
             detail=str(exc),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,

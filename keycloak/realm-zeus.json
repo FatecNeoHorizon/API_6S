@@ -4,26 +4,36 @@
   "sslRequired": "none",
   "roles": {
     "realm": [
-      { "name": "ADMIN",   "description": "Full access — user management, settings, and all data" },
-      { "name": "ANALYST", "description": "Operational access — dashboards, reports, ETL execution" },
-      { "name": "VIEWER",  "description": "Read-only access — dashboard and indicator visualization" }
+      {
+        "name": "ADMIN",
+        "description": "Dono/admin Horizon. Acesso total: LGPD, usuários, termos, uploads e áreas analíticas."
+      },
+      {
+        "name": "MANAGER",
+        "description": "Administrador Tecsys. Pode operar o sistema, fazer uploads e análises. Sem acesso a usuários, termos ou rotas LGPD."
+      },
+      {
+        "name": "ANALYST",
+        "description": "Operacional/visualizador. Acessa dashboards, heatmap, estrutura de redes e próprios dados. Sem gestão administrativa nem upload."
+      }
     ]
   },
   "clients": [
     {
-      "clientId": "zeus-app",
+      "clientId": "zeus-frontend",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "http://localhost:5173/*"
+        "http://localhost:5173/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:5173"
       ],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/"
       }
     }
   ]

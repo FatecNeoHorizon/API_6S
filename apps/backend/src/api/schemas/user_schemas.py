@@ -188,6 +188,8 @@ class RefreshTokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
+class LogoutResponse(BaseModel):
+    detail: str
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
@@ -214,6 +216,50 @@ class ResetPasswordRequest(BaseModel):
 
 class ResetPasswordResponse(BaseModel):
     detail: str
+
+
+class IdentityExport(BaseModel):
+    user_id: UUID
+    username: str
+    email: str
+    profile: str
+    active: bool
+    first_access_completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConsentExportItem(BaseModel):
+    consent_log_id: UUID
+    clause_id: UUID
+    clause_code: str
+    clause_title: str
+    policy_version_id: UUID
+    policy_type: str
+    policy_version: str
+    action: str
+    timestamp: datetime
+    source_ip: str
+    user_agent: str
+    channel: str | None
+
+
+class SessionExportItem(BaseModel):
+    session_id: UUID
+    source_ip: str
+    user_agent: str
+    created_at: datetime
+    updated_at: datetime
+    expires_at: datetime | None
+    invalidated_at: datetime | None = None
+
+
+class DataExportResponse(BaseModel):
+    export_version: str = "1.0"
+    exported_at: datetime
+    identity: IdentityExport
+    consent_history: list[ConsentExportItem]
+    session_history: list[SessionExportItem]
 
 
 class SessionResponse(BaseModel):

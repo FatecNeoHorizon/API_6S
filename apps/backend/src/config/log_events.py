@@ -10,6 +10,7 @@ USER_LISTED = "user.listed"
 # Policy events
 POLICY_VERSION_CREATED = "policy.version.created"
 POLICY_CLAUSE_CREATED = "policy.clause.created"
+POLICY_UPDATE_NOTIFICATION_SCHEDULED = "policy.update.notification.scheduled"
 
 # Consent events
 CONSENT_REGISTERED = "consent.registered"

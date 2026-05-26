@@ -51,6 +51,7 @@ class ConsentHistoryItem(BaseModel):
     action: str
     registered_at: datetime
     channel: str
+    consent_hash: str
     policy_version_id: UUID
     policy_type: str
     policy_version: str

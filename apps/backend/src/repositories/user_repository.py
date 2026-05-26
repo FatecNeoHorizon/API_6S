@@ -293,7 +293,11 @@ def exists_by_email_hash(conn: PgConnection, email_hash: str) -> bool:
         return cursor.fetchone() is not None
 
 
-def exists_by_email_hash_for_other_user(conn: PgConnection, email_hash: str, user_uuid: str) -> bool:
+def exists_by_email_hash_for_other_user(
+    conn: PgConnection,
+    email_hash: str,
+    user_uuid: str,
+) -> bool:
     query = """
         SELECT 1
         FROM TB_USER
@@ -345,7 +349,11 @@ def get_current_user_profile(conn: PgConnection, user_uuid: str) -> dict | None:
     }
 
 
-def update_current_user_profile(conn: PgConnection, user_uuid: str, data: dict) -> dict | None:
+def update_current_user_profile(
+    conn: PgConnection,
+    user_uuid: str,
+    data: dict,
+) -> dict | None:
     query = """
         UPDATE TB_USER
         SET USERNAME = %s,
@@ -599,6 +607,36 @@ def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
     }
 
 
+def log_auth_attempt(
+    conn: PgConnection,
+    *,
+    email_hash: str,
+    source_ip: str,
+    success: bool,
+    blocked: bool,
+) -> None:
+    query = """
+        INSERT INTO TB_AUTH_ATTEMPT (
+            EMAIL_HASH,
+            SOURCE_IP,
+            SUCCESS,
+            BLOCKED
+        )
+        VALUES (%s, %s, %s, %s)
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                email_hash,
+                source_ip[:255],
+                success,
+                blocked,
+            ),
+        )
+
+
 def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
     query = """
         SELECT
@@ -713,7 +751,12 @@ def create_user_session(
     return session_uuid
 
 
-def rotate_refresh_token(conn: PgConnection, refresh_token_hash: str, new_refresh_token_hash: str, refresh_expires_at):
+def rotate_refresh_token(
+    conn: PgConnection,
+    refresh_token_hash: str,
+    new_refresh_token_hash: str,
+    refresh_expires_at,
+):
     query = """
         UPDATE TB_SESSION s
         SET REFRESH_TOKEN_HASH = %s,

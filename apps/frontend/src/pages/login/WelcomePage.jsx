@@ -1,8 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { initiateOAuthLogin } from '@/api/auth'
 import zeusWelcomeImage from '@/assets/zeus_welcome_image.jpg'
 
 export function WelcomePage() {
-  const navigate = useNavigate()
+  async function handleLogin() {
+    const url = await initiateOAuthLogin()
+    window.location.href = url
+  }
 
   return (
     <main className="min-h-screen bg-background grid grid-cols-1 lg:grid-cols-[1fr_1.618fr]">
@@ -27,9 +30,8 @@ export function WelcomePage() {
           <span className="text-primary">elétrico</span> brasileiro.
         </h1>
 
-        {/* CTA — ao integrar Keycloak, trocar navigate('/login') pelo endpoint OAuth */}
         <button
-          onClick={() => navigate('/login')}
+          onClick={handleLogin}
           className="
             inline-flex items-center gap-2.5
             bg-primary hover:bg-primary/90

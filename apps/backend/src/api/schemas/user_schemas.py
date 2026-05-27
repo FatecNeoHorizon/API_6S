@@ -1,20 +1,8 @@
 from datetime import datetime
 from uuid import UUID
-import re
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-
-def password_validator(password: str) -> str:
-    if len(password) < 8:
-        raise ValueError("A senha deve ter pelo menos 8 caracteres.")
-    if not re.search(r"[A-Z]", password):
-        raise ValueError("A senha deve conter pelo menos uma letra maiúscula.")
-    if not re.search(r"\d", password):
-        raise ValueError("A senha deve conter pelo menos um número.")
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        raise ValueError("A senha deve conter pelo menos um caractere especial.")
-    return password
 
 
 class UserBase(BaseModel):
@@ -37,8 +25,6 @@ class UserCreateResponse(UserBase):
     active: bool
     first_access_completed: bool = False
     created_at: datetime
-    dev_first_access_token: str | None = None
-    dev_first_access_url: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -162,22 +148,6 @@ class LoginResponse(BaseModel):
     pending_clauses: list[dict]
 
 
-class FirstAccessRequest(BaseModel):
-    token: str = Field(..., min_length=20)
-    new_password: str = Field(..., min_length=8)
-
-    @field_validator("new_password")
-    def validate_new_password(cls, v: str) -> str:
-        return password_validator(v)
-
-
-class FirstAccessResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    pending_consent: bool
-    pending_clauses: list[dict]
-
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=20)
@@ -189,32 +159,6 @@ class RefreshTokenResponse(BaseModel):
     token_type: str = "bearer"
 
 class LogoutResponse(BaseModel):
-    detail: str
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
-class ForgotPasswordResponse(BaseModel):
-    detail: str
-    dev_reset_token: str | None = None
-    dev_reset_url: str | None = None
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str = Field(..., min_length=20)
-    new_password: str = Field(..., min_length=8)
-
-    @field_validator("new_password")
-    def validate_new_password(cls, v: str) -> str:
-        return password_validator(v)
-
-
-class ResetPasswordResponse(BaseModel):
     detail: str
 
 

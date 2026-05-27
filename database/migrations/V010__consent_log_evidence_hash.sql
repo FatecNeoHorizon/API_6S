@@ -55,6 +55,10 @@ CREATE TRIGGER TB_CONSENT_LOG_SET_HASH
     FOR EACH ROW
     EXECUTE FUNCTION fn_set_consent_log_hash();
 
+-- Backfill existing rows. The append-only trigger must be bypassed here because
+-- this UPDATE only adds a derived field and does not alter the semantic content of the record.
+ALTER TABLE TB_CONSENT_LOG DISABLE TRIGGER TB_CONSENT_LOG_APPEND_ONLY;
+
 UPDATE TB_CONSENT_LOG
 SET CONSENT_HASH = fn_compute_consent_log_hash(
     USER_ID,
@@ -64,6 +68,8 @@ SET CONSENT_HASH = fn_compute_consent_log_hash(
     CREATED_AT
 )
 WHERE CONSENT_HASH IS NULL;
+
+ALTER TABLE TB_CONSENT_LOG ENABLE TRIGGER TB_CONSENT_LOG_APPEND_ONLY;
 
 ALTER TABLE TB_CONSENT_LOG
     ALTER COLUMN CONSENT_HASH SET NOT NULL;

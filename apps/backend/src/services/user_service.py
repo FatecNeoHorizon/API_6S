@@ -1,7 +1,6 @@
 import base64
 import hashlib
-import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import List
 from uuid import UUID
 
@@ -12,9 +11,13 @@ from fastapi import HTTPException
 from psycopg2 import IntegrityError, OperationalError
 
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
-from src.config.auth_security import hash_token
 from src.config.email_hasher import EmailHasher
 from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
+from src.config.keycloak_admin_client import (
+    KeycloakAdminError,
+    KeycloakUserAlreadyExistsError,
+    get_keycloak_admin_client,
+)
 from src.config.log_events import SESSION_INVALIDATED_ALL
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection
@@ -26,7 +29,6 @@ from src.repositories.user_repository import (
     UserPersistenceError,
     UserProfileNotFoundError,
     UserResult,
-    create_first_access_token,
     create_user,
     delete_user,
     exists_by_email_hash,
@@ -34,6 +36,8 @@ from src.repositories.user_repository import (
     exists_by_profile_id,
     exists_by_username,
     get_current_user_profile,
+    get_keycloak_sub,
+    get_profile_name_by_id,
     get_user_by_id,
     invalidate_user_sessions,
     list_profiles,
@@ -42,13 +46,14 @@ from src.repositories.user_repository import (
     update_current_user_profile,
     update_user,
 )
-from src.services.email_service import send_first_access_email
 
 
 def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
     settings = Settings()
     normalized_email = str(payload.email).strip().lower()
     email_hash = EmailHasher.hash(normalized_email)
+    keycloak = get_keycloak_admin_client()
+    keycloak_sub: str | None = None
 
     try:
         with get_pg_connection() as conn:
@@ -59,25 +64,41 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
             if exists_by_email_hash(conn, email_hash):
                 raise UserAlreadyExistsError("E-mail já cadastrado.")
 
-            data = {
-                "username": payload.username.strip().upper(),
-                "email_hash": email_hash,
-                "email_enc": _encrypt_email(normalized_email, settings),
-                "profile_id": payload.profile_id,
-            }
+            profile_name = get_profile_name_by_id(conn, payload.profile_id)
 
-            result = create_user(conn, data)
-
-            raw_token = secrets.token_urlsafe(32)
-            token_expires_at = datetime.now(timezone.utc) + timedelta(hours=48)
-            create_first_access_token(
-                conn,
-                user_id=str(result.user_uuid),
-                token_hash=hash_token(raw_token),
-                expires_at=token_expires_at,
+        # Cria o usuário no Keycloak e obtém o KEYCLOAK_SUB
+        try:
+            keycloak_sub = keycloak.create_user(
+                username=payload.username.strip().upper(),
+                email=normalized_email,
+                enabled=True,
             )
+            keycloak.assign_realm_role(keycloak_sub, profile_name)
+        except KeycloakUserAlreadyExistsError as exc:
+            raise UserAlreadyExistsError("E-mail já cadastrado no servidor de identidade.") from exc
+        except KeycloakAdminError as exc:
+            raise HTTPException(status_code=502, detail="Falha ao criar usuário no servidor de identidade.") from exc
 
-        response = UserCreateResponse(
+        # Persiste no banco com o KEYCLOAK_SUB
+        try:
+            with get_pg_connection() as conn:
+                data = {
+                    "username": payload.username.strip().upper(),
+                    "email_hash": email_hash,
+                    "email_enc": _encrypt_email(normalized_email, settings),
+                    "profile_id": payload.profile_id,
+                    "keycloak_sub": keycloak_sub,
+                }
+                result = create_user(conn, data)
+        except Exception:
+            # Rollback: remove o usuário do Keycloak se o banco falhar
+            try:
+                keycloak.delete_user(keycloak_sub)
+            except Exception:
+                pass
+            raise
+
+        return UserCreateResponse(
             user_uuid=result.user_uuid,
             username=result.username,
             profile_id=result.profile_id,
@@ -85,24 +106,9 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
             created_at=result.created_at,
         )
 
-        frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
-        first_access_url = f"{frontend_base_url}/first-access?token={raw_token}"
-        
-        # Send first-access email in both production and non-production environments
-        try:
-            send_first_access_email(to_address=normalized_email, first_access_url=first_access_url)
-        except Exception as exc:
-            # Log the error but don't fail the user creation
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send first-access email to {normalized_email}: {exc}")
-
-        if settings.app_env != "prod":
-            response.dev_first_access_token = raw_token
-            response.dev_first_access_url = first_access_url
-
-        return response
     except (UserProfileNotFoundError, UserAlreadyExistsError):
+        raise
+    except HTTPException:
         raise
     except IntegrityError as exc:
         handle_db_integrity_error(exc, context="create_user_service")
@@ -141,8 +147,17 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
         with get_pg_connection() as conn:
             if not exists_by_profile_id(conn, data["profile_id"]):
                 raise UserProfileNotFoundError("Perfil não encontrado para o profile_id informado.")
+
+            current = get_user_by_id(conn, user_uuid)
+            if current is None:
+                raise UserNotFoundError("Usuário não encontrado.")
+
+            old_profile_name = get_profile_name_by_id(conn, current.profile_id)
+            new_profile_name = get_profile_name_by_id(conn, data["profile_id"])
+            keycloak_sub = get_keycloak_sub(conn, user_uuid)
+
             result = update_user(conn, user_uuid, data)
-    except UserProfileNotFoundError:
+    except (UserProfileNotFoundError, UserNotFoundError):
         raise
     except IntegrityError as exc:
         handle_db_integrity_error(exc, context="update_user_service")
@@ -152,6 +167,18 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
         raise HTTPException(status_code=503, detail="database_unavailable")
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
+
+    if keycloak_sub and old_profile_name != new_profile_name:
+        try:
+            get_keycloak_admin_client().update_user_role(keycloak_sub, old_profile_name, new_profile_name)
+        except Exception:
+            _log.warning(
+                "keycloak.user.role_update_failed",
+                keycloak_sub=keycloak_sub,
+                old_role=old_profile_name,
+                new_role=new_profile_name,
+            )
+
     return result
 
 _log = structlog.get_logger()
@@ -160,6 +187,7 @@ _log = structlog.get_logger()
 def set_user_active_service(user_uuid: UUID, active: bool, acting_user_id: str | None = None) -> UserResult:
     try:
         with get_pg_connection() as conn:
+            keycloak_sub = get_keycloak_sub(conn, user_uuid)
             result = set_user_active(conn, user_uuid, active)
             if result is not None and not active:
                 invalidated = invalidate_user_sessions(conn, str(user_uuid))
@@ -178,12 +206,24 @@ def set_user_active_service(user_uuid: UUID, active: bool, acting_user_id: str |
         raise HTTPException(status_code=503, detail="database_unavailable")
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
+
+    if keycloak_sub:
+        try:
+            get_keycloak_admin_client().set_user_enabled(keycloak_sub, active)
+        except Exception:
+            _log.warning(
+                "keycloak.user.enabled_update_failed",
+                keycloak_sub=keycloak_sub,
+                active=active,
+            )
+
     return result
 
 
 def delete_user_service(user_uuid: UUID) -> None:
     try:
         with get_pg_connection() as conn:
+            keycloak_sub = get_keycloak_sub(conn, user_uuid)
             deleted = delete_user(conn, user_uuid)
     except IntegrityError as exc:
         handle_db_integrity_error(exc, context="delete_user_service")
@@ -193,6 +233,12 @@ def delete_user_service(user_uuid: UUID) -> None:
         raise HTTPException(status_code=503, detail="database_unavailable")
     if not deleted:
         raise UserNotFoundError("Usuário não encontrado.")
+
+    if keycloak_sub:
+        try:
+            get_keycloak_admin_client().delete_user(keycloak_sub)
+        except Exception:
+            _log.warning("keycloak.user.delete_failed", keycloak_sub=keycloak_sub)
     
 def _sanitize_fernet_key(raw_key: str) -> str:
     key = raw_key.strip().strip('"').strip("'")

@@ -1,10 +1,6 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { WelcomePage } from "../pages/login/WelcomePage";
-import LoginPage from "../pages/login/LoginPage";
 import ConsentPage from "../pages/login/ConsentPage";
-import ForgotPasswordPage from "../pages/login/ForgotPasswordPage";
-import ResetPasswordPage from "../pages/login/ResetPasswordPage";
-import PrimeiroAcessoPage from "../pages/login/PrimeiroAcessoPage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute, { TokenRequiredRoute, RoleRequiredRoute } from "@/components/auth/ProtectedRoute";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";
@@ -25,12 +21,8 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/consent" element={<TokenRequiredRoute><ConsentPage /></TokenRequiredRoute>} />
-        <Route path="/first-access" element={<PrimeiroAcessoPage />} />
-        <Route path="/primeiro-acesso" element={<Navigate to="/first-access" replace />} />
         <Route path="/" element={<WelcomePage />} />
         <Route path="/dashboard/*" element={<ProtectedRoute />}>
           <Route path="" element={<DashboardLayout />}>

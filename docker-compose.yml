@@ -168,6 +168,7 @@ services:
       - "8180:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
+      - ./keycloak/themes:/opt/keycloak/themes
     networks:
       - app_network
       - keycloak_network

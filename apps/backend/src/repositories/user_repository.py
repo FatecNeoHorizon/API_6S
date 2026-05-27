@@ -60,9 +60,10 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
             USERNAME,
             EMAIL_HASH,
             EMAIL_ENC,
-            PROFILE_ID
+            PROFILE_ID,
+            KEYCLOAK_SUB
         )
-        VALUES (%s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s)
         RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT
     """
 
@@ -75,6 +76,7 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
                     data["email_hash"],
                     data["email_enc"],
                     str(data["profile_id"]),
+                    data.get("keycloak_sub"),
                 ),
             )
             row = cursor.fetchone()
@@ -494,81 +496,33 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
     ]
 
 
-def create_first_access_token(
-    conn: PgConnection,
-    *,
-    user_id: str,
-    token_hash: str,
-    expires_at: datetime,
-) -> str:
+def get_profile_name_by_id(conn: PgConnection, profile_id: UUID) -> Optional[str]:
     query = """
-        INSERT INTO TB_FIRST_ACCESS_TOKEN (USER_ID, TOKEN_HASH, EXPIRES_AT)
-        VALUES (%s, %s, %s)
-        RETURNING TOKEN_UUID
+        SELECT PROFILE_NAME
+        FROM TB_PROFILE
+        WHERE PROFILE_UUID = %s
+          AND DELETED_AT IS NULL
+        LIMIT 1
     """
-
     with conn.cursor() as cursor:
-        cursor.execute(query, (str(user_id), token_hash, expires_at))
+        cursor.execute(query, (str(profile_id),))
         row = cursor.fetchone()
+    return row[0] if row else None
 
-    return str(row[0])
 
-
-def consume_valid_first_access_token(conn: PgConnection, token_hash: str):
+def get_keycloak_sub(conn: PgConnection, user_uuid: UUID) -> Optional[str]:
     query = """
-        UPDATE TB_FIRST_ACCESS_TOKEN fat
-        SET USED_AT = NOW()
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE fat.USER_ID = u.USER_UUID
-          AND fat.TOKEN_HASH = %s
-          AND fat.USED_AT IS NULL
-          AND fat.EXPIRES_AT > NOW()
-          AND u.DELETED_AT IS NULL
-        RETURNING
-            fat.TOKEN_UUID,
-            fat.USER_ID,
-            u.ACTIVE,
-            p.PROFILE_NAME,
-            u.USERNAME,
-            u.EMAIL_HASH
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (token_hash,))
-        row = cursor.fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "token_uuid": row[0],
-        "user_id": row[1],
-        "active": row[2],
-        "profile_name": row[3],
-        "username": row[4],
-        "email_hash": row[5],
-    }
-
-
-def complete_first_access(
-    conn: PgConnection,
-    *,
-    user_id: str,
-    password_hash: str,
-) -> None:
-    query = """
-        UPDATE TB_USER
-        SET PASSWORD_HASH = %s,
-            FIRST_ACCESS_COMPLETED = TRUE,
-            UPDATED_AT = NOW()
+        SELECT KEYCLOAK_SUB
+        FROM TB_USER
         WHERE USER_UUID = %s
           AND DELETED_AT IS NULL
+        LIMIT 1
     """
-
     with conn.cursor() as cursor:
-        cursor.execute(query, (password_hash, str(user_id)))
+        cursor.execute(query, (str(user_uuid),))
+        row = cursor.fetchone()
+    return str(row[0]) if row and row[0] else None
+
 
 
 def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
@@ -667,19 +621,6 @@ def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
         "first_access_completed": row[3],
         "profile_name": row[4],
     }
-
-
-def invalidate_user_sessions(conn: PgConnection, user_id: str) -> None:
-    query = """
-        UPDATE TB_SESSION
-        SET INVALIDATED_AT = NOW(),
-            UPDATED_AT = NOW()
-        WHERE USER_ID = %s
-          AND INVALIDATED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (user_id,))
 
 
 def invalidate_session(conn: PgConnection, session_id: str) -> bool:
@@ -919,86 +860,6 @@ def invalidate_single_session(
         row = cursor.fetchone()
     return row is not None
 
-
-def create_password_reset_token(
-    conn: PgConnection,
-    *,
-    user_id: str,
-    token_hash: str,
-    expires_at,
-) -> None:
-    query = """
-        INSERT INTO TB_PASSWORD_RESET (
-            USER_UUID,
-            TOKEN_HASH,
-            EXPIRES_AT,
-            USED_AT
-        )
-        VALUES (%s, %s, %s, NULL)
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (user_id, token_hash, expires_at))
-
-
-def get_valid_password_reset_token(conn: PgConnection, token_hash: str):
-    query = """
-        SELECT
-            pr.RESET_UUID,
-            pr.USER_UUID,
-            u.ACTIVE
-        FROM TB_PASSWORD_RESET pr
-        JOIN TB_USER u
-          ON u.USER_UUID = pr.USER_UUID
-        WHERE pr.TOKEN_HASH = %s
-          AND pr.USED_AT IS NULL
-          AND pr.EXPIRES_AT > NOW()
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (token_hash,))
-        row = cursor.fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "reset_uuid": row[0],
-        "user_uuid": row[1],
-        "active": row[2],
-    }
-
-
-def mark_password_reset_token_used(conn: PgConnection, reset_uuid: str) -> None:
-    query = """
-        UPDATE TB_PASSWORD_RESET
-        SET USED_AT = NOW()
-        WHERE RESET_UUID = %s
-          AND USED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(reset_uuid),))
-
-
-def update_user_password(
-    conn: PgConnection,
-    *,
-    user_id: str,
-    password_hash: str,
-) -> None:
-    query = """
-        UPDATE TB_USER
-        SET PASSWORD_HASH = %s,
-            UPDATED_AT = NOW()
-        WHERE USER_UUID = %s
-          AND DELETED_AT IS NULL
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (password_hash, str(user_id)))
 
 
 def get_user_for_export(conn: PgConnection, user_id: str) -> dict | None:

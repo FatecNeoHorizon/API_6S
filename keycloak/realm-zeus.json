@@ -2,6 +2,7 @@
   "realm": "zeus",
   "enabled": true,
   "sslRequired": "none",
+  "loginTheme": "zeus",
   "roles": {
     "realm": [
       {

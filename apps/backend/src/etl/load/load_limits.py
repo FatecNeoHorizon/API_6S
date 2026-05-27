@@ -4,6 +4,8 @@ from pymongo.collection import Collection
 from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
+from src.etl.load.load_annual_summaries import compute_annual_summaries
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 1000
@@ -72,6 +74,8 @@ def load_limits(
             total_rejected += len(e.details.get("writeErrors", []))
             total_modified += e.details.get("nModified", 0)
             logger.error(f"[load_limits] BulkWriteError em conj: {e.details}")
+
+    compute_annual_summaries(conj_collection)
 
     metrics = {
         "inserted": 0,

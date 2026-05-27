@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle, Plus, Eye, EyeOff, RotateCcw } from "lucide-react"
+import { Search, Edit, Trash2, User, Loader2, X, AlertTriangle, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,13 +9,10 @@ import { apiClient } from "@/api/client"
 const DEFAULT_PAGE_SIZE = 5
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100]
 const ALLOWED_PROFILE_NAMES = new Set(["ADMIN", "ANALYST", "MANAGER"])
-const API_BASE_URL = import.meta.env.VITE_API_URL
-
 const normalizeUser = (user) => ({
   user_uuid: user.user_uuid,
   username: user.username,
   profile_id: user.profile_id,
-  active: Boolean(user.active),
   created_at: user.created_at,
   updated_at: user.updated_at,
 })
@@ -46,7 +43,7 @@ const getProfileName = (profileId, profiles) => {
   return found?.profile_name || profileId
 }
 
-const buildPaginatedUsersResponse = ({ page, pageSize, username, status, sourceUsers }) => {
+const buildPaginatedUsersResponse = ({ page, pageSize, username, sourceUsers }) => {
   const normalizedSearch = username.trim().toLowerCase()
 
   const filtered = sourceUsers.filter((user) => {
@@ -54,14 +51,7 @@ const buildPaginatedUsersResponse = ({ page, pageSize, username, status, sourceU
       ? user.username.toLowerCase().includes(normalizedSearch)
       : true
 
-    let matchesStatus = true
-    if (status === "active") {
-      matchesStatus = user.active
-    } else if (status === "inactive") {
-      matchesStatus = !user.active
-    }
-
-    return matchesUsername && matchesStatus
+    return matchesUsername
   })
 
   const total = filtered.length
@@ -87,10 +77,6 @@ const getPerfilClassName = (perfil) => {
   if (perfil === "ADMIN") return "bg-primary/10 text-primary"
   if (perfil === "ANALYST") return "bg-chart-2/10 text-chart-2"
   return "bg-muted text-muted-foreground"
-}
-
-const getStatusClassName = (active) => {
-  return active ? "bg-chart-1/10 text-chart-1" : "bg-muted text-muted-foreground"
 }
 
 import { deleteUserRequest } from "@/api/users"
@@ -125,13 +111,8 @@ const updateUserRequest = async (userId, payload) => {
   return apiClient.patch(`/users/${userId}`, payload)
 }
 
-const setUserActiveRequest = async (userId, active) => {
-  return apiClient.patch(`/users/${userId}/active`, { active })
-}
-
 export default function UsuariosPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [profiles, setProfiles] = useState([])
@@ -163,7 +144,6 @@ export default function UsuariosPage() {
   const [editForm, setEditForm] = useState({
     username: "",
     profile_id: "",
-    active: "true",
   })
   const [editError, setEditError] = useState("")
   const [isEditingUser, setIsEditingUser] = useState(false)
@@ -205,7 +185,6 @@ export default function UsuariosPage() {
       page: currentPage,
       pageSize,
       username: searchTerm,
-      status: statusFilter,
       sourceUsers: allUsers,
     })
 
@@ -214,19 +193,12 @@ export default function UsuariosPage() {
     if (response.meta.page !== currentPage) {
       setCurrentPage(response.meta.page)
     }
-  }, [currentPage, pageSize, searchTerm, statusFilter, allUsers])
+  }, [currentPage, pageSize, searchTerm, allUsers])
 
   const totalUsers = allUsers.length
-  const activeUsers = allUsers.filter((u) => u.active).length
-  const inactiveUsers = allUsers.filter((u) => !u.active).length
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value)
-    setCurrentPage(1)
-  }
-
-  const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value)
     setCurrentPage(1)
   }
 
@@ -310,7 +282,6 @@ export default function UsuariosPage() {
     setEditForm({
       username: user.username,
       profile_id: user.profile_id,
-      active: String(user.active),
     })
     setEditError("")
     setShowEditModal(true)
@@ -344,7 +315,6 @@ export default function UsuariosPage() {
 
     const username = editForm.username.trim()
     const profile_id = editForm.profile_id
-    const active = editForm.active === "true"
 
     if (!username || !profile_id) {
       setEditError("Preencha os campos obrigatórios.")
@@ -361,10 +331,6 @@ export default function UsuariosPage() {
 
     try {
       await updateUserRequest(selectedUser.user_uuid, payload)
-
-      if (active !== selectedUser.active) {
-        await setUserActiveRequest(selectedUser.user_uuid, active)
-      }
 
       toast.success("Usuário editado com sucesso")
       closeEditModal()
@@ -399,56 +365,16 @@ export default function UsuariosPage() {
   const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
   const deleteActionButtonLabel = "Excluir Usuário"
 
-  const handleCardKeyDown = (e, filter) => {
-    if (e.key === "Enter" || e.key === " ") {
-      setStatusFilter(filter)
-    }
-  }
-
   return (
     <>
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            onClick={() => setStatusFilter("all")}
-            onKeyDown={(e) => handleCardKeyDown(e, "all")}
-          >
+        <div className="grid grid-cols-1 gap-4">
+          <Card className="border-border bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total de Usuários</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{totalUsers}</div>
-            </CardContent>
-          </Card>
-          <Card
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            onClick={() => setStatusFilter("active")}
-            onKeyDown={(e) => handleCardKeyDown(e, "active")}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Ativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-chart-1">{activeUsers}</div>
-            </CardContent>
-          </Card>
-          <Card
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer border-border bg-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            onClick={() => setStatusFilter("inactive")}
-            onKeyDown={(e) => handleCardKeyDown(e, "inactive")}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Inativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-muted-foreground">{inactiveUsers}</div>
             </CardContent>
           </Card>
         </div>
@@ -463,23 +389,7 @@ export default function UsuariosPage() {
           />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <label className="text-sm text-muted-foreground" htmlFor="status-filter">
-              Filtrar por status
-            </label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground sm:w-56"
-            >
-              <option value="all">Todos</option>
-              <option value="active">Ativos</option>
-              <option value="inactive">Inativos</option>
-            </select>
-          </div>
-
+        <div className="flex items-center justify-end">
           <Button
             type="button"
             className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -526,7 +436,6 @@ export default function UsuariosPage() {
                   <tr className="border-b border-border">
                     <th className="px-2 py-3 text-left text-sm font-medium text-muted-foreground">Username</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Perfil</th>
-                    <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Status</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Data de Criação</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Ações</th>
                   </tr>
@@ -534,7 +443,7 @@ export default function UsuariosPage() {
                 <tbody>
                   {isLoading && (
                     <tr>
-                      <td colSpan={5} className="py-10">
+                      <td colSpan={4} className="py-10">
                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Carregando usuários...</span>
@@ -545,7 +454,7 @@ export default function UsuariosPage() {
 
                   {!isLoading && usersPage.data.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-muted-foreground">
+                      <td colSpan={4} className="py-10 text-center text-muted-foreground">
                         Nenhum usuário encontrado para os filtros aplicados.
                       </td>
                     </tr>
@@ -569,13 +478,6 @@ export default function UsuariosPage() {
                             {getProfileName(user.profile_id, profiles)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClassName(user.active)}`}
-                          >
-                            {user.active ? "Ativo" : "Inativo"}
-                          </span>
-                        </td>
                         <td className="px-2 py-3 text-center text-sm text-muted-foreground">{formatDate(user.created_at)}</td>
                         <td className="px-2 py-3 text-center">
                           <div className="flex items-center justify-center gap-1">
@@ -593,11 +495,11 @@ export default function UsuariosPage() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className={`h-8 w-8 text-muted-foreground ${user.active ? "hover:text-destructive" : "hover:text-chart-1"}`}
-                              aria-label={user.active ? `Desativar ${user.username}` : `Reativar ${user.username}`}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              aria-label={`Excluir ${user.username}`}
                               onClick={() => openDeleteModal(user)}
                             >
-                              {user.active ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
@@ -690,23 +592,6 @@ export default function UsuariosPage() {
                       {profile.profile_name}
                     </option>
                   ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="edit-user-status">
-                  Status
-                </label>
-                <select
-                  id="edit-user-status"
-                  name="active"
-                  value={editForm.active}
-                  onChange={handleEditFormChange}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
-                  disabled={isEditingUser}
-                >
-                  <option value="true">Ativo</option>
-                  <option value="false">Inativo</option>
                 </select>
               </div>
 

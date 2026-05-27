@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
 
-from src.api.dependencies.auth import require_admin
+from src.api.dependencies.auth import require_admin, require_admin_or_manager
 from src.api.schemas.user_schemas import (
     ProfileResponse, UserCreateRequest, UserCreateResponse,
     UserMeResponse, UserMeUpdateRequest, UserResult, UserUpdateRequest, UserSetActiveRequest,
@@ -26,11 +26,11 @@ from src.services.user_service import (
     update_current_user_profile_service,
 )
 
-router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/users", tags=["users"])
 log = structlog.get_logger()
 
 @router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
-def list_users(_current_user: AuthenticatedUser = Depends(get_current_user)):
+def list_users(current_user: AuthenticatedUser = Depends(require_admin_or_manager)):
     users = list_users_service()
     log.info(USER_LISTED, count=len(users))
     return users
@@ -77,7 +77,7 @@ def update_my_profile(
 
 
 @router.get("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
-def get_user(user_uuid: UUID, _current_user: AuthenticatedUser = Depends(get_current_user)):
+def get_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_admin_or_manager)):
     try:
         return get_user_by_id_service(user_uuid)
     except UserNotFoundError as exc:
@@ -86,7 +86,7 @@ def get_user(user_uuid: UUID, _current_user: AuthenticatedUser = Depends(get_cur
 
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreateRequest, _admin: AuthenticatedUser = Depends(require_admin)):
+def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         result = create_user_service(payload)
         log.info(USER_CREATED, user_id=str(result.user_uuid), profile_id=str(result.profile_id))
@@ -103,7 +103,7 @@ def create_user(payload: UserCreateRequest, _admin: AuthenticatedUser = Depends(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 @router.patch("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
-def update_user(user_uuid: UUID, payload: UserUpdateRequest, _admin: AuthenticatedUser = Depends(require_admin)):
+def update_user(user_uuid: UUID, payload: UserUpdateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         data = {"username": payload.username, "profile_id": payload.profile_id}
         result = update_user_service(user_uuid, data)
@@ -146,7 +146,7 @@ def delete_user_sessions(
     )
 
 @router.delete("/{user_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_uuid: UUID, _admin: AuthenticatedUser = Depends(require_admin)):
+def delete_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         delete_user_service(user_uuid)
         log.info(USER_DELETED, user_id=str(user_uuid))

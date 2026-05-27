@@ -12,8 +12,10 @@ services:
       - envs/.env.postgres.${APP_ENV:-dev}
     ports:
       - "5432:5432"
+    command: postgres -c max_prepared_transactions=10
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
     networks:
       - db_network
     healthcheck:

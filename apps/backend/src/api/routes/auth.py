@@ -8,6 +8,7 @@ from src.api.dependencies.auth import (
     get_current_user_no_consent_check,
 )
 from src.api.schemas.user_schemas import (
+    CallbackRequest,
     CurrentUserResponse,
     DataExportResponse,
     LoginRequest,
@@ -23,6 +24,7 @@ from src.services.auth_service import (
     list_sessions_service,
     login,
     logout,
+    oauth_callback,
     refresh_access_token,
     revoke_session_service,
 )
@@ -38,9 +40,25 @@ def get_auth_me(
         user_id=current_user.user_id,
         username=current_user.username,
         profile=current_user.profile_name,
-        first_access_completed=current_user.first_access_completed,
         active=current_user.active,
     )
+
+
+@router.post("/callback", response_model=LoginResponse)
+@limiter.limit("20/minute")
+def post_callback(request: Request, payload: CallbackRequest):
+    source_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    with get_pg_connection() as conn:
+        return oauth_callback(
+            conn,
+            code=payload.code,
+            code_verifier=payload.code_verifier,
+            redirect_uri=payload.redirect_uri,
+            source_ip=source_ip,
+            user_agent=user_agent,
+        )
 
 
 @router.post(

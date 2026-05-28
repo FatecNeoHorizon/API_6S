@@ -36,7 +36,6 @@ def make_authenticated_admin() -> AuthenticatedUser:
         "session_id": SESSION_ID,
         "username": "admin",
         "profile_name": "ADMIN",
-        "first_access_completed": True,
         "active": True,
     }
 

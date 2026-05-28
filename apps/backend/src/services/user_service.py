@@ -168,16 +168,30 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
 
-    if keycloak_sub and old_profile_name != new_profile_name:
-        try:
-            get_keycloak_admin_client().update_user_role(keycloak_sub, old_profile_name, new_profile_name)
-        except Exception:
-            _log.warning(
-                "keycloak.user.role_update_failed",
-                keycloak_sub=keycloak_sub,
-                old_role=old_profile_name,
-                new_role=new_profile_name,
-            )
+    if keycloak_sub:
+        keycloak = get_keycloak_admin_client()
+        new_username = data["username"].strip().upper()
+
+        if old_profile_name != new_profile_name:
+            try:
+                keycloak.update_user_role(keycloak_sub, old_profile_name, new_profile_name)
+            except Exception:
+                _log.warning(
+                    "keycloak.user.role_update_failed",
+                    keycloak_sub=keycloak_sub,
+                    old_role=old_profile_name,
+                    new_role=new_profile_name,
+                )
+
+        if current.username.upper() != new_username:
+            try:
+                keycloak.update_user(keycloak_sub, username=new_username)
+            except Exception:
+                _log.warning(
+                    "keycloak.user.username_update_failed",
+                    keycloak_sub=keycloak_sub,
+                    new_username=new_username,
+                )
 
     return result
 
@@ -286,7 +300,6 @@ def _format_current_user_profile(row: dict) -> dict:
         "email": _decrypt_email(row["email_enc"], settings),
         "profile_name": row["profile_name"],
         "active": row["active"],
-        "first_access_completed": row["first_access_completed"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -315,6 +328,7 @@ def update_current_user_profile_service(user_id: str, username: str, email: str)
     normalized_username = username.strip().upper()
     normalized_email = str(email).strip().lower()
     email_hash = EmailHasher.hash(normalized_email)
+    keycloak_sub: str | None = None
 
     try:
         with get_pg_connection() as conn:
@@ -333,6 +347,7 @@ def update_current_user_profile_service(user_id: str, username: str, email: str)
             if exists_by_email_hash_for_other_user(conn, email_hash, user_id):
                 raise UserAlreadyExistsError("E-mail ja cadastrado.")
 
+            keycloak_sub = get_keycloak_sub(conn, user_id)
             result = update_current_user_profile(
                 conn,
                 user_id,
@@ -353,6 +368,19 @@ def update_current_user_profile_service(user_id: str, username: str, email: str)
 
     if result is None:
         raise UserNotFoundError("Usuario nao encontrado.")
+
+    if keycloak_sub:
+        try:
+            get_keycloak_admin_client().update_user(
+                keycloak_sub,
+                username=normalized_username,
+                email=normalized_email,
+            )
+        except Exception:
+            _log.warning(
+                "keycloak.user.profile_update_failed",
+                keycloak_sub=keycloak_sub,
+            )
 
     return _format_current_user_profile(result)
 

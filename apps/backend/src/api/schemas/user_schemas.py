@@ -23,7 +23,6 @@ class UserCreateRequest(BaseModel):
 class UserCreateResponse(UserBase):
     user_uuid: UUID
     active: bool
-    first_access_completed: bool = False
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,7 +41,6 @@ class UserResult(BaseModel):
     username: str
     profile_id: UUID
     active: bool
-    first_access_completed: bool = False
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -87,27 +85,6 @@ class UserMeResponse(BaseModel):
     email: EmailStr
     profile_name: str
     active: bool
-    first_access_completed: bool
-    created_at: datetime
-    updated_at: datetime
-
-
-class UserMeUpdateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
-class UserMeResponse(BaseModel):
-    user_uuid: UUID
-    username: str
-    email: EmailStr
-    profile_name: str
-    active: bool
-    first_access_completed: bool
     created_at: datetime
     updated_at: datetime
 
@@ -128,8 +105,13 @@ class CurrentUserResponse(BaseModel):
     user_id: UUID
     username: str
     profile: str
-    first_access_completed: bool
     active: bool
+
+class CallbackRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    code_verifier: str = Field(..., min_length=1)
+    redirect_uri: str = Field(..., min_length=1)
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -168,7 +150,6 @@ class IdentityExport(BaseModel):
     email: str
     profile: str
     active: bool
-    first_access_completed: bool
     created_at: datetime
     updated_at: datetime
 

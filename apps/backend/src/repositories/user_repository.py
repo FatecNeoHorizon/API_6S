@@ -130,7 +130,6 @@ def get_user_profile_by_id(conn: PgConnection, user_uuid: str):
             u.EMAIL_ENC,
             u.PROFILE_ID,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             u.CREATED_AT,
             u.UPDATED_AT,
             p.PROFILE_NAME
@@ -155,10 +154,9 @@ def get_user_profile_by_id(conn: PgConnection, user_uuid: str):
         "email_enc": row[2],
         "profile_id": row[3],
         "active": row[4],
-        "first_access_completed": row[5],
-        "created_at": row[6],
-        "updated_at": row[7],
-        "profile_name": row[8],
+        "created_at": row[5],
+        "updated_at": row[6],
+        "profile_name": row[7],
     }
 
 
@@ -178,7 +176,6 @@ def update_user_profile(conn: PgConnection, user_uuid: str, data: dict):
                 EMAIL_ENC,
                 PROFILE_ID,
                 ACTIVE,
-                FIRST_ACCESS_COMPLETED,
                 CREATED_AT,
                 UPDATED_AT
         )
@@ -188,7 +185,6 @@ def update_user_profile(conn: PgConnection, user_uuid: str, data: dict):
             updated.EMAIL_ENC,
             updated.PROFILE_ID,
             updated.ACTIVE,
-            updated.FIRST_ACCESS_COMPLETED,
             updated.CREATED_AT,
             updated.UPDATED_AT,
             p.PROFILE_NAME
@@ -223,10 +219,9 @@ def update_user_profile(conn: PgConnection, user_uuid: str, data: dict):
         "email_enc": row[2],
         "profile_id": row[3],
         "active": row[4],
-        "first_access_completed": row[5],
-        "created_at": row[6],
-        "updated_at": row[7],
-        "profile_name": row[8],
+        "created_at": row[5],
+        "updated_at": row[6],
+        "profile_name": row[7],
     }
 
 
@@ -321,7 +316,6 @@ def get_current_user_profile(conn: PgConnection, user_uuid: str) -> dict | None:
             u.EMAIL_ENC,
             p.PROFILE_NAME,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             u.CREATED_AT,
             u.UPDATED_AT
         FROM TB_USER u
@@ -345,9 +339,8 @@ def get_current_user_profile(conn: PgConnection, user_uuid: str) -> dict | None:
         "email_enc": row[2],
         "profile_name": row[3],
         "active": row[4],
-        "first_access_completed": row[5],
-        "created_at": row[6],
-        "updated_at": row[7],
+        "created_at": row[5],
+        "updated_at": row[6],
     }
 
 
@@ -510,6 +503,33 @@ def get_profile_name_by_id(conn: PgConnection, profile_id: UUID) -> Optional[str
     return row[0] if row else None
 
 
+def get_user_by_keycloak_sub(conn: PgConnection, keycloak_sub: str) -> Optional[dict]:
+    query = """
+        SELECT
+            u.USER_UUID,
+            u.USERNAME,
+            u.ACTIVE,
+            p.PROFILE_NAME
+        FROM TB_USER u
+        JOIN TB_PROFILE p
+          ON p.PROFILE_UUID = u.PROFILE_ID
+        WHERE u.KEYCLOAK_SUB = %s
+          AND u.DELETED_AT IS NULL
+        LIMIT 1
+    """
+    with conn.cursor() as cursor:
+        cursor.execute(query, (keycloak_sub,))
+        row = cursor.fetchone()
+    if row is None:
+        return None
+    return {
+        "user_uuid": row[0],
+        "username": row[1],
+        "active": row[2],
+        "profile_name": row[3],
+    }
+
+
 def get_keycloak_sub(conn: PgConnection, user_uuid: UUID) -> Optional[str]:
     query = """
         SELECT KEYCLOAK_SUB
@@ -533,7 +553,6 @@ def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
             u.EMAIL_HASH,
             u.PASSWORD_HASH,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             p.PROFILE_NAME
         FROM TB_USER u
         JOIN TB_PROFILE p
@@ -556,8 +575,7 @@ def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
         "email_hash": row[2],
         "password_hash": row[3],
         "active": row[4],
-        "first_access_completed": row[5],
-        "profile_name": row[6],
+        "profile_name": row[5],
     }
 
 
@@ -597,7 +615,6 @@ def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
             u.USER_UUID,
             u.USERNAME,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             p.PROFILE_NAME
         FROM TB_USER u
         JOIN TB_PROFILE p
@@ -618,8 +635,7 @@ def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
         "user_uuid": row[0],
         "username": row[1],
         "active": row[2],
-        "first_access_completed": row[3],
-        "profile_name": row[4],
+        "profile_name": row[3],
     }
 
 
@@ -751,7 +767,6 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
             s.SESSION_UUID,
             u.USER_UUID,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             p.PROFILE_NAME,
             u.USERNAME,
             s.INVALIDATED_AT,
@@ -773,28 +788,26 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
     if row is None:
         return None
 
-    # Check conditions
-    if row[6] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
+    if row[5] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
         return None
 
-    if row[7] is not None:  # EXPIRES_AT exists
+    if row[6] is not None:  # EXPIRES_AT exists
         now = datetime.now(timezone.utc)
-        if row[7] <= now:  # Check if expired
+        if row[6] <= now:  # Check if expired
             return None
 
-    if row[8] is not None:  # DELETED_AT is not NULL → session was soft-deleted
+    if row[7] is not None:  # DELETED_AT is not NULL → session was soft-deleted
         return None
 
-    if row[9] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
+    if row[8] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
         return None
 
     return {
         "session_uuid": row[0],
         "user_uuid": row[1],
         "active": row[2],
-        "first_access_completed": row[3],
-        "profile_name": row[4],
-        "username": row[5],
+        "profile_name": row[3],
+        "username": row[4],
     }
 
 
@@ -869,7 +882,6 @@ def get_user_for_export(conn: PgConnection, user_id: str) -> dict | None:
             u.USERNAME,
             u.EMAIL_ENC,
             u.ACTIVE,
-            u.FIRST_ACCESS_COMPLETED,
             u.CREATED_AT,
             u.UPDATED_AT,
             u.ANONYMIZED_AT,
@@ -894,11 +906,10 @@ def get_user_for_export(conn: PgConnection, user_id: str) -> dict | None:
         "username": row[1],
         "email_enc": row[2],
         "active": row[3],
-        "first_access_completed": row[4],
-        "created_at": row[5],
-        "updated_at": row[6],
-        "anonymized_at": row[7],
-        "profile_name": row[8],
+        "created_at": row[4],
+        "updated_at": row[5],
+        "anonymized_at": row[6],
+        "profile_name": row[7],
     }
 
 

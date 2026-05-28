@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { WelcomePage } from "../pages/login/WelcomePage";
+import CallbackPage from "../pages/login/CallbackPage";
 import ConsentPage from "../pages/login/ConsentPage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute, { TokenRequiredRoute, RoleRequiredRoute } from "@/components/auth/ProtectedRoute";
@@ -22,6 +23,7 @@ export function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/auth/callback" element={<CallbackPage />} />
         <Route path="/consent" element={<TokenRequiredRoute><ConsentPage /></TokenRequiredRoute>} />
         <Route path="/" element={<WelcomePage />} />
         <Route path="/dashboard/*" element={<ProtectedRoute />}>

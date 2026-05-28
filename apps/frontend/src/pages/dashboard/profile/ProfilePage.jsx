@@ -1,5 +1,6 @@
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, Trash2, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, ShieldCheck, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
@@ -172,87 +173,71 @@ export default function ProfilePage() {
       <div>
         <h2 className="text-2xl font-semibold text-foreground">Meu Perfil</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Consulte e atualize somente as informacoes vinculadas a sua propria conta.
+          Consulte e atualize suas informacoes pessoais.
         </p>
       </div>
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+      {error ? (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
-      )}
+      ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card className="rounded-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4 text-primary" />
-              Dados cadastrais
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              Dados pessoais
             </CardTitle>
             <CardDescription>
-              Nome e email sao dados pessoais da sua conta e nao alteram seu cargo no sistema.
+              Essas informacoes sao utilizadas para identificacao na plataforma.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="profile-username">
-                  Nome
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="username">
+                  Nome de usuario
                 </label>
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="profile-username"
-                    name="username"
-                    value={form.username}
-                    onChange={handleChange}
-                    className="pl-9"
-                    autoComplete="name"
-                    disabled={isSaving}
-                  />
-                </div>
+                <Input
+                  id="username"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  placeholder="Seu nome"
+                  disabled={isSaving}
+                />
               </div>
 
-              <div className="grid gap-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="profile-email">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="email">
                   Email
                 </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="profile-email"
+                    id="email"
                     name="email"
                     type="email"
                     value={form.email}
                     onChange={handleChange}
+                    placeholder="voce@email.com"
                     className="pl-9"
-                    autoComplete="email"
                     disabled={isSaving}
                   />
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="profile-role">
-                  Cargo
-                </label>
-                <div className="relative">
-                  <Shield className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="profile-role"
-                    value={profile?.profile_name || ""}
-                    className="pl-9"
-                    disabled
-                    readOnly
-                  />
-                </div>
-              </div>
-
               <div className="flex justify-end">
-                <Button type="submit" disabled={isSaving || !hasChanges}>
+                <Button
+                  type="submit"
+                  disabled={!hasChanges || isSaving}
+                  className="min-w-36"
+                >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Salvar alteracoes
+                  {isSaving ? "Salvando..." : "Salvar alteracoes"}
                 </Button>
               </div>
             </form>
@@ -290,6 +275,26 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">Ultima atualizacao</p>
                 <p className="mt-1 font-medium text-foreground">{formatDateTime(profile?.updated_at)}</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Consentimentos
+              </CardTitle>
+              <CardDescription>
+                Revise ou altere seus consentimentos individualmente a qualquer momento.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full border-border text-foreground hover:bg-muted">
+                <Link to="/dashboard/consentimentos">
+                  <ShieldCheck className="h-4 w-4" />
+                  Gerenciar consentimentos
+                </Link>
+              </Button>
             </CardContent>
           </Card>
 

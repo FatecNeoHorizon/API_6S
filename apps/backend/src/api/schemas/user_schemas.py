@@ -76,20 +76,6 @@ class MyProfileUpdateRequest(BaseModel):
         return str(v).strip().lower()
 
 
-class MyProfileResponse(UserResult):
-    email: EmailStr
-    profile_name: str
-
-
-class MyProfileUpdateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
 class UserUpdateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     profile_id: UUID
@@ -115,28 +101,44 @@ class UserMeUpdateRequest(BaseModel):
         return str(v).strip().lower()
 
 
-class UserMeResponse(BaseModel):
-    user_uuid: UUID
-    username: str
-    email: EmailStr
-    profile_name: str
-    active: bool
-    first_access_completed: bool
-    created_at: datetime
-    updated_at: datetime
-
-
-class UserMeUpdateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
 class UserSetActiveRequest(BaseModel):
     active: bool
+
+
+class UserConsentUpdateItem(BaseModel):
+    clause_id: UUID
+    accepted: bool
+
+
+class UserConsentUpdateRequest(BaseModel):
+    consents: list[UserConsentUpdateItem] = Field(..., min_length=1)
+
+
+class UserConsentPreferenceItem(BaseModel):
+    clause_id: UUID
+    policy_version_id: UUID
+    policy_type: str
+    policy_version: str
+    clause_code: str
+    clause_title: str
+    clause_description: str | None = None
+    mandatory: bool
+    accepted: bool
+    current_status: str
+    last_action: str | None = None
+    last_action_at: datetime | None = None
+
+
+class UserConsentPreferencesResponse(BaseModel):
+    user_id: UUID
+    consents: list[UserConsentPreferenceItem]
+
+
+class UserConsentUpdateResponse(BaseModel):
+    account_deleted: bool
+    updated_count: int
+    consents: list[UserConsentPreferenceItem] | None = None
+
 
 class CurrentUserResponse(BaseModel):
     user_id: UUID
@@ -144,6 +146,7 @@ class CurrentUserResponse(BaseModel):
     profile: str
     first_access_completed: bool
     active: bool
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -188,8 +191,10 @@ class RefreshTokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
+
 class LogoutResponse(BaseModel):
     detail: str
+
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr

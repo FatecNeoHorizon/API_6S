@@ -12,3 +12,15 @@ export function updateMyProfile(payload) {
 export function exportMyData() {
   return apiClient.get("/auth/me/export", getAuthOptions());
 }
+
+export function getMyConsentPreferences(userId) {
+  return apiClient.get(`/users/${userId}/consents`, getAuthOptions());
+}
+
+export function updateMyConsentPreferences(userId, consents) {
+  return apiClient.patch(
+    `/users/${userId}/consents`,
+    { consents },
+    getAuthOptions(),
+  );
+}

@@ -152,6 +152,35 @@ class KeycloakAdminClient:
 
         log.info("keycloak.user.enabled_updated", keycloak_sub=keycloak_sub, enabled=enabled)
 
+    def update_user(self, keycloak_sub: str, *, username: str | None = None, email: str | None = None) -> None:
+        """Updates username and/or email for a user in Keycloak."""
+        payload: dict = {}
+        if username is not None:
+            payload["username"] = username
+        if email is not None:
+            payload["email"] = email
+        if not payload:
+            return
+
+        response = httpx.put(
+            self._url(f"users/{keycloak_sub}"),
+            json=payload,
+            headers=self._headers(),
+            timeout=10,
+        )
+
+        if response.status_code == 404:
+            raise KeycloakUserNotFoundError(
+                f"User '{keycloak_sub}' not found in Keycloak."
+            )
+        if response.status_code not in (200, 204):
+            raise KeycloakAdminError(
+                f"Failed to update user '{keycloak_sub}': "
+                f"{response.status_code} {response.text}"
+            )
+
+        log.info("keycloak.user.updated", keycloak_sub=keycloak_sub, fields=list(payload.keys()))
+
     def delete_user(self, keycloak_sub: str) -> None:
         """Deletes a user from Keycloak."""
         response = httpx.delete(

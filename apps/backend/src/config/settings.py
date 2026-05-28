@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     # Keycloak Admin API
     keycloak_url: str = Field(default="http://keycloak:8080")
     keycloak_realm: str = Field(default="zeus")
+    keycloak_client_id: str = Field(default="zeus-frontend")
     keycloak_admin_client_id: str = Field(default="admin-cli")
     keycloak_admin_username: str = Field(default="admin")
     keycloak_admin_password: str = Field(default="")

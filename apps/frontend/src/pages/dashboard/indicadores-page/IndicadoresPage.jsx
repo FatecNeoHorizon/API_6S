@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -532,6 +533,7 @@ export default function IndicadoresPage() {
   const [rankingData, setRankingData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [decFecLoading, setDecFecLoading] = useState(false);
+  const [rankingSearch, setRankingSearch] = useState("");
 
   // Perdas
   const [perdasPeriod, setPerdasPeriod] = useState(null);
@@ -1245,11 +1247,16 @@ export default function IndicadoresPage() {
           >
             <CardHeader className="flex-shrink-0">
               <CardTitle className="text-foreground">
-                Ranking de Distribuidoras
+                Ranking por DEC médio
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Ordenado por indicador DEC
-              </CardDescription>
+              <div className="mt-2">
+                <Input
+                  placeholder="Buscar distribuidora..."
+                  value={rankingSearch}
+                  onChange={(e) => setRankingSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-auto max-h-[780px]">
@@ -1278,22 +1285,28 @@ export default function IndicadoresPage() {
                         </td>
                       </tr>
                     ) : rankingData.length > 0 ? (
-                      rankingData.map((dist) => (
-                        <tr
-                          key={dist.nome}
-                          className="border-b border-border/50 hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="py-3 px-4 text-sm text-foreground font-medium">
-                            {dist.nome}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.dec ?? "—"}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.fec ?? "—"}
-                          </td>
-                        </tr>
-                      ))
+                      rankingData
+                        .filter((dist) =>
+                          dist.nome
+                            .toLowerCase()
+                            .includes(rankingSearch.toLowerCase()),
+                        )
+                        .map((dist) => (
+                          <tr
+                            key={dist.nome}
+                            className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-sm text-foreground font-medium">
+                              {dist.nome}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
+                              {dist.dec ?? "—"}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
+                              {dist.fec ?? "—"}
+                            </td>
+                          </tr>
+                        ))
                     ) : (
                       <tr>
                         <td

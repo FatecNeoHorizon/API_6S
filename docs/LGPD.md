@@ -17,7 +17,7 @@ This document describes how the database was designed to comply with Brazil's Ge
 | **Security** | Encryption at rest and in transit, append-only logs, RLS, roles |
 | **Prevention** | Synthetic data in dev/homolog — no real data outside production |
 | **Non-discrimination** | Profiles and permissions are role-based, not individual |
-| **Accountability** | All actions are logged in `TB_LOG` with actor, action, result and timestamp |
+| **Accountability** | Sensitive actions logged via structlog (JSON). General-purpose `TB_LOG` table is planned but not yet implemented. |
 
 ## 🤝 Consent Management (Art. 7 and Art. 8, LGPD)
 
@@ -209,21 +209,18 @@ Real data is never used outside production. The `V006__synthetic_seed.sql` migra
 | `EMAIL_ENC` | TB_USER | Application-layer encryption used to protect the original e-mail value |
 | `EMAIL_HASH` | TB_USER |  Deterministic SHA-256 hash with fixed salt from `EMAIL_HASH_SALT`, used for lookup without exposing or decrypting the email |
 | `PASSWORD_HASH` | TB_USER | Bcrypt hash — never stored in plain text |
-| `SOURCE_IP` | TB_LOG, TB_SESSION, TB_AUTH_ATTEMPT, TB_CONSENT_LOG | Masked — only first 3 octets stored |
-| `DETAILS` | TB_LOG | Encrypted JSONB |
+| `SOURCE_IP` | TB_SESSION, TB_AUTH_ATTEMPT, TB_CONSENT_LOG | Masked — only first 3 octets stored |
 | `TOKEN_HASH` | TB_PASSWORD_RESET | SHA-256 hash of the password reset token — the raw token is never stored |
 
 Password reset tokens are not stored in plain text. The database stores only `TOKEN_HASH`, which contains the SHA-256 hash of the issued token. This reduces exposure in case of database access while preserving the ability to validate single-use reset requests.
 
 ## 📊 Audit Trail
 
-Every action performed on sensitive data is recorded in `TB_LOG` with:
-- Who performed the action (`USER_ID`)
-- What was done (`ACTION`)
-- Which record was affected (`ENTITY` + `ENTITY_ID`)
-- From where (`SOURCE_IP`, `USER_AGENT`)
-- The outcome (`RESULT`)
-- When it happened (`CREATED_AT`)
+Sensitive actions (auth attempts, consent events, session lifecycle) are recorded in dedicated tables (`TB_AUTH_ATTEMPT`, `TB_CONSENT_LOG`, `TB_SESSION`).
+
+General-purpose audit via `TB_LOG` (a planned append-only table covering all CRUD actions on sensitive entities) is **not yet implemented**. Until then, general audit coverage is provided by structured JSON logs (structlog) with `actor_id`, `target_user_id`, `action`, and timestamp fields — persisted via the application's logging infrastructure, not in the database.
+
+> **Note:** Documentation describing `TB_LOG` as an existing table reflects a planned design, not the current implementation state.
 
 The log table is append-only — UPDATE and DELETE are blocked at the database level via trigger, ensuring the audit trail cannot be tampered with.
 

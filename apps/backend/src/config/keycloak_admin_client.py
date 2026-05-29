@@ -7,6 +7,8 @@ from src.config.settings import Settings
 
 log = structlog.get_logger()
 
+VALID_PROFILES = {"ADMIN", "MANAGER", "ANALYST"}
+
 
 class KeycloakAdminError(Exception):
     pass
@@ -24,9 +26,8 @@ class KeycloakAdminClient:
     def __init__(self, settings: Settings):
         self._base_url = settings.keycloak_url.rstrip("/")
         self._realm = settings.keycloak_realm
-        self._client_id = settings.keycloak_admin_client_id
-        self._username = settings.keycloak_admin_username
-        self._password = settings.keycloak_admin_password
+        self._client_id = settings.keycloak_backend_client_id
+        self._client_secret = settings.keycloak_backend_client_secret
         self._token: str | None = None
         self._token_expires_at: float = 0.0
 
@@ -35,19 +36,18 @@ class KeycloakAdminClient:
             return self._token
 
         response = httpx.post(
-            f"{self._base_url}/realms/master/protocol/openid-connect/token",
+            f"{self._base_url}/realms/{self._realm}/protocol/openid-connect/token",
             data={
-                "grant_type": "password",
+                "grant_type": "client_credentials",
                 "client_id": self._client_id,
-                "username": self._username,
-                "password": self._password,
+                "client_secret": self._client_secret,
             },
             timeout=10,
         )
 
         if response.status_code != 200:
             raise KeycloakAdminError(
-                f"Failed to obtain admin token: {response.status_code} {response.text}"
+                f"Failed to obtain service account token: {response.status_code} {response.text}"
             )
 
         data = response.json()
@@ -96,6 +96,64 @@ class KeycloakAdminClient:
 
         log.info("keycloak.user.created", keycloak_sub=keycloak_sub, email=email)
         return keycloak_sub
+
+    def get_user(self, keycloak_sub: str) -> dict:
+        """Returns a single Keycloak user by ID."""
+        response = httpx.get(
+            self._url(f"users/{keycloak_sub}"),
+            headers=self._headers(),
+            timeout=10,
+        )
+
+        if response.status_code == 404:
+            raise KeycloakUserNotFoundError(
+                f"User '{keycloak_sub}' not found in Keycloak."
+            )
+        if response.status_code != 200:
+            raise KeycloakAdminError(
+                f"Failed to get user '{keycloak_sub}': {response.status_code} {response.text}"
+            )
+
+        return response.json()
+
+    def get_users(self, *, first: int = 0, max_results: int = 100, search: str = "") -> list[dict]:
+        """Lists users in the realm with optional search and pagination."""
+        params: dict = {"first": first, "max": max_results}
+        if search:
+            params["search"] = search
+
+        response = httpx.get(
+            self._url("users"),
+            params=params,
+            headers=self._headers(),
+            timeout=10,
+        )
+
+        if response.status_code != 200:
+            raise KeycloakAdminError(
+                f"Failed to list users: {response.status_code} {response.text}"
+            )
+
+        return response.json()
+
+    def get_user_realm_roles(self, keycloak_sub: str) -> list[str]:
+        """Returns the list of realm role names assigned to a user."""
+        response = httpx.get(
+            self._url(f"users/{keycloak_sub}/role-mappings/realm"),
+            headers=self._headers(),
+            timeout=10,
+        )
+
+        if response.status_code == 404:
+            raise KeycloakUserNotFoundError(
+                f"User '{keycloak_sub}' not found in Keycloak."
+            )
+        if response.status_code != 200:
+            raise KeycloakAdminError(
+                f"Failed to get roles for '{keycloak_sub}': {response.status_code} {response.text}"
+            )
+
+        return [r["name"] for r in response.json()]
 
     def assign_realm_role(self, keycloak_sub: str, role_name: str) -> None:
         """Assigns a realm role to a user."""

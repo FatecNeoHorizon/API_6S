@@ -105,7 +105,7 @@ Se você não solicitou este acesso, ignore este email.
         raise
 
 
-def send_bulk_incident_notification(
+def send_bulk_notification(
     to_addresses: list,
     subject: str,
     body_html: str,
@@ -119,7 +119,7 @@ def send_bulk_incident_notification(
     settings = Settings()
 
     if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password or not settings.smtp_from:
-        logger.warning("SMTP settings not configured. Skipping bulk incident notification.")
+        logger.warning("SMTP settings not configured. Skipping bulk notification.")
         return {"sent": 0, "failed": len(to_addresses)}
 
     sent = 0
@@ -141,7 +141,7 @@ def send_bulk_incident_notification(
                     server.send_message(msg)
                     sent += 1
                 except Exception as exc:
-                    logger.error(f"Failed to send incident notification to {address}: {exc}")
+                    logger.error(f"Failed to send notification to {address}: {exc}")
                     failed += 1
 
     except smtplib.SMTPAuthenticationError as exc:
@@ -154,5 +154,15 @@ def send_bulk_incident_notification(
         logger.error(f"Unexpected error in bulk send: {exc}")
         return {"sent": sent, "failed": failed + (len(to_addresses) - sent - failed)}
 
-    logger.info(f"Bulk incident notification complete. sent={sent}, failed={failed}")
+    logger.info(f"Bulk notification complete. sent={sent}, failed={failed}")
     return {"sent": sent, "failed": failed}
+
+
+def send_bulk_incident_notification(
+    to_addresses: list,
+    subject: str,
+    body_html: str,
+    body_text: str,
+) -> dict:
+    """Backward-compatible wrapper for the incident notification workflow."""
+    return send_bulk_notification(to_addresses, subject, body_html, body_text)

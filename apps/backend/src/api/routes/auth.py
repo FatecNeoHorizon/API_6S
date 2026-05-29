@@ -11,7 +11,6 @@ from src.api.schemas.user_schemas import (
     CallbackRequest,
     CurrentUserResponse,
     DataExportResponse,
-    LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
@@ -22,7 +21,6 @@ from src.database.postgres import get_pg_connection
 from src.services.auth_service import (
     export_user_data,
     list_sessions_service,
-    login,
     logout,
     oauth_callback,
     refresh_access_token,
@@ -56,30 +54,6 @@ def post_callback(request: Request, payload: CallbackRequest):
             code=payload.code,
             code_verifier=payload.code_verifier,
             redirect_uri=payload.redirect_uri,
-            source_ip=source_ip,
-            user_agent=user_agent,
-        )
-
-
-@router.post(
-    "/login",
-    response_model=LoginResponse,
-    summary="Authenticate user",
-    description=(
-        "Authenticates a user and records the authentication attempt in "
-        "TB_AUTH_ATTEMPT using the deterministic email hash and masked source IP. "
-        "The password, plain email and internal session data are never logged."
-    ),
-)
-@limiter.limit("10/minute")
-def post_login(request: Request, payload: LoginRequest):
-    source_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-
-    with get_pg_connection() as conn:
-        return login(
-            conn,
-            payload=payload,
             source_ip=source_ip,
             user_agent=user_agent,
         )

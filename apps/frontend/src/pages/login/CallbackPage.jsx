@@ -12,16 +12,32 @@ export function CallbackPage() {
     handled.current = true;
 
     const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
+    const code  = params.get("code");
     const state = params.get("state");
 
-    const storedState = sessionStorage.getItem("pkce_state");
-    const codeVerifier = sessionStorage.getItem("pkce_verifier");
+    if (!code || !state) {
+      if (window.opener) window.close();
+      else navigate("/", { replace: true });
+      return;
+    }
 
+    if (window.opener) {
+      // Running inside popup — relay code+state to parent and close
+      window.opener.postMessage(
+        { type: "oauth_code", code, state },
+        window.location.origin,
+      );
+      window.close();
+      return;
+    }
+
+    // Fallback: direct navigation (popup was blocked or user navigated manually)
+    const storedState  = sessionStorage.getItem("pkce_state");
+    const codeVerifier = sessionStorage.getItem("pkce_verifier");
     sessionStorage.removeItem("pkce_state");
     sessionStorage.removeItem("pkce_verifier");
 
-    if (!code || !state || state !== storedState || !codeVerifier) {
+    if (!storedState || state !== storedState || !codeVerifier) {
       navigate("/", { replace: true });
       return;
     }
@@ -32,19 +48,10 @@ export function CallbackPage() {
       redirect_uri: `${window.location.origin}/auth/callback`,
     })
       .then((res) => {
-        saveClientSession(res.data.access_token, {
-          refreshToken: res.data.refresh_token,
-        });
-
-        if (res.data.pending_consent) {
-          navigate("/consent", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+        saveClientSession(res.access_token, { refreshToken: res.refresh_token });
+        navigate(res.pending_consent ? "/consent" : "/dashboard", { replace: true });
       })
-      .catch(() => {
-        navigate("/", { replace: true });
-      });
+      .catch(() => navigate("/", { replace: true }));
   }, [navigate]);
 
   return (

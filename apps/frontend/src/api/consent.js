@@ -8,6 +8,7 @@ const SESSION_KEYS = [
   "refresh_token",
   "refreshToken",
   "token",
+  "kc_id_token",
 ];
 
 export function getSessionToken() {
@@ -59,6 +60,10 @@ export function clearClientSession() {
     sessionStorage.removeItem(key);
     localStorage.removeItem(key);
   }
+}
+
+export function getKeycloakIdToken() {
+  return sessionStorage.getItem("kc_id_token") || localStorage.getItem("kc_id_token") || null;
 }
 
 export function getPendingConsent() {

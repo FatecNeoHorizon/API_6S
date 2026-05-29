@@ -1,10 +1,69 @@
-import { initiateOAuthLogin } from '@/api/auth'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { initiateOAuthLogin, exchangeCodeForToken } from '@/api/auth'
+import { saveClientSession } from '@/api/consent'
 import zeusWelcomeImage from '@/assets/zeus_welcome_image.jpg'
 
 export function WelcomePage() {
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+
   async function handleLogin() {
+    if (loading) return
+    setLoading(true)
+
     const url = await initiateOAuthLogin()
-    window.location.href = url
+
+    const w = 480, h = 640
+    const left = Math.round(screen.width / 2 - w / 2)
+    const top  = Math.round(screen.height / 2 - h / 2)
+    const popup = window.open(url, 'keycloak-login', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes`)
+
+    if (!popup) {
+      window.location.href = url
+      return
+    }
+
+    function handleMessage(event) {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'oauth_code') return
+
+      window.removeEventListener('message', handleMessage)
+      clearInterval(pollClosed)
+
+      const { code, state } = event.data
+      const storedState   = sessionStorage.getItem('pkce_state')
+      const codeVerifier  = sessionStorage.getItem('pkce_verifier')
+      sessionStorage.removeItem('pkce_state')
+      sessionStorage.removeItem('pkce_verifier')
+
+      if (!storedState || state !== storedState || !codeVerifier) {
+        setLoading(false)
+        return
+      }
+
+      exchangeCodeForToken({
+        code,
+        code_verifier: codeVerifier,
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      })
+        .then(res => {
+          saveClientSession(res.access_token, { refreshToken: res.refresh_token })
+          if (res.kc_id_token) sessionStorage.setItem('kc_id_token', res.kc_id_token)
+          navigate(res.pending_consent ? '/consent' : '/dashboard')
+        })
+        .catch(() => setLoading(false))
+    }
+
+    window.addEventListener('message', handleMessage)
+
+    const pollClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollClosed)
+        window.removeEventListener('message', handleMessage)
+        setLoading(false)
+      }
+    }, 500)
   }
 
   return (
@@ -32,17 +91,18 @@ export function WelcomePage() {
 
         <button
           onClick={handleLogin}
+          disabled={loading}
           className="
             inline-flex items-center gap-2.5
-            bg-primary hover:bg-primary/90
+            bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-wait
             text-primary-foreground font-semibold text-sm
             rounded-lg px-7 py-3.5
             transition-all duration-200
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           "
         >
-          Entrar no sistema
-          <span aria-hidden className="text-lg">→</span>
+          {loading ? 'Aguardando login...' : 'Entrar no sistema'}
+          {!loading && <span aria-hidden className="text-lg">→</span>}
         </button>
 
         <span className="mt-10 text-[11px] text-muted-foreground/50 tracking-widest uppercase">

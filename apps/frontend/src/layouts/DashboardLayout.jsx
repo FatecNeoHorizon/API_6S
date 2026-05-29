@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
-import { getSessionToken, clearClientSession, logoutUser } from "@/api/consent";
+import { getSessionToken, clearClientSession, logoutUser, getKeycloakIdToken } from "@/api/consent";
+import { buildKeycloakLogoutUrl } from "@/api/auth";
 
 const menuItems = [
   {
@@ -208,11 +209,11 @@ export default function DashboardLayout() {
   }, []);
 
   const handleLogout = async () => {
+    const idToken = getKeycloakIdToken();
     try {
       await logoutUser();
     } catch {}
-    clearClientSession();
-    window.location.href = "/login";
+    window.location.href = buildKeycloakLogoutUrl(idToken);
   };
 
   // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]

@@ -156,7 +156,9 @@ def oauth_callback(
             detail="invalid_authorization_code",
         )
 
-    kc_access_token = response.json().get("access_token")
+    kc_tokens = response.json()
+    kc_access_token = kc_tokens.get("access_token")
+    kc_id_token = kc_tokens.get("id_token", "")
     try:
         signing_key = _get_jwks_client().get_signing_key_from_jwt(kc_access_token)
         kc_payload = _jwt.decode(
@@ -204,7 +206,7 @@ def oauth_callback(
             detail="inactive_user",
         )
 
-    return _create_session_and_token(
+    result = _create_session_and_token(
         conn,
         user_id=str(user["user_uuid"]),
         profile_name=profile_name,
@@ -212,6 +214,8 @@ def oauth_callback(
         user_agent=user_agent,
         username=username,
     )
+    result["kc_id_token"] = kc_id_token
+    return result
 
 
 def refresh_access_token(conn, *, payload: RefreshTokenRequest) -> dict:

@@ -11,12 +11,9 @@ from src.repositories.user_repository import get_active_session_user
 EXEMPT_PREFIXES = (
     "/consent",
     "/terms",
-    "/auth/login",
+    "/auth/callback",
     "/auth/logout",
     "/auth/refresh",
-    "/auth/first-access",
-    "/auth/forgot-password",
-    "/auth/reset-password",
     "/auth/sessions",
     "/docs",
     "/redoc",

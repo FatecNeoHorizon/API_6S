@@ -89,6 +89,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     pending_consent: bool
     pending_clauses: list[dict]
+    kc_id_token: str = ""
 
 
 class RefreshTokenRequest(BaseModel):

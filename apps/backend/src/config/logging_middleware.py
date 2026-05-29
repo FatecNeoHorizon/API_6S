@@ -6,7 +6,20 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
+from src.config.auth_security import decode_token
+
 log = structlog.get_logger()
+
+
+def _extract_user_id(request: Request) -> str | None:
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    try:
+        payload = decode_token(auth[7:])
+        return payload.get("sub")
+    except Exception:
+        return None
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -17,7 +30,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             request_id=str(uuid.uuid4()),
             method=request.method,
             path=request.url.path,
-            user_id=None,  # JWT not implemented yet
+            user_id=_extract_user_id(request),
         )
 
         log.info("request_started")

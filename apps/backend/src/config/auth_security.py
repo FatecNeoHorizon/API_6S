@@ -1,5 +1,6 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
+from ipaddress import ip_address
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +12,21 @@ from src.config.settings import Settings
 
 
 settings = Settings()
+
+
+def mask_source_ip(source_ip: str | None) -> str:
+    value = (source_ip or "").strip()
+    if not value or value.lower() == "unknown":
+        return "unknown"
+    try:
+        parsed = ip_address(value)
+    except ValueError:
+        return "unknown"
+    if parsed.version == 4:
+        octets = value.split(".")
+        return f"{octets[0]}.{octets[1]}.{octets[2]}.0"
+    hextets = parsed.exploded.split(":")
+    return f"{':'.join(hextets[:4])}::"
 
 
 def is_valid_uuid(value: Any) -> bool:

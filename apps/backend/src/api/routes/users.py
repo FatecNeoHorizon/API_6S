@@ -89,7 +89,7 @@ def get_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_
 def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         result = create_user_service(payload)
-        log.info(USER_CREATED, user_id=str(result.user_uuid), profile_id=str(result.profile_id))
+        log.info(USER_CREATED, actor_id=current_user.user_id, target_user_id=str(result.user_uuid), profile_id=str(result.profile_id))
         return result
     except UserAlreadyExistsError as exc:
         log.warning(USER_CONFLICT, reason=str(exc))
@@ -107,7 +107,7 @@ def update_user(user_uuid: UUID, payload: UserUpdateRequest, current_user: Authe
     try:
         data = {"username": payload.username, "profile_id": payload.profile_id}
         result = update_user_service(user_uuid, data)
-        log.info(USER_UPDATED, user_id=str(user_uuid), fields_changed=list(data.keys()))
+        log.info(USER_UPDATED, actor_id=current_user.user_id, target_user_id=str(user_uuid), fields_changed=list(data.keys()))
         return result
     except UserNotFoundError as exc:
         log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
@@ -128,7 +128,7 @@ def set_active(
 ):
     try:
         result = set_user_active_service(user_uuid, payload.active, acting_user_id=current_user.user_id)
-        log.info(USER_DEACTIVATED, user_id=str(user_uuid), active=payload.active)
+        log.info(USER_DEACTIVATED, actor_id=current_user.user_id, target_user_id=str(user_uuid), active=payload.active)
         return result
     except UserNotFoundError as exc:
         log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
@@ -149,7 +149,7 @@ def delete_user_sessions(
 def delete_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         delete_user_service(user_uuid)
-        log.info(USER_DELETED, user_id=str(user_uuid))
+        log.info(USER_DELETED, actor_id=current_user.user_id, target_user_id=str(user_uuid))
     except UserNotFoundError as exc:
         log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

@@ -355,34 +355,41 @@ const formatMonthLabel = (m) =>
   m ? `${MONTH_NAMES[m.month - 1]}/${m.year}` : "—";
 
 const calcAverage = (records) => {
-  if (!records.length) return null;
+  const valid = records.filter((r) => r.value != null);
+  if (!valid.length) return null;
   return parseFloat(
-    (records.reduce((acc, r) => acc + r.value, 0) / records.length).toFixed(2),
+    (valid.reduce((acc, r) => acc + r.value, 0) / valid.length).toFixed(2),
   );
 };
+
+const avgOrNull = (values) =>
+  values.length
+    ? parseFloat((values.reduce((a, v) => a + v, 0) / values.length).toFixed(2))
+    : null;
 
 const buildRanking = (data) => {
   const agentMap = {};
   data.forEach((item) => {
     if (!agentMap[item.agent_acronym])
       agentMap[item.agent_acronym] = { decValues: [], fecValues: [] };
-    if (item.indicator_type_code === "DEC")
+    if (item.indicator_type_code === "DEC" && item.value != null)
       agentMap[item.agent_acronym].decValues.push(item.value);
-    if (item.indicator_type_code === "FEC")
+    if (item.indicator_type_code === "FEC" && item.value != null)
       agentMap[item.agent_acronym].fecValues.push(item.value);
   });
   return Object.entries(agentMap)
-    .filter(([, v]) => v.decValues.length && v.fecValues.length)
     .map(([nome, { decValues, fecValues }]) => ({
       nome,
-      dec: parseFloat(
-        (decValues.reduce((a, v) => a + v, 0) / decValues.length).toFixed(2),
-      ),
-      fec: parseFloat(
-        (fecValues.reduce((a, v) => a + v, 0) / fecValues.length).toFixed(2),
-      ),
+      dec: avgOrNull(decValues),
+      fec: avgOrNull(fecValues),
     }))
-    .sort((a, b) => b.dec - a.dec || b.fec - a.fec);
+    .sort((a, b) => {
+      if (a.dec === null && b.dec !== null) return 1;
+      if (a.dec !== null && b.dec === null) return -1;
+      if (a.dec === null && b.dec === null)
+        return (b.fec ?? -Infinity) - (a.fec ?? -Infinity);
+      return b.dec - a.dec || (b.fec ?? 0) - (a.fec ?? 0);
+    });
 };
 
 const buildChartData = (data) => {
@@ -1280,10 +1287,10 @@ export default function IndicadoresPage() {
                             {dist.nome}
                           </td>
                           <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.dec}
+                            {dist.dec ?? "—"}
                           </td>
                           <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.fec}
+                            {dist.fec ?? "—"}
                           </td>
                         </tr>
                       ))

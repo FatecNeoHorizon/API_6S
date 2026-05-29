@@ -4,6 +4,7 @@ import secrets
 
 import httpx
 import jwt as _jwt
+from jwt import PyJWKClient
 import structlog
 from fastapi import HTTPException, status
 
@@ -11,7 +12,6 @@ from src.api.schemas.user_schemas import (
     ConsentExportItem,
     DataExportResponse,
     IdentityExport,
-    LoginRequest,
     RefreshTokenRequest,
     SessionExportItem,
 )
@@ -20,9 +20,7 @@ from src.config.auth_security import (
     create_access_token,
     hash_token,
     is_valid_uuid,
-    verify_password,
 )
-from src.config.email_hasher import EmailHasher
 from src.config.log_events import DATA_EXPORT_REQUESTED
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection, set_current_user
@@ -32,14 +30,12 @@ from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     create_user_session,
     get_sessions_for_export,
-    get_user_auth_by_email_hash,
     get_user_by_keycloak_sub,
     get_user_for_export,
     get_user_sessions,
     invalidate_single_session,
     invalidate_user_sessions,
     invalidate_session,
-    log_auth_attempt,
     rotate_refresh_token,
 )
 
@@ -47,9 +43,18 @@ from src.repositories.user_repository import (
 settings = Settings()
 log = structlog.get_logger()
 
+_jwks_client: PyJWKClient | None = None
 
-def _build_email_hash(email: str) -> str:
-    return EmailHasher.hash(email)
+
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        jwks_uri = (
+            f"{settings.keycloak_url}/realms/{settings.keycloak_realm}"
+            "/protocol/openid-connect/certs"
+        )
+        _jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
+    return _jwks_client
 
 
 def _generate_refresh_token() -> str:
@@ -73,43 +78,6 @@ def _mask_source_ip(source_ip: str | None) -> str:
 
     hextets = parsed_ip.exploded.split(":")
     return f"{':'.join(hextets[:4])}::"
-
-
-def _record_auth_attempt(
-    conn,
-    *,
-    email_hash: str,
-    source_ip: str,
-    success: bool,
-    blocked: bool,
-) -> None:
-    log_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=_mask_source_ip(source_ip),
-        success=success,
-        blocked=blocked,
-    )
-
-
-def _record_failed_auth_attempt_and_commit(
-    conn,
-    *,
-    email_hash: str,
-    source_ip: str,
-    blocked: bool = False,
-) -> None:
-    _record_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=source_ip,
-        success=False,
-        blocked=blocked,
-    )
-
-    # Failed logins are followed by HTTPException. The request-level connection
-    # manager rolls back on exceptions, so commit the audit row before raising.
-    conn.commit()
 
 
 def _create_session_and_token(
@@ -189,14 +157,39 @@ def oauth_callback(
         )
 
     kc_access_token = response.json().get("access_token")
-    kc_payload = _jwt.decode(kc_access_token, options={"verify_signature": False})
+    try:
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(kc_access_token)
+        kc_payload = _jwt.decode(
+            kc_access_token,
+            signing_key,
+            algorithms=["RS256"],
+            options={"verify_aud": False},
+        )
+    except (_jwt.InvalidTokenError, Exception) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_keycloak_token",
+        ) from exc
     keycloak_sub = kc_payload.get("sub")
-
     if not keycloak_sub:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_keycloak_token",
         )
+
+    # Keycloak is source of truth: extract identity claims from the token
+    kc_roles: list[str] = kc_payload.get("realm_access", {}).get("roles", [])
+    profile_name = next(
+        (r for r in kc_roles if r in ("ADMIN", "MANAGER", "ANALYST")),
+        None,
+    )
+    if not profile_name:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="no_valid_profile_role",
+        )
+
+    username: str = kc_payload.get("preferred_username", "")
 
     user = get_user_by_keycloak_sub(conn, keycloak_sub)
     if not user:
@@ -214,10 +207,10 @@ def oauth_callback(
     return _create_session_and_token(
         conn,
         user_id=str(user["user_uuid"]),
-        profile_name=user["profile_name"],
+        profile_name=profile_name,
         source_ip=source_ip,
         user_agent=user_agent,
-        username=user["username"],
+        username=username,
     )
 
 
@@ -261,67 +254,6 @@ def refresh_access_token(conn, *, payload: RefreshTokenRequest) -> dict:
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
-
-
-
-def login(
-    conn,
-    *,
-    payload: LoginRequest,
-    source_ip: str,
-    user_agent: str,
-):
-    email_hash = _build_email_hash(payload.email)
-    user = get_user_auth_by_email_hash(conn, email_hash)
-
-    generic_error = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="invalid_credentials",
-    )
-
-    if not user:
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-        )
-        raise generic_error
-
-    if not user["active"]:
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-            blocked=True,
-        )
-        raise generic_error
-
-    if not verify_password(payload.password, user["password_hash"]):
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-        )
-        raise generic_error
-
-    response = _create_session_and_token(
-        conn,
-        user_id=str(user["user_uuid"]),
-        profile_name=user["profile_name"],
-        source_ip=source_ip,
-        user_agent=user_agent,
-        username=user["username"],
-    )
-
-    _record_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=source_ip,
-        success=True,
-        blocked=False,
-    )
-
-    return response
 
 
 

@@ -4,7 +4,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -95,18 +95,29 @@ class Settings(BaseSettings):
     email_hash_salt: str = Field(default="")
     email_encryption_key: Optional[str] = Field(default=None)
 
-    jwt_secret_key: str = Field(default="")
-    jwt_algorithm: str = Field(default="HS256")
+    jwt_private_key: str = Field(default="")
+    jwt_public_key: str = Field(default="")
+    jwt_algorithm: str = Field(default="RS256")
     jwt_access_token_expire_minutes: int = Field(default=15)
     jwt_refresh_token_expire_days: int = Field(default=7)
 
-    # Keycloak Admin API
+    @field_validator("jwt_private_key", "jwt_public_key", mode="before")
+    @classmethod
+    def normalize_pem_newlines(cls, v: str) -> str:
+        # Env files (especially via Docker env_file) store PEM as single-line
+        # with literal \n — decode them into real newlines.
+        if isinstance(v, str) and r"\n" in v:
+            return v.replace(r"\n", "\n")
+        return v
+
+    # Keycloak / OAuth 2.0
     keycloak_url: str = Field(default="http://keycloak:8080")
     keycloak_realm: str = Field(default="zeus")
     keycloak_client_id: str = Field(default="zeus-frontend")
-    keycloak_admin_client_id: str = Field(default="admin-cli")
-    keycloak_admin_username: str = Field(default="admin")
-    keycloak_admin_password: str = Field(default="")
+
+    # Keycloak backend service account (client_credentials grant)
+    keycloak_backend_client_id: str = Field(default="zeus-backend")
+    keycloak_backend_client_secret: str = Field(default="")
 
     # SMTP Email Configuration
     smtp_host: str = Field(default="")
@@ -143,8 +154,11 @@ class Settings(BaseSettings):
         if not self.email_hash_salt:
             raise ValueError("EMAIL_HASH_SALT is missing.")
 
-        if not self.jwt_secret_key:
-            raise ValueError("JWT_SECRET_KEY is missing.")
+        if not self.jwt_private_key:
+            raise ValueError("JWT_PRIVATE_KEY is missing.")
+
+        if not self.jwt_public_key:
+            raise ValueError("JWT_PUBLIC_KEY is missing.")
 
         return self
 

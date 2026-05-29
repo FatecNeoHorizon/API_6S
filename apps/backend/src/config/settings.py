@@ -91,9 +91,9 @@ class Settings(BaseSettings):
     postgres_db: str = Field(default="postgres")
     postgres_sslmode: str = Field(default="prefer")
 
-    blacklist_postgres_host: str = Field(default="postgres")
-    blacklist_postgres_port: int = Field(default=5432)
-    blacklist_postgres_user: str = Field(default="postgres")
+    blacklist_postgres_host: str = Field(default="")
+    blacklist_postgres_port: int = Field(default=0)
+    blacklist_postgres_user: str = Field(default="")
     blacklist_postgres_password: str = Field(default="")
     blacklist_postgres_db: str = Field(default="tecsys_blacklist")
     blacklist_postgres_sslmode: str = Field(default="prefer")

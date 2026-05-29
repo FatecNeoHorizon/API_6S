@@ -145,9 +145,19 @@ function fileNameToKey(fileName) {
   return null;
 }
 
+function getUploadAuthHeaders() {
+  try {
+    const token = getSessionToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 function uploadFormDataWithProgress(formData, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const authHeaders = getUploadAuthHeaders();
 
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
@@ -176,6 +186,9 @@ function uploadFormDataWithProgress(formData, onProgress) {
     xhr.addEventListener("abort", () => reject({ status: 0, message: "Upload cancelado" }));
 
     xhr.open("POST", "http://localhost:8000/upload/");
+    Object.entries(authHeaders).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value);
+    });
     xhr.send(formData);
   });
 }
@@ -188,7 +201,6 @@ export default function DashboardLayout() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [appLoadIds, setAppLoadIds] = useState(null);
   const [profileDisplayName, setProfileDisplayName] = useState(null);
 
   const userDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
@@ -208,16 +220,13 @@ export default function DashboardLayout() {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch {}
+    await logoutUser();
     clearClientSession();
     window.location.href = "/login";
   };
 
   // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]
   const [fileList, setFileList] = useState([]);
-  const [batchId, setBatchId] = useState(null);
   const pollingRef = useRef(null);
 
   const resetModal = () => {
@@ -226,7 +235,6 @@ export default function DashboardLayout() {
     setUploadModalOpen(false);
     setFileList([]);
     setDragActive(false);
-    setBatchId(null);
   };
 
   const validateAndAddFiles = useCallback(
@@ -297,7 +305,9 @@ export default function DashboardLayout() {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/upload/batch/${id}`);
+        const res = await fetch(`http://localhost:8000/upload/batch/${id}`, {
+          headers: getUploadAuthHeaders(),
+        });
         if (!res.ok) return; // falha de rede — mantém estado, continua polling
 
         const data = await res.json();
@@ -371,7 +381,6 @@ export default function DashboardLayout() {
       });
 
       if (response.batch_id) {
-        setBatchId(response.batch_id);
         setFileList((prev) =>
           prev.map((entry) => ({ ...entry, status: "processing", progress: 100 }))
         );

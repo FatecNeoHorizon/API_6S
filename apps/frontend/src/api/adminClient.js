@@ -36,6 +36,26 @@ const buildAuthHeaders = () => {
   };
 };
 
+async function parseResponseBody(response) {
+  if (response.status === 204 || response.status === 205) {
+    return null;
+  }
+
+  const contentType = response.headers.get("content-type");
+  const contentLength = response.headers.get("content-length");
+
+  if (contentLength === "0") {
+    return null;
+  }
+
+  if (contentType?.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return text || null;
+}
+
 async function request(path, options = {}, retryAfterConsent = true) {
   const { headers: requestHeaders, ...requestOptions } = options;
 
@@ -51,10 +71,7 @@ async function request(path, options = {}, retryAfterConsent = true) {
       },
     });
 
-    const contentType = response.headers.get("content-type");
-    const responseBody = contentType?.includes("application/json")
-      ? await response.json()
-      : await response.text();
+    const responseBody = await parseResponseBody(response);
 
     if (!response.ok) {
       console.warn("adminClient: resposta não-ok", { url, status: response.status, body: responseBody });
@@ -94,10 +111,7 @@ async function postFormRequest(path, formData, options = {}, retryAfterConsent =
     body: formData,
   });
 
-  const contentType = response.headers.get("content-type");
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  const responseBody = await parseResponseBody(response);
 
   if (!response.ok) {
     const error = new Error(`Erro na API: ${response.status}`);

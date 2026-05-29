@@ -33,6 +33,7 @@ function setupXHR(batchId = "batch-test") {
       handlers[ev] = cb;
     }),
     open: vi.fn(),
+    setRequestHeader: vi.fn(),
     send: vi.fn(),
     status: 202,
     responseText: JSON.stringify({ batch_id: batchId }),
@@ -94,6 +95,7 @@ describe("[TEST] 4.8.3 – Processing feedback acceptance criteria", () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8000/upload/batch/batch-test",
+      { headers: {} },
     );
     expect(globalThis.fetch).not.toHaveBeenCalledWith(
       expect.stringContaining("/upload/status/"),

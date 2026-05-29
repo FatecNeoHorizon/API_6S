@@ -169,12 +169,15 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <div>
-        <h2 className="text-2xl font-semibold text-foreground">Meu Perfil</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Consulte e atualize suas informacoes pessoais.
-        </p>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-primary">Conta</p>
+          <h2 className="mt-1 text-2xl font-semibold text-foreground">Meu Perfil</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Consulte e atualize suas informações pessoais.
+          </p>
+        </div>
       </div>
 
       {error ? (
@@ -184,22 +187,22 @@ export default function ProfilePage() {
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="rounded-lg">
-          <CardHeader>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="h-fit rounded-lg border-border shadow-none">
+          <CardHeader className="border-b border-border pb-5">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
               Dados pessoais
             </CardTitle>
             <CardDescription>
-              Essas informacoes sao utilizadas para identificacao na plataforma.
+              Essas informações são utilizadas para identificação na plataforma.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <div className="space-y-2">
+          <CardContent className="pt-6">
+            <form className="grid gap-5" onSubmit={handleSubmit}>
+              <div className="grid gap-2">
                 <label className="text-sm font-medium text-foreground" htmlFor="username">
-                  Nome de usuario
+                  Nome de usuário
                 </label>
                 <Input
                   id="username"
@@ -211,7 +214,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 <label className="text-sm font-medium text-foreground" htmlFor="email">
                   Email
                 </label>
@@ -230,14 +233,14 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end border-t border-border pt-5">
                 <Button
                   type="submit"
                   disabled={!hasChanges || isSaving}
-                  className="min-w-36"
+                  className="w-full sm:w-auto sm:min-w-44"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {isSaving ? "Salvando..." : "Salvar alteracoes"}
+                  {isSaving ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </div>
             </form>
@@ -245,41 +248,43 @@ export default function ProfilePage() {
         </Card>
 
         <aside className="flex flex-col gap-4">
-          <Card className="rounded-lg">
-            <CardHeader>
+          <Card className="rounded-lg border-border shadow-none">
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Shield className="h-4 w-4 text-primary" />
                 Acesso
               </CardTitle>
               <CardDescription>Estado atual da conta</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
+            <CardContent className="grid gap-3 text-sm">
+              <div className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2">
                 <span className="text-muted-foreground">Status</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-chart-1/10 px-2 py-1 text-xs font-medium text-chart-1">
                   <CheckCircle2 className="h-3 w-3" />
                   {profile?.active ? "Ativo" : "Inativo"}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2">
                 <span className="text-muted-foreground">Perfil</span>
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                   {profile?.profile_name || "-"}
                 </span>
               </div>
-              <div className="border-t border-border pt-3">
-                <p className="text-xs text-muted-foreground">Criado em</p>
-                <p className="mt-1 font-medium text-foreground">{formatDateTime(profile?.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Ultima atualizacao</p>
+              <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Criado em</p>
+                  <p className="mt-1 font-medium text-foreground">{formatDateTime(profile?.created_at)}</p>
+                </div>
+                <div>
+                <p className="text-xs text-muted-foreground">Última atualização</p>
                 <p className="mt-1 font-medium text-foreground">{formatDateTime(profile?.updated_at)}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg">
-            <CardHeader>
+          <Card className="rounded-lg border-border shadow-none">
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 Consentimentos
@@ -289,7 +294,7 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild variant="outline" className="w-full border-border text-foreground hover:bg-muted">
+              <Button asChild variant="outline" className="w-full justify-center border-border bg-background text-foreground hover:bg-muted">
                 <Link to="/dashboard/consentimentos">
                   <ShieldCheck className="h-4 w-4" />
                   Gerenciar consentimentos
@@ -298,8 +303,8 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg">
-            <CardHeader>
+          <Card className="rounded-lg border-border shadow-none">
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Download className="h-4 w-4 text-primary" />
                 Portabilidade de dados
@@ -322,8 +327,8 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg border-destructive/30">
-            <CardHeader>
+          <Card className="rounded-lg border-destructive/30 bg-destructive/5 shadow-none">
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base text-destructive">
                 <Trash2 className="h-4 w-4" />
                 Exclusao da conta
@@ -346,7 +351,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">Encarregado de Dados</p>
             <p className="mt-1">
               {dpoContact.name} ·{" "}

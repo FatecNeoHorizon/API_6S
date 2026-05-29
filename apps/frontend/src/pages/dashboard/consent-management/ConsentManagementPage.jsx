@@ -39,9 +39,9 @@ function formatDateTime(value) {
 }
 
 function getStatusLabel(consent) {
-  if (consent.accepted) return "Accepted";
-  if (consent.current_status === "PENDING") return "Pending";
-  return "Revoked";
+  if (consent.accepted) return "Aceito";
+  if (consent.current_status === "PENDING") return "Pendente";
+  return "Revogado";
 }
 
 function ConfirmationModal({
@@ -80,8 +80,8 @@ function ConfirmationModal({
           <div>
             <h3 className="text-lg font-semibold text-foreground">
               {isMandatoryRevocation
-                ? "Mandatory consent revocation"
-                : "Confirm consent update"}
+                ? "Revogação de consentimento obrigatório"
+                : "Confirmar alteração de consentimento"}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {pendingChange.clause_title}
@@ -92,16 +92,16 @@ function ConfirmationModal({
         {isMandatoryRevocation ? (
           <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-foreground">
             <p className="font-semibold text-destructive">
-              This action will permanently delete/anonymize your account.
+              Esta ação excluirá ou anonimizará permanentemente sua conta.
             </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>Your account and personal data will be permanently removed or anonymized.</li>
-              <li>This action cannot be undone.</li>
-              <li>Your active session access will be removed immediately.</li>
+              <li>Sua conta e seus dados pessoais serão removidos ou anonimizados permanentemente.</li>
+              <li>Esta ação não poderá ser desfeita.</li>
+              <li>Seu acesso de sessão será removido imediatamente.</li>
             </ul>
 
             <label className="mt-4 block text-xs font-medium text-foreground">
-              Type DELETE to confirm
+              Digite DELETE para confirmar
             </label>
             <Input
               className="mt-2"
@@ -113,17 +113,17 @@ function ConfirmationModal({
           </div>
         ) : (
           <p className="mt-5 text-sm leading-6 text-muted-foreground">
-            This will register a new append-only consent event as{" "}
+            Esta ação registrará um novo evento de consentimento como{" "}
             <strong className="text-foreground">
-              {pendingChange.nextAccepted ? "accepted" : "revoked"}
+              {pendingChange.nextAccepted ? "aceito" : "revogado"}
             </strong>
-            . Previous consent records will not be changed.
+            . Os registros anteriores de consentimento não serão alterados.
           </p>
         )}
 
         <div className="mt-6 flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-            Cancel
+            Cancelar
           </Button>
           <Button
             type="button"
@@ -132,7 +132,7 @@ function ConfirmationModal({
             disabled={saving || !canConfirm}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {isMandatoryRevocation ? "Confirm deletion" : "Confirm update"}
+            {isMandatoryRevocation ? "Confirmar exclusão" : "Confirmar alteração"}
           </Button>
         </div>
       </div>
@@ -163,7 +163,7 @@ export default function ConsentManagementPage() {
       setProfile(profileData);
       setConsents(consentData.consents || []);
     } catch {
-      setLoadError("Could not load your consent preferences.");
+      setLoadError("Não foi possível carregar suas preferências de consentimento.");
     } finally {
       setLoading(false);
     }
@@ -223,9 +223,9 @@ export default function ConsentManagementPage() {
       setConsents(response.consents || []);
       setPendingChange(null);
       setConfirmationText("");
-      toast.success("Consent preference updated.");
+      toast.success("Preferência de consentimento atualizada.");
     } catch {
-      toast.error("Could not update consent preference.");
+      toast.error("Não foi possível atualizar a preferência de consentimento.");
     } finally {
       setSaving(false);
     }
@@ -236,7 +236,7 @@ export default function ConsentManagementPage() {
       <div className="flex min-h-[360px] items-center justify-center">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          <span className="text-sm">Loading consent preferences...</span>
+          <span className="text-sm">Carregando preferências de consentimento...</span>
         </div>
       </div>
     );
@@ -246,10 +246,10 @@ export default function ConsentManagementPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <div>
         <h2 className="text-2xl font-semibold text-foreground">
-          Consent Management
+          Gerenciamento de Consentimentos
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review, accept or revoke individual consent clauses at any time.
+          Revise, aceite ou revogue cláusulas de consentimento individualmente a qualquer momento.
         </p>
       </div>
 
@@ -263,16 +263,16 @@ export default function ConsentManagementPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            Current consent preferences
+            Preferências atuais de consentimento
           </CardTitle>
           <CardDescription>
-            Every change creates a new append-only consent log entry.
+            Cada alteração cria um novo registro imutável no histórico de consentimentos.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {Object.values(groupedConsents).length === 0 ? (
             <div className="rounded-lg border border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              No current consent clauses were found.
+              Nenhuma cláusula de consentimento atual foi encontrada.
             </div>
           ) : (
             Object.values(groupedConsents).map((group) => (
@@ -282,7 +282,7 @@ export default function ConsentManagementPage() {
                     {formatPolicyType(group.policy_type)}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Version {group.policy_version}
+                    Versão {group.policy_version}
                   </p>
                 </div>
 
@@ -308,7 +308,7 @@ export default function ConsentManagementPage() {
                                     : "rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
                                 }
                               >
-                                {consent.mandatory ? "Mandatory" : "Optional"}
+                                {consent.mandatory ? "Obrigatório" : "Opcional"}
                               </span>
                               <span
                                 className={
@@ -333,7 +333,7 @@ export default function ConsentManagementPage() {
                             ) : null}
 
                             <p className="mt-3 text-xs text-muted-foreground">
-                              Last action: {formatDateTime(consent.last_action_at)}
+                              Última ação: {formatDateTime(consent.last_action_at)}
                             </p>
                           </div>
 
@@ -345,7 +345,7 @@ export default function ConsentManagementPage() {
                               disabled={saving || consent.accepted}
                               onClick={() => requestConsentChange(consent, true)}
                             >
-                              Accept
+                              Aceitar
                             </Button>
                             <Button
                               type="button"
@@ -354,7 +354,7 @@ export default function ConsentManagementPage() {
                               disabled={saving || !consent.accepted}
                               onClick={() => requestConsentChange(consent, false)}
                             >
-                              Revoke
+                              Revogar
                             </Button>
                           </div>
                         </div>
@@ -376,7 +376,7 @@ export default function ConsentManagementPage() {
         disabled={loading || saving}
       >
         <RotateCcw className="h-4 w-4" />
-        Reload preferences
+        Recarregar preferências
       </Button>
 
       <ConfirmationModal

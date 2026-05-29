@@ -1,4 +1,9 @@
-import { getSessionToken } from "./consent";
+import {
+  clearClientSession,
+  getRefreshToken,
+  getSessionToken,
+  saveClientSession,
+} from "./consent";
 import { waitForPendingConsentAcceptance } from "./pendingConsentInterceptor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -43,6 +48,10 @@ async function request(path, options = {}, retryAfterConsent = true) {
     error.status = response.status;
     error.data = responseBody;
 
+    if (retryAfterConsent && await shouldRefreshAuth(error, path)) {
+      return request(path, options, false);
+    }
+
     if (retryAfterConsent) {
       const shouldRetry = await waitForPendingConsentAcceptance(error);
 
@@ -55,6 +64,62 @@ async function request(path, options = {}, retryAfterConsent = true) {
   }
 
   return responseBody;
+}
+
+async function shouldRefreshAuth(error, path) {
+  if (path === "/auth/login" || path === "/auth/refresh") {
+    return false;
+  }
+
+  if (error?.status !== 401) {
+    return false;
+  }
+
+  const detail = error?.data?.detail;
+  const refreshableDetails = new Set([
+    "missing_authentication",
+    "token_expired",
+    "invalid_or_expired_session",
+  ]);
+
+  if (!refreshableDetails.has(detail)) {
+    return false;
+  }
+
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    clearClientSession();
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    const responseBody = await parseResponseBody(response);
+
+    if (!response.ok) {
+      clearClientSession();
+      return false;
+    }
+
+    saveClientSession(responseBody.access_token, {
+      remember: localStorage.getItem("refresh_token") === refreshToken
+        || localStorage.getItem("refreshToken") === refreshToken,
+      refreshToken: responseBody.refresh_token,
+    });
+
+    return true;
+  } catch {
+    clearClientSession();
+    return false;
+  }
 }
 
 async function postFormRequest(

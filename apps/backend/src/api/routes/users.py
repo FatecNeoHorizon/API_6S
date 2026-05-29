@@ -89,7 +89,7 @@ def get_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_
 def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
         result = create_user_service(payload)
-        log.info(USER_CREATED, user_id=str(result.user_uuid), profile_id=str(result.profile_id))
+        log.info(USER_CREATED, user_id=str(result.user_uuid), profile_name=result.profile_name)
         return result
     except UserAlreadyExistsError as exc:
         log.warning(USER_CONFLICT, reason=str(exc))
@@ -105,7 +105,7 @@ def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = De
 @router.patch("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
 def update_user(user_uuid: UUID, payload: UserUpdateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
     try:
-        data = {"username": payload.username, "profile_id": payload.profile_id}
+        data = {"username": payload.username, "profile_name": payload.profile_name}
         result = update_user_service(user_uuid, data)
         log.info(USER_UPDATED, user_id=str(user_uuid), fields_changed=list(data.keys()))
         return result

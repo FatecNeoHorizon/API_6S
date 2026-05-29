@@ -17,12 +17,10 @@ def get_session_user(conn, session_uuid: str) -> dict | None:
             SELECT
                 s.SESSION_UUID,
                 u.USER_UUID,
-                p.PROFILE_NAME
+                u.PROFILE_NAME
             FROM TB_SESSION s
             JOIN TB_USER u
               ON u.USER_UUID = s.USER_ID
-            JOIN TB_PROFILE p
-              ON p.PROFILE_UUID = u.PROFILE_ID
             WHERE s.SESSION_UUID = %s
               AND s.INVALIDATED_AT IS NULL
               AND s.EXPIRES_AT > NOW()

@@ -1,34 +1,30 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
-
-class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    profile_id: UUID
+VALID_PROFILES = Literal["ADMIN", "MANAGER", "ANALYST"]
 
 
 class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    profile_id: UUID
+    profile_name: VALID_PROFILES
 
     @field_validator("email")
     def validate_email_format(cls, v: EmailStr) -> str:
         return str(v).strip().lower()
 
 
-class UserCreateResponse(UserBase):
+class UserCreateResponse(BaseModel):
     user_uuid: UUID
+    username: str
+    profile_name: str
     active: bool
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
-
-
-class UserResponse(UserCreateResponse):
-    pass
 
 
 class ProfileResponse(BaseModel):
@@ -39,44 +35,20 @@ class ProfileResponse(BaseModel):
 class UserResult(BaseModel):
     user_uuid: UUID
     username: str
-    profile_id: UUID
+    profile_name: str
     active: bool
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
-class MyProfileResponse(UserResult):
-    email: EmailStr
-    profile_name: str
-
-
-class MyProfileUpdateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
-class MyProfileResponse(UserResult):
-    email: EmailStr
-    profile_name: str
-
-
-class MyProfileUpdateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
-
-
 class UserUpdateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    profile_id: UUID
+    profile_name: VALID_PROFILES
+
+
+class UserSetActiveRequest(BaseModel):
+    active: bool
 
 
 class UserMeResponse(BaseModel):
@@ -98,28 +70,17 @@ class UserMeUpdateRequest(BaseModel):
         return str(v).strip().lower()
 
 
-class UserSetActiveRequest(BaseModel):
-    active: bool
-
 class CurrentUserResponse(BaseModel):
     user_id: UUID
     username: str
     profile: str
     active: bool
 
+
 class CallbackRequest(BaseModel):
     code: str = Field(..., min_length=1)
     code_verifier: str = Field(..., min_length=1)
     redirect_uri: str = Field(..., min_length=1)
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=1, max_length=256)
-
-    @field_validator("email")
-    def normalize_email(cls, v: EmailStr) -> str:
-        return str(v).strip().lower()
 
 
 class LoginResponse(BaseModel):
@@ -130,7 +91,6 @@ class LoginResponse(BaseModel):
     pending_clauses: list[dict]
 
 
-
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=20)
 
@@ -139,6 +99,7 @@ class RefreshTokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
 
 class LogoutResponse(BaseModel):
     detail: str

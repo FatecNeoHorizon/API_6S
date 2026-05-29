@@ -33,7 +33,7 @@ class ProfilePersistenceError(Exception):
 class UserCreateResult:
     user_uuid: UUID
     username: str
-    profile_id: UUID
+    profile_name: str
     active: bool
     created_at: datetime
 
@@ -48,7 +48,7 @@ class ProfileResult:
 class UserResult:
     user_uuid: UUID
     username: str
-    profile_id: UUID
+    profile_name: str
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -58,13 +58,12 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
     query = """
         INSERT INTO TB_USER (
             USERNAME,
-            EMAIL_HASH,
             EMAIL_ENC,
-            PROFILE_ID,
+            PROFILE_NAME,
             KEYCLOAK_SUB
         )
-        VALUES (%s, %s, %s, %s, %s)
-        RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT
+        VALUES (%s, %s, %s, %s)
+        RETURNING USER_UUID, USERNAME, PROFILE_NAME, ACTIVE, CREATED_AT
     """
 
     try:
@@ -73,15 +72,14 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
                 query,
                 (
                     data["username"],
-                    data["email_hash"],
                     data["email_enc"],
-                    str(data["profile_id"]),
+                    data["profile_name"],
                     data.get("keycloak_sub"),
                 ),
             )
             row = cursor.fetchone()
     except UniqueViolation as exc:
-        raise UserAlreadyExistsError("Nome de usuário ou e-mail já cadastrado.") from exc
+        raise UserAlreadyExistsError("Nome de usuário já cadastrado.") from exc
     except Exception as exc:
         raise UserPersistenceError("Falha ao salvar o usuário no PostgreSQL.") from exc
 
@@ -91,7 +89,7 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
     return UserCreateResult(
         user_uuid=row[0],
         username=row[1],
-        profile_id=row[2],
+        profile_name=row[2],
         active=row[3],
         created_at=row[4],
     )
@@ -99,7 +97,7 @@ def create_user(conn: PgConnection, data: dict) -> UserCreateResult:
 
 def get_user_by_id(conn: PgConnection, user_uuid: UUID) -> Optional[UserResult]:
     query = """
-        SELECT USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT, UPDATED_AT
+        SELECT USER_UUID, USERNAME, PROFILE_NAME, ACTIVE, CREATED_AT, UPDATED_AT
         FROM TB_USER
         WHERE USER_UUID = %s
           AND DELETED_AT IS NULL
@@ -115,119 +113,16 @@ def get_user_by_id(conn: PgConnection, user_uuid: UUID) -> Optional[UserResult]:
     return UserResult(
         user_uuid=row[0],
         username=row[1],
-        profile_id=row[2],
+        profile_name=row[2],
         active=row[3],
         created_at=row[4],
         updated_at=row[5],
     )
 
 
-def get_user_profile_by_id(conn: PgConnection, user_uuid: str):
-    query = """
-        SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.EMAIL_ENC,
-            u.PROFILE_ID,
-            u.ACTIVE,
-            u.CREATED_AT,
-            u.UPDATED_AT,
-            p.PROFILE_NAME
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.USER_UUID = %s
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(user_uuid),))
-        row = cursor.fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "user_uuid": row[0],
-        "username": row[1],
-        "email_enc": row[2],
-        "profile_id": row[3],
-        "active": row[4],
-        "created_at": row[5],
-        "updated_at": row[6],
-        "profile_name": row[7],
-    }
-
-
-def update_user_profile(conn: PgConnection, user_uuid: str, data: dict):
-    query = """
-        WITH updated AS (
-            UPDATE TB_USER
-            SET USERNAME = %s,
-                EMAIL_HASH = %s,
-                EMAIL_ENC = %s,
-                UPDATED_AT = NOW()
-            WHERE USER_UUID = %s
-              AND DELETED_AT IS NULL
-            RETURNING
-                USER_UUID,
-                USERNAME,
-                EMAIL_ENC,
-                PROFILE_ID,
-                ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
-        )
-        SELECT
-            updated.USER_UUID,
-            updated.USERNAME,
-            updated.EMAIL_ENC,
-            updated.PROFILE_ID,
-            updated.ACTIVE,
-            updated.CREATED_AT,
-            updated.UPDATED_AT,
-            p.PROFILE_NAME
-        FROM updated
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = updated.PROFILE_ID
-    """
-
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                query,
-                (
-                    data["username"],
-                    data["email_hash"],
-                    data["email_enc"],
-                    str(user_uuid),
-                ),
-            )
-            row = cursor.fetchone()
-    except UniqueViolation as exc:
-        raise UserAlreadyExistsError("Nome de usuÃ¡rio ou e-mail jÃ¡ cadastrado.") from exc
-    except Exception as exc:
-        raise UserPersistenceError("Falha ao atualizar o perfil do usuÃ¡rio.") from exc
-
-    if row is None:
-        return None
-
-    return {
-        "user_uuid": row[0],
-        "username": row[1],
-        "email_enc": row[2],
-        "profile_id": row[3],
-        "active": row[4],
-        "created_at": row[5],
-        "updated_at": row[6],
-        "profile_name": row[7],
-    }
-
-
 def list_users(conn: PgConnection) -> List[UserResult]:
     query = """
-        SELECT USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT, UPDATED_AT
+        SELECT USER_UUID, USERNAME, PROFILE_NAME, ACTIVE, CREATED_AT, UPDATED_AT
         FROM TB_USER
         WHERE DELETED_AT IS NULL
         ORDER BY CREATED_AT DESC
@@ -241,7 +136,7 @@ def list_users(conn: PgConnection) -> List[UserResult]:
         UserResult(
             user_uuid=row[0],
             username=row[1],
-            profile_id=row[2],
+            profile_name=row[2],
             active=row[3],
             created_at=row[4],
             updated_at=row[5],
@@ -263,66 +158,19 @@ def exists_by_username(conn: PgConnection, username: str) -> bool:
         return cursor.fetchone() is not None
 
 
-def exists_by_profile_id(conn: PgConnection, profile_id: UUID) -> bool:
-    query = """
-        SELECT 1
-        FROM TB_PROFILE
-        WHERE PROFILE_UUID = %s
-          AND DELETED_AT IS NULL
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(profile_id),))
-        return cursor.fetchone() is not None
-
-
-def exists_by_email_hash(conn: PgConnection, email_hash: str) -> bool:
-    query = """
-        SELECT 1
-        FROM TB_USER
-        WHERE EMAIL_HASH = %s
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (email_hash,))
-        return cursor.fetchone() is not None
-
-
-def exists_by_email_hash_for_other_user(
-    conn: PgConnection,
-    email_hash: str,
-    user_uuid: str,
-) -> bool:
-    query = """
-        SELECT 1
-        FROM TB_USER
-        WHERE EMAIL_HASH = %s
-          AND USER_UUID <> %s
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (email_hash, str(user_uuid)))
-        return cursor.fetchone() is not None
-
-
 def get_current_user_profile(conn: PgConnection, user_uuid: str) -> dict | None:
     query = """
         SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.EMAIL_ENC,
-            p.PROFILE_NAME,
-            u.ACTIVE,
-            u.CREATED_AT,
-            u.UPDATED_AT
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.USER_UUID = %s
-          AND u.DELETED_AT IS NULL
+            USER_UUID,
+            USERNAME,
+            EMAIL_ENC,
+            PROFILE_NAME,
+            ACTIVE,
+            CREATED_AT,
+            UPDATED_AT
+        FROM TB_USER
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
         LIMIT 1
     """
 
@@ -349,10 +197,11 @@ def update_current_user_profile(
     user_uuid: str,
     data: dict,
 ) -> dict | None:
+    # Email uniqueness is now enforced by Keycloak; we only update EMAIL_ENC
+    # (LGPD export copy) and USERNAME.
     query = """
         UPDATE TB_USER
         SET USERNAME = %s,
-            EMAIL_HASH = %s,
             EMAIL_ENC = %s,
             UPDATED_AT = NOW()
         WHERE USER_UUID = %s
@@ -366,14 +215,13 @@ def update_current_user_profile(
                 query,
                 (
                     data["username"],
-                    data["email_hash"],
                     data["email_enc"],
                     str(user_uuid),
                 ),
             )
             row = cursor.fetchone()
     except UniqueViolation as exc:
-        raise UserAlreadyExistsError("Nome de usuÃ¡rio ou e-mail jÃ¡ cadastrado.") from exc
+        raise UserAlreadyExistsError("Nome de usuário já cadastrado.") from exc
 
     if row is None:
         return None
@@ -385,11 +233,11 @@ def update_user(conn: PgConnection, user_uuid: UUID, data: dict) -> Optional[Use
     query = """
         UPDATE TB_USER
         SET USERNAME = %s,
-            PROFILE_ID = %s,
+            PROFILE_NAME = %s,
             UPDATED_AT = NOW()
         WHERE USER_UUID = %s
           AND DELETED_AT IS NULL
-        RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT, UPDATED_AT
+        RETURNING USER_UUID, USERNAME, PROFILE_NAME, ACTIVE, CREATED_AT, UPDATED_AT
     """
 
     try:
@@ -398,7 +246,7 @@ def update_user(conn: PgConnection, user_uuid: UUID, data: dict) -> Optional[Use
                 query,
                 (
                     data["username"],
-                    str(data["profile_id"]),
+                    data["profile_name"],
                     str(user_uuid),
                 ),
             )
@@ -412,7 +260,7 @@ def update_user(conn: PgConnection, user_uuid: UUID, data: dict) -> Optional[Use
     return UserResult(
         user_uuid=row[0],
         username=row[1],
-        profile_id=row[2],
+        profile_name=row[2],
         active=row[3],
         created_at=row[4],
         updated_at=row[5],
@@ -430,7 +278,7 @@ def set_user_active(
             UPDATED_AT = NOW()
         WHERE USER_UUID = %s
           AND DELETED_AT IS NULL
-        RETURNING USER_UUID, USERNAME, PROFILE_ID, ACTIVE, CREATED_AT, UPDATED_AT
+        RETURNING USER_UUID, USERNAME, PROFILE_NAME, ACTIVE, CREATED_AT, UPDATED_AT
     """
 
     with conn.cursor() as cursor:
@@ -443,7 +291,7 @@ def set_user_active(
     return UserResult(
         user_uuid=row[0],
         username=row[1],
-        profile_id=row[2],
+        profile_name=row[2],
         active=row[3],
         created_at=row[4],
         updated_at=row[5],
@@ -489,32 +337,25 @@ def list_profiles(conn: PgConnection) -> List[ProfileResult]:
     ]
 
 
-def get_profile_name_by_id(conn: PgConnection, profile_id: UUID) -> Optional[str]:
+def exists_by_profile_name(conn: PgConnection, profile_name: str) -> bool:
     query = """
-        SELECT PROFILE_NAME
+        SELECT 1
         FROM TB_PROFILE
-        WHERE PROFILE_UUID = %s
+        WHERE UPPER(PROFILE_NAME) = UPPER(%s)
           AND DELETED_AT IS NULL
         LIMIT 1
     """
     with conn.cursor() as cursor:
-        cursor.execute(query, (str(profile_id),))
-        row = cursor.fetchone()
-    return row[0] if row else None
+        cursor.execute(query, (profile_name,))
+        return cursor.fetchone() is not None
 
 
 def get_user_by_keycloak_sub(conn: PgConnection, keycloak_sub: str) -> Optional[dict]:
     query = """
-        SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.ACTIVE,
-            p.PROFILE_NAME
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.KEYCLOAK_SUB = %s
-          AND u.DELETED_AT IS NULL
+        SELECT USER_UUID, ACTIVE
+        FROM TB_USER
+        WHERE KEYCLOAK_SUB = %s
+          AND DELETED_AT IS NULL
         LIMIT 1
     """
     with conn.cursor() as cursor:
@@ -524,9 +365,7 @@ def get_user_by_keycloak_sub(conn: PgConnection, keycloak_sub: str) -> Optional[
         return None
     return {
         "user_uuid": row[0],
-        "username": row[1],
-        "active": row[2],
-        "profile_name": row[3],
+        "active": row[1],
     }
 
 
@@ -542,41 +381,6 @@ def get_keycloak_sub(conn: PgConnection, user_uuid: UUID) -> Optional[str]:
         cursor.execute(query, (str(user_uuid),))
         row = cursor.fetchone()
     return str(row[0]) if row and row[0] else None
-
-
-
-def get_user_auth_by_email_hash(conn: PgConnection, email_hash: str):
-    query = """
-        SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.EMAIL_HASH,
-            u.PASSWORD_HASH,
-            u.ACTIVE,
-            p.PROFILE_NAME
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.EMAIL_HASH = %s
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (email_hash,))
-        row = cursor.fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "user_uuid": row[0],
-        "username": row[1],
-        "email_hash": row[2],
-        "password_hash": row[3],
-        "active": row[4],
-        "profile_name": row[5],
-    }
 
 
 def log_auth_attempt(
@@ -607,36 +411,6 @@ def log_auth_attempt(
                 blocked,
             ),
         )
-
-
-def get_user_auth_by_id(conn: PgConnection, user_uuid: str):
-    query = """
-        SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.ACTIVE,
-            p.PROFILE_NAME
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.USER_UUID = %s
-          AND u.DELETED_AT IS NULL
-        LIMIT 1
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(user_uuid),))
-        row = cursor.fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "user_uuid": row[0],
-        "username": row[1],
-        "active": row[2],
-        "profile_name": row[3],
-    }
 
 
 def invalidate_session(conn: PgConnection, session_id: str) -> bool:
@@ -721,8 +495,6 @@ def rotate_refresh_token(
             EXPIRES_AT = %s,
             UPDATED_AT = NOW()
         FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
         WHERE s.USER_ID = u.USER_UUID
           AND s.REFRESH_TOKEN_HASH = %s
           AND s.REFRESH_EXPIRES_AT > NOW()
@@ -733,7 +505,7 @@ def rotate_refresh_token(
             s.SESSION_UUID,
             u.USER_UUID,
             u.ACTIVE,
-            p.PROFILE_NAME,
+            u.PROFILE_NAME,
             u.USERNAME
     """
 
@@ -767,17 +539,14 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
             s.SESSION_UUID,
             u.USER_UUID,
             u.ACTIVE,
-            p.PROFILE_NAME,
+            u.PROFILE_NAME,
             u.USERNAME,
             s.INVALIDATED_AT,
             s.EXPIRES_AT,
             s.DELETED_AT,
             u.DELETED_AT as user_deleted_at
         FROM TB_SESSION s
-        JOIN TB_USER u
-          ON u.USER_UUID = s.USER_ID
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
+        JOIN TB_USER u ON u.USER_UUID = s.USER_ID
         WHERE s.SESSION_UUID = %s
     """
 
@@ -788,18 +557,18 @@ def get_active_session_user(conn: PgConnection, session_uuid: str):
     if row is None:
         return None
 
-    if row[5] is not None:  # INVALIDATED_AT is not NULL → session was invalidated
+    if row[5] is not None:  # INVALIDATED_AT
         return None
 
-    if row[6] is not None:  # EXPIRES_AT exists
+    if row[6] is not None:  # EXPIRES_AT
         now = datetime.now(timezone.utc)
-        if row[6] <= now:  # Check if expired
+        if row[6] <= now:
             return None
 
-    if row[7] is not None:  # DELETED_AT is not NULL → session was soft-deleted
+    if row[7] is not None:  # session DELETED_AT
         return None
 
-    if row[8] is not None:  # USER DELETED_AT is not NULL → user was soft-deleted
+    if row[8] is not None:  # user DELETED_AT
         return None
 
     return {
@@ -874,23 +643,20 @@ def invalidate_single_session(
     return row is not None
 
 
-
 def get_user_for_export(conn: PgConnection, user_id: str) -> dict | None:
     query = """
         SELECT
-            u.USER_UUID,
-            u.USERNAME,
-            u.EMAIL_ENC,
-            u.ACTIVE,
-            u.CREATED_AT,
-            u.UPDATED_AT,
-            u.ANONYMIZED_AT,
-            p.PROFILE_NAME
-        FROM TB_USER u
-        JOIN TB_PROFILE p
-          ON p.PROFILE_UUID = u.PROFILE_ID
-        WHERE u.USER_UUID = %s
-          AND u.DELETED_AT IS NULL
+            USER_UUID,
+            USERNAME,
+            EMAIL_ENC,
+            ACTIVE,
+            CREATED_AT,
+            UPDATED_AT,
+            ANONYMIZED_AT,
+            PROFILE_NAME
+        FROM TB_USER
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
         LIMIT 1
     """
 

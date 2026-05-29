@@ -139,7 +139,6 @@ export default function UsuariosPage() {
   })
   const [createError, setCreateError] = useState("")
   const [isCreatingUser, setIsCreatingUser] = useState(false)
-  const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState({
     username: "",
@@ -219,14 +218,12 @@ export default function UsuariosPage() {
       profile_id: "",
     })
     setCreateError("")
-    setShowCreatePassword(false)
     setShowCreateModal(true)
   }
 
   const handleCloseCreateModal = () => {
     setShowCreateModal(false)
     setCreateError("")
-    setShowCreatePassword(false)
   }
 
   const isValidEmail = (value) => {
@@ -346,15 +343,29 @@ export default function UsuariosPage() {
     if (!selectedUser) return
 
     setIsConfirmingDeleteAction(true)
+    const deletedUserId = selectedUser.user_uuid
 
     try {
-      await deleteUserRequest(selectedUser.user_uuid)
+      await deleteUserRequest(deletedUserId)
       toast.success("Usuário excluído com sucesso")
       closeDeleteModal()
-      await loadUsersAndProfiles()
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Não foi possível excluir o usuário. Tente novamente."))
-      setIsConfirmingDeleteAction(false)
+      if (error?.status === 404) {
+        toast.success("Usuário já estava excluído")
+        closeDeleteModal()
+      } else {
+        toast.error(getApiErrorMessage(error, "Não foi possível excluir o usuário. Tente novamente."))
+        setIsConfirmingDeleteAction(false)
+        return
+      }
+    }
+
+    setAllUsers((currentUsers) => currentUsers.filter((user) => user.user_uuid !== deletedUserId))
+
+    try {
+      await loadUsersAndProfiles()
+    } catch {
+      toast.error("Usuário excluído, mas não foi possível atualizar a lista agora.")
     }
   }
 

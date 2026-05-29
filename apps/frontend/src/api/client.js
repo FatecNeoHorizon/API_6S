@@ -3,6 +3,26 @@ import { waitForPendingConsentAcceptance } from "./pendingConsentInterceptor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+async function parseResponseBody(response) {
+  if (response.status === 204 || response.status === 205) {
+    return null;
+  }
+
+  const contentType = response.headers.get("content-type");
+  const contentLength = response.headers.get("content-length");
+
+  if (contentLength === "0") {
+    return null;
+  }
+
+  if (contentType?.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return text || null;
+}
+
 async function request(path, options = {}, retryAfterConsent = true) {
   const token = getSessionToken();
 
@@ -16,10 +36,7 @@ async function request(path, options = {}, retryAfterConsent = true) {
     },
   });
 
-  const contentType = response.headers.get("content-type")
-  const responseBody = contentType?.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  const responseBody = await parseResponseBody(response);
 
   if (!response.ok) {
     const error = new Error(`Erro na API: ${response.status}`);
@@ -59,10 +76,7 @@ async function postFormRequest(
   });
 
   if (!response.ok) {
-    const contentType = response.headers.get("content-type");
-    const responseBody = contentType?.includes("application/json")
-      ? await response.json()
-      : await response.text();
+    const responseBody = await parseResponseBody(response);
 
     const error = new Error(`Erro na API: ${response.status}`);
     error.status = response.status;
@@ -78,13 +92,7 @@ async function postFormRequest(
     throw error;
   }
 
-  const contentType = response.headers.get("content-type");
-
-  if (contentType?.includes("application/json")) {
-    return response.json();
-  }
-
-  return response.text();
+  return parseResponseBody(response);
 }
 
 export const apiClient = {

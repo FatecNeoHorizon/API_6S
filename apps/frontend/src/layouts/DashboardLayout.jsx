@@ -27,37 +27,37 @@ import { buildKeycloakLogoutUrl } from "@/api/auth";
 const menuItems = [
   {
     label: "Indicadores DEC/FEC e Perdas",
-    href: "/dashboard/indicadores",
+    href: "/indicators",
     icon: BarChart3,
     allowedProfiles: [],
   },
   {
     label: "Heat Map",
-    href: "/dashboard/heatmap",
+    href: "/heatmap",
     icon: Map,
     allowedProfiles: [],
   },
   {
     label: "Estrutura das Redes",
-    href: "/dashboard/estrutura-redes",
+    href: "/network-structure",
     icon: Network,
     allowedProfiles: [],
   },
   {
     label: "Gestão de Usuários",
-    href: "/dashboard/usuarios",
+    href: "/users",
     icon: Users,
     allowedProfiles: ["ADMIN", "MANAGER"],
   },
   {
     label: "Gestão de Termos",
-    href: "/dashboard/termos",
+    href: "/terms",
     icon: FileText,
     allowedProfiles: ["ADMIN"],
   },
   {
     label: "Notificação de Incidente",
-    href: "/dashboard/incident-notification",
+    href: "/incident-notification",
     icon: ShieldAlert,
     allowedProfiles: ["ADMIN"],
   },
@@ -75,6 +75,13 @@ function decodeJwtPayload(token) {
   } catch {
     return null;
   }
+}
+
+function formatDisplayName(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getUserDisplayName(token) {
@@ -204,8 +211,9 @@ export default function DashboardLayout() {
   const [isUploading, setIsUploading] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState(null);
 
-  const userDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
-  const userInitials = getUserInitials(userDisplayName);
+  const rawDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
+  const userDisplayName = formatDisplayName(rawDisplayName);
+  const userInitials = getUserInitials(rawDisplayName);
   const userProfile = getUserProfile(getSessionToken());
 
   useEffect(() => {
@@ -304,6 +312,28 @@ export default function DashboardLayout() {
     setFileList((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const triggerForecastTraining = useCallback(async () => {
+    const token = getSessionToken();
+    if (!token) return;
+    toast.info("Calculando previsões DEC/FEC em background...");
+    try {
+      const params = new URLSearchParams({
+        consumer_unit_set_id: "16648",
+        year_start: "2020",
+        year_end: "2025",
+        indicator_types: "DEC",
+      });
+      params.append("indicator_types", "FEC");
+      await fetch(`http://localhost:8000/timeseries/forecast-unit?${params}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Previsões DEC/FEC geradas com sucesso!");
+    } catch {
+      // falha silenciosa — previsões podem ser geradas depois
+    }
+  }, []);
+
   const startBatchPolling = useCallback((id) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
 
@@ -342,6 +372,10 @@ export default function DashboardLayout() {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setIsUploading(false);
+
+          if (data.status === "SUCCESS" || data.status === "SUCCESS_WITH_WARNINGS") {
+            triggerForecastTraining();
+          }
 
           if (data.status === "SUCCESS") {
             toast.success("Todos os arquivos processados com sucesso!");
@@ -507,7 +541,7 @@ export default function DashboardLayout() {
                 <Menu className="w-5 h-5 text-foreground" />
               </button>
               <h1 className="text-lg font-semibold text-foreground">
-                {pathname === "/dashboard/perfil"
+                {pathname === "/profile"
                   ? "Meu Perfil"
                   : menuItems.find((item) => item.href === pathname)?.label || "Dashboard"}
               </h1>
@@ -537,9 +571,9 @@ export default function DashboardLayout() {
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1">
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-[2000]">
                     <Link
-                      to="/dashboard/perfil"
+                      to="/profile"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setUserMenuOpen(false)}
                     >

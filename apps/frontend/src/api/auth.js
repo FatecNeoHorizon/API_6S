@@ -14,7 +14,7 @@ export function exchangeCodeForToken(payload) {
 
 export function buildKeycloakLogoutUrl(idToken) {
   const params = new URLSearchParams({
-    post_logout_redirect_uri: window.location.origin,
+    post_logout_redirect_uri: window.location.origin + "/",
     ...(idToken && { id_token_hint: idToken }),
   });
   return `${import.meta.env.VITE_KEYCLOAK_URL}/realms/zeus/protocol/openid-connect/logout?${params}`;

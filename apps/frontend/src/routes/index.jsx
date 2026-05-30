@@ -24,20 +24,22 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rotas públicas — resolvidas antes do ProtectedRoute */}
+        <Route path="/" element={<WelcomePage />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/auth/callback" element={<CallbackPage />} />
         <Route path="/consent" element={<TokenRequiredRoute><ConsentPage /></TokenRequiredRoute>} />
         <Route path="/goodbye" element={<GoodbyePage />} />
-        <Route path="/" element={<WelcomePage />} />
-        <Route path="/dashboard/*" element={<ProtectedRoute />}>
-          <Route path="" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="indicadores" replace />} />
-            <Route path="indicadores" element={<IndicadoresPage />} />
-            <Route path="estrutura-redes" element={<EstruturaRedesPage />} />
-            <Route path="perfil" element={<ProfilePage />} />
-            <Route path="consentimentos" element={<ConsentManagementPage />} />
-            <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN", "MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
-            <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
+
+        {/* Rotas protegidas — captura tudo que não casou acima */}
+        <Route path="*" element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="indicators" element={<IndicadoresPage />} />
+            <Route path="network-structure" element={<EstruturaRedesPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="consents" element={<ConsentManagementPage />} />
+            <Route path="users" element={<RoleRequiredRoute allowedProfiles={["ADMIN", "MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
+            <Route path="terms" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
             <Route path="incident-notification" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><IncidentNotificationPage /></RoleRequiredRoute>} />
             <Route path="heatmap" element={<HeatmapFilters />} />
             <Route path="*" element={<NotFoundPage />} />

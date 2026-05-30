@@ -327,7 +327,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full justify-center border-border bg-background text-foreground hover:bg-muted">
-                <Link to="/dashboard/consentimentos">
+                <Link to="/consents">
                   <ShieldCheck className="h-4 w-4" />
                   Gerenciar consentimentos
                 </Link>

@@ -50,7 +50,7 @@ export function WelcomePage() {
         .then(res => {
           saveClientSession(res.access_token, { refreshToken: res.refresh_token })
           if (res.kc_id_token) sessionStorage.setItem('kc_id_token', res.kc_id_token)
-          navigate(res.pending_consent ? '/consent' : '/dashboard')
+          navigate(res.pending_consent ? '/consent' : '/indicators')
         })
         .catch(() => setLoading(false))
     }

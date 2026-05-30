@@ -185,7 +185,7 @@ export default function ConsentPage() {
       }
       
       await submitConsent(actions)
-      navigate("/dashboard/indicadores")
+      navigate("/indicators")
     } catch (error) {
       const serverError = error.data?.detail ? JSON.stringify(error.data.detail) : "Erro desconhecido"
       setSubmissionError(`Não foi possível concluir o consentimento: ${serverError}`)

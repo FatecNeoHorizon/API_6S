@@ -1,5 +1,6 @@
 from typing import List
 from uuid import UUID
+from fastapi import APIRouter, Depends, Request, Response
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi import status
@@ -67,7 +68,16 @@ def post_first_access(request: Request, payload: FirstAccessRequest):
         )
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    summary="Authenticate user",
+    description=(
+        "Authenticates a user and records the authentication attempt in "
+        "TB_AUTH_ATTEMPT using the deterministic email hash and masked source IP. "
+        "The password, plain email and internal session data are never logged."
+    ),
+)
 @limiter.limit("10/minute")
 def post_login(request: Request, payload: LoginRequest):
     source_ip = request.client.host if request.client else "unknown"
@@ -88,7 +98,11 @@ def post_logout(
     current_user: AuthenticatedUser = Depends(get_current_user_no_consent_check),
 ):
     with get_pg_connection() as conn:
-        logout(conn, user_id=current_user.user_id)
+        logout(
+            conn,
+            user_id=current_user.user_id,
+            session_id=current_user.session_id,
+        )
     return Response(status_code=204)
 
 

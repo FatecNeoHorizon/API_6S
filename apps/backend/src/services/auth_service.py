@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from ipaddress import ip_address
 import secrets
 
 import structlog
@@ -42,6 +43,8 @@ from src.repositories.user_repository import (
     get_valid_password_reset_token,
     invalidate_single_session,
     invalidate_user_sessions,
+    invalidate_session,
+    log_auth_attempt,
     mark_password_reset_token_used,
     rotate_refresh_token,
     update_user_password,
@@ -58,6 +61,62 @@ def _build_email_hash(email: str) -> str:
 
 def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
+
+
+def _mask_source_ip(source_ip: str | None) -> str:
+    value = (source_ip or "").strip()
+
+    if not value or value.lower() == "unknown":
+        return "unknown"
+
+    try:
+        parsed_ip = ip_address(value)
+    except ValueError:
+        return "unknown"
+
+    if parsed_ip.version == 4:
+        octets = value.split(".")
+        return f"{octets[0]}.{octets[1]}.{octets[2]}.0"
+
+    hextets = parsed_ip.exploded.split(":")
+    return f"{':'.join(hextets[:4])}::"
+
+
+def _record_auth_attempt(
+    conn,
+    *,
+    email_hash: str,
+    source_ip: str,
+    success: bool,
+    blocked: bool,
+) -> None:
+    log_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=_mask_source_ip(source_ip),
+        success=success,
+        blocked=blocked,
+    )
+
+
+def _record_failed_auth_attempt_and_commit(
+    conn,
+    *,
+    email_hash: str,
+    source_ip: str,
+    blocked: bool = False,
+) -> None:
+    _record_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=source_ip,
+        success=False,
+        blocked=blocked,
+    )
+
+    # Failed logins are followed by HTTPException. The request-level connection
+    # manager rolls back on exceptions, so commit the audit row before raising.
+    conn.commit()
 
 
 def _create_session_and_token(
@@ -86,7 +145,6 @@ def _create_session_and_token(
         refresh_expires_at=refresh_expires_at,
     )
 
-    # Ensure session_id is a valid UUID string
     if not is_valid_uuid(session_id):
         raise HTTPException(
             status_code=500,
@@ -211,21 +269,43 @@ def login(
     )
 
     if not user:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+        )
         raise generic_error
 
     if not user["active"]:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+            blocked=True,
+        )
         raise generic_error
 
     if not user["first_access_completed"]:
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+            blocked=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="first_access_required",
         )
 
     if not verify_password(payload.password, user["password_hash"]):
+        _record_failed_auth_attempt_and_commit(
+            conn,
+            email_hash=email_hash,
+            source_ip=source_ip,
+        )
         raise generic_error
 
-    return _create_session_and_token(
+    response = _create_session_and_token(
         conn,
         user_id=str(user["user_uuid"]),
         profile_name=user["profile_name"],
@@ -234,9 +314,40 @@ def login(
         username=user["username"],
     )
 
+    _record_auth_attempt(
+        conn,
+        email_hash=email_hash,
+        source_ip=source_ip,
+        success=True,
+        blocked=False,
+    )
 
-def logout(conn, *, user_id: str) -> None:
-    invalidate_user_sessions(conn, user_id)
+    return response
+
+
+def logout(conn, *, user_id: str, session_id: str) -> None:
+    set_current_user(conn, user_id)
+
+    was_invalidated = invalidate_session(conn, session_id)
+
+    if not was_invalidated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_session",
+        )
+
+
+def logout(conn, *, user_id: str, session_id: str) -> None:
+    set_current_user(conn, user_id)
+
+    was_invalidated = invalidate_session(conn, session_id)
+
+    if not was_invalidated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_session",
+        )
+
 
 
 def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:

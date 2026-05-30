@@ -7,6 +7,7 @@ from src.config.settings import Settings
 from src.control.tam_sam_procedures import Tam_sam_procedures
 from src.database.connection import get_client
 from src.etl.extract.extract_decfec import extract_decfec
+from src.etl.load.load_annual_summaries import compute_annual_summaries
 from src.services.retraining_service import schedule_retraining
 
 
@@ -141,5 +142,7 @@ def load_decfec(
                 )
         except BulkWriteError as e:
             logger.error(f"[load_decfec] BulkWriteError em conj: {e.details}")
+
+    compute_annual_summaries(conj_collection)
 
     return metrics

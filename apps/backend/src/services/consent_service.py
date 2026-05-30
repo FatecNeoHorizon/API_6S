@@ -8,9 +8,12 @@ from psycopg2 import IntegrityError, OperationalError
 
 from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.repositories import consent_repository
+from src.repositories.anonymization_repository import anonymize_user
+from src.repositories.user_repository import invalidate_user_sessions
 from src.config.log_events import  CONSENT_REGISTERED, CONSENT_REVOKED
 
 log = structlog.get_logger()
+
 
 @dataclass
 class AuthenticatedUser:
@@ -92,6 +95,7 @@ def format_consent_history(rows: list[dict]) -> list[dict]:
             "action": row["action"],
             "registered_at": row["registered_at"],
             "channel": row["channel"],
+            "consent_hash": row["consent_hash"],
             "policy_version_id": row["policy_version_id"],
             "policy_type": row["policy_type"],
             "policy_version": row["policy_version"],
@@ -118,6 +122,146 @@ def get_user_consent_history(conn, user_id: str) -> list[dict]:
         raise HTTPException(status_code=503, detail="database_unavailable")
 
     return format_consent_history(rows)
+
+
+def format_consent_preferences(rows: list[dict]) -> list[dict]:
+    return [
+        {
+            "clause_id": row["clause_uuid"],
+            "policy_version_id": row["policy_version_id"],
+            "policy_type": row["policy_type"],
+            "policy_version": row["policy_version"],
+            "clause_code": row["clause_code"],
+            "clause_title": row["clause_title"],
+            "clause_description": row.get("clause_description"),
+            "mandatory": row["mandatory"],
+            "accepted": row["accepted"],
+            "current_status": row["current_status"],
+            "last_action": row.get("last_action"),
+            "last_action_at": row.get("last_action_at"),
+        }
+        for row in rows
+    ]
+
+
+def get_user_consent_preferences(conn, user_id: str) -> list[dict]:
+    """
+    Returns all current clauses with the latest consent status for the user.
+    """
+    try:
+        rows = consent_repository.list_user_current_consent_preferences(conn, user_id)
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="get_user_consent_preferences")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="get_user_consent_preferences")
+        raise HTTPException(status_code=503, detail="database_unavailable")
+
+    return format_consent_preferences(rows)
+
+
+def update_user_consent_preferences(
+    conn,
+    *,
+    user_id: str,
+    updates: list,
+    source_ip: str,
+    user_agent: str,
+) -> dict:
+    """
+    Updates consent preferences after onboarding.
+
+    Every change is recorded as a new append-only TB_CONSENT_LOG row.
+    Revoking a mandatory clause anonymizes the user and invalidates all active
+    sessions before the response is returned.
+    """
+    if not updates:
+        raise HTTPException(status_code=422, detail="empty_consent_update")
+
+    seen_clause_ids = set()
+    mandatory_revoked = False
+    updated_count = 0
+
+    try:
+        for item in updates:
+            clause_id = str(item.clause_id)
+
+            if clause_id in seen_clause_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "duplicate_clause_id",
+                        "clause_id": clause_id,
+                    },
+                )
+
+            seen_clause_ids.add(clause_id)
+
+            clause = consent_repository.get_current_clause_for_consent_update(
+                conn,
+                clause_id,
+            )
+
+            if not clause:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "invalid_clause_id",
+                        "clause_id": clause_id,
+                    },
+                )
+
+            accepted = bool(item.accepted)
+            event_action = "CONSENT_ACCEPTED" if accepted else "CONSENT_REVOKED"
+
+            inserted = consent_repository.insert_consent_event(
+                conn=conn,
+                user_id=user_id,
+                clause_uuid=str(clause["clause_uuid"]),
+                policy_version_id=str(clause["policy_version_id"]),
+                event_action=event_action,
+                source_ip=source_ip,
+                user_agent=user_agent,
+            )
+
+            if not inserted:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "consent_event_not_inserted",
+                        "clause_id": clause_id,
+                    },
+                )
+
+            updated_count += 1
+
+            if clause["mandatory"] and not accepted:
+                mandatory_revoked = True
+
+        if mandatory_revoked:
+            anonymize_user(conn, user_id)
+            invalidate_user_sessions(conn, user_id)
+
+            return {
+                "account_deleted": True,
+                "updated_count": updated_count,
+                "consents": None,
+            }
+
+        return {
+            "account_deleted": False,
+            "updated_count": updated_count,
+            "consents": get_user_consent_preferences(conn, user_id),
+        }
+
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        handle_db_integrity_error(exc, context="update_user_consent_preferences")
+        raise HTTPException(status_code=409, detail="conflict")
+    except OperationalError as exc:
+        handle_db_operational_error(exc, context="update_user_consent_preferences")
+        raise HTTPException(status_code=503, detail="database_unavailable")
 
 
 def _get_action_value(action_item) -> str:

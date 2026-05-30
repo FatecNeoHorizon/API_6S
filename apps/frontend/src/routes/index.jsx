@@ -5,6 +5,7 @@ import ConsentPage from "../pages/login/ConsentPage";
 import ForgotPasswordPage from "../pages/login/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/login/ResetPasswordPage";
 import PrimeiroAcessoPage from "../pages/login/PrimeiroAcessoPage";
+import GoodbyePage from "../pages/login/GoodbyePage";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute, { TokenRequiredRoute, RoleRequiredRoute } from "@/components/auth/ProtectedRoute";
 import IndicadoresPage from "../pages/dashboard/indicadores-page/IndicadoresPage";
@@ -13,6 +14,7 @@ import UsuariosPage from "../pages/dashboard/user-management/UsuariosPage";
 import TermsPage from "../pages/dashboard/terms-management/TermsPage";
 import { HeatmapFilters } from "../pages/dashboard/heatmap/HeatmapFilters";
 import ProfilePage from "../pages/dashboard/profile/ProfilePage";
+import ConsentManagementPage from "../pages/dashboard/consent-management/ConsentManagementPage";
 import IncidentNotificationPage from "../pages/dashboard/incident-notification/IncidentNotificationPage";
 
 function NotFoundPage() {
@@ -29,6 +31,7 @@ export function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/consent" element={<TokenRequiredRoute><ConsentPage /></TokenRequiredRoute>} />
+        <Route path="/goodbye" element={<GoodbyePage />} />
         <Route path="/first-access" element={<PrimeiroAcessoPage />} />
         <Route path="/primeiro-acesso" element={<Navigate to="/first-access" replace />} />
         <Route path="/" element={<WelcomePage />} />
@@ -38,11 +41,12 @@ export function AppRoutes() {
             <Route path="indicadores" element={<IndicadoresPage />} />
             <Route path="estrutura-redes" element={<EstruturaRedesPage />} />
             <Route path="perfil" element={<ProfilePage />} />
-            <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN","MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
+            <Route path="consentimentos" element={<ConsentManagementPage />} />
+            <Route path="usuarios" element={<RoleRequiredRoute allowedProfiles={["ADMIN", "MANAGER"]}><UsuariosPage /></RoleRequiredRoute>} />
             <Route path="termos" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><TermsPage /></RoleRequiredRoute>} />
             <Route path="incident-notification" element={<RoleRequiredRoute allowedProfiles={["ADMIN"]}><IncidentNotificationPage /></RoleRequiredRoute>} />
+            <Route path="heatmap" element={<HeatmapFilters />} />
             <Route path="*" element={<NotFoundPage />} />
-            <Route path="heatmap" element={<HeatmapFilters/>} />
           </Route>
         </Route>
       </Routes>

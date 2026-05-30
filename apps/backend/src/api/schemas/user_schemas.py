@@ -104,6 +104,42 @@ class UserMeUpdateRequest(BaseModel):
 class UserSetActiveRequest(BaseModel):
     active: bool
 
+
+class UserConsentUpdateItem(BaseModel):
+    clause_id: UUID
+    accepted: bool
+
+
+class UserConsentUpdateRequest(BaseModel):
+    consents: list[UserConsentUpdateItem] = Field(..., min_length=1)
+
+
+class UserConsentPreferenceItem(BaseModel):
+    clause_id: UUID
+    policy_version_id: UUID
+    policy_type: str
+    policy_version: str
+    clause_code: str
+    clause_title: str
+    clause_description: str | None = None
+    mandatory: bool
+    accepted: bool
+    current_status: str
+    last_action: str | None = None
+    last_action_at: datetime | None = None
+
+
+class UserConsentPreferencesResponse(BaseModel):
+    user_id: UUID
+    consents: list[UserConsentPreferenceItem]
+
+
+class UserConsentUpdateResponse(BaseModel):
+    account_deleted: bool
+    updated_count: int
+    consents: list[UserConsentPreferenceItem] | None = None
+
+
 class CurrentUserResponse(BaseModel):
     user_id: UUID
     username: str
@@ -111,9 +147,10 @@ class CurrentUserResponse(BaseModel):
     first_access_completed: bool
     active: bool
 
+
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=256)
 
     @field_validator("email")
     def normalize_email(cls, v: EmailStr) -> str:
@@ -153,6 +190,10 @@ class RefreshTokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class LogoutResponse(BaseModel):
+    detail: str
 
 
 class ForgotPasswordRequest(BaseModel):

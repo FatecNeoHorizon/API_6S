@@ -38,6 +38,20 @@ def close_postgres_pool() -> None:
         _pool = None
 
 
+def acquire_pg_connection():
+    if _pool is None:
+        raise RuntimeError("PostgreSQL pool not initialized.")
+
+    return _pool.getconn()
+
+
+def release_pg_connection(conn) -> None:
+    if _pool is None:
+        raise RuntimeError("PostgreSQL pool not initialized.")
+
+    _pool.putconn(conn)
+
+
 @contextmanager
 def get_pg_connection():
     """

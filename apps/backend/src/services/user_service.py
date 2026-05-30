@@ -3,13 +3,13 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import List
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import bcrypt
 import structlog
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
-from psycopg2 import IntegrityError, OperationalError
+from psycopg2 import IntegrityError, OperationalError, extensions
 
 from src.api.schemas.user_schemas import UserCreateRequest, UserCreateResponse
 from src.config.auth_security import hash_token
@@ -19,6 +19,15 @@ from src.config.log_events import SESSION_INVALIDATED_ALL
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection
 from src.database.postgres import set_current_user
+from src.database.postgres import acquire_pg_connection, release_pg_connection
+from src.database.blacklist_postgres import (
+    acquire_blacklist_connection,
+    release_blacklist_connection,
+)
+from src.repositories.blacklist_repository import (
+    BlacklistPersistenceError,
+    insert_blacklisted_user,
+)
 from src.repositories.user_repository import (
     ProfileResult,
     UserAlreadyExistsError,
@@ -28,7 +37,10 @@ from src.repositories.user_repository import (
     UserResult,
     create_first_access_token,
     create_user,
+    delete_user_first_access_tokens,
     delete_user,
+    delete_user_password_reset_tokens,
+    delete_user_sessions,
     exists_by_email_hash,
     exists_by_email_hash_for_other_user,
     exists_by_profile_id,
@@ -38,6 +50,7 @@ from src.repositories.user_repository import (
     invalidate_user_sessions,
     list_profiles,
     list_users,
+    remove_user_encryption_material,
     set_user_active,
     update_current_user_profile,
     update_user,
@@ -182,17 +195,76 @@ def set_user_active_service(user_uuid: UUID, active: bool, acting_user_id: str |
 
 
 def delete_user_service(user_uuid: UUID) -> None:
+    main_conn = None
+    blacklist_conn = None
+    gtrid = str(uuid4())
+    main_xid = extensions.Xid(42, gtrid, "main")
+    blacklist_xid = extensions.Xid(42, gtrid, "blacklist")
+
     try:
-        with get_pg_connection() as conn:
-            deleted = delete_user(conn, user_uuid)
+        main_conn = acquire_pg_connection()
+        blacklist_conn = acquire_blacklist_connection()
+        main_conn.autocommit = False
+        blacklist_conn.autocommit = False
+        main_conn.tpc_begin(main_xid)
+        blacklist_conn.tpc_begin(blacklist_xid)
+
+        if get_user_by_id(main_conn, user_uuid) is None:
+            raise UserNotFoundError("Usuário não encontrado.")
+
+        remove_user_encryption_material(main_conn, user_uuid)
+        insert_blacklisted_user(blacklist_conn, user_uuid)
+
+        delete_user_sessions(main_conn, user_uuid)
+        delete_user_first_access_tokens(main_conn, user_uuid)
+        delete_user_password_reset_tokens(main_conn, user_uuid)
+
+        deleted = delete_user(main_conn, user_uuid)
+        if not deleted:
+            raise UserNotFoundError("Usuário não encontrado.")
+
+        main_conn.tpc_prepare()
+        blacklist_conn.tpc_prepare()
+
+        main_conn.tpc_commit()
+        blacklist_conn.tpc_commit()
+    except (UserNotFoundError, UserAlreadyExistsError, UserProfileNotFoundError):
+        if main_conn is not None:
+            main_conn.tpc_rollback()
+        if blacklist_conn is not None:
+            blacklist_conn.tpc_rollback()
+        raise
+    except BlacklistPersistenceError as exc:
+        if main_conn is not None:
+            main_conn.tpc_rollback()
+        if blacklist_conn is not None:
+            blacklist_conn.tpc_rollback()
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     except IntegrityError as exc:
+        if main_conn is not None:
+            main_conn.tpc_rollback()
+        if blacklist_conn is not None:
+            blacklist_conn.tpc_rollback()
         handle_db_integrity_error(exc, context="delete_user_service")
-        raise HTTPException(status_code=409, detail="conflict")
+        raise HTTPException(status_code=409, detail="conflict") from exc
     except OperationalError as exc:
+        if main_conn is not None:
+            main_conn.tpc_rollback()
+        if blacklist_conn is not None:
+            blacklist_conn.tpc_rollback()
         handle_db_operational_error(exc, context="delete_user_service")
-        raise HTTPException(status_code=503, detail="database_unavailable")
-    if not deleted:
-        raise UserNotFoundError("Usuário não encontrado.")
+        raise HTTPException(status_code=503, detail="database_unavailable") from exc
+    except Exception:
+        if main_conn is not None:
+            main_conn.tpc_rollback()
+        if blacklist_conn is not None:
+            blacklist_conn.tpc_rollback()
+        raise
+    finally:
+        if main_conn is not None:
+            release_pg_connection(main_conn)
+        if blacklist_conn is not None:
+            release_blacklist_connection(blacklist_conn)
     
 def _sanitize_fernet_key(raw_key: str) -> str:
     key = raw_key.strip().strip('"').strip("'")

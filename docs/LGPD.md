@@ -29,6 +29,115 @@ Consent is managed at the clause level — each user can accept or revoke indivi
 
 The complete consent history is preserved forever — it is never deleted or updated. This allows proving at any point in time what the user accepted and when.
 
+### Append-Only Consent History
+
+User consent is recorded through an append-only event model in `TB_CONSENT_LOG`. The system does not store consent as a single mutable flag. Instead, every acceptance or revocation creates a new event, preserving the full consent timeline.
+
+This model supports the controller’s burden of proof under LGPD Art. 8, §5, and the accountability principle under Art. 6, X, because the system can demonstrate when consent was given, which clause was accepted, which policy version applied, and whether the user later revoked or re-accepted consent.
+
+`TB_CONSENT_LOG` is a shared table for all users. Each record is linked to a specific user through `USER_ID`, and to the applicable legal content through `CLAUSE_ID` and `POLICY_VERSION_ID`.
+
+The current consent state is derived from the latest event for each `USER_ID + CLAUSE_ID` combination:
+
+```sql
+SELECT
+    ACTION,
+    POLICY_VERSION_ID,
+    CREATED_AT
+FROM TB_CONSENT_LOG
+WHERE USER_ID = :user_id
+  AND CLAUSE_ID = :clause_id
+ORDER BY CREATED_AT DESC, LOG_UUID DESC
+LIMIT 1;
+```
+
+If the latest action is `CONSENT_ACCEPTED`, the clause is considered accepted. If the latest action is `CONSENT_REVOKED`, or if no event exists, the clause is considered pending.
+
+The system does not need to list all users to find a specific person’s consent history. It retrieves the required records directly by filtering `TB_CONSENT_LOG` by `USER_ID`.
+
+### Pending Consent Enforcement
+
+The operational consent state is derived through `V_PENDING_CONSENT`, which identifies mandatory clauses that still require user acceptance.
+
+This pending consent logic is used by the authentication flow, authorization dependencies and middleware. If a user has unresolved mandatory consent, protected routes may be blocked until the required clauses are accepted.
+
+Thus:
+
+- `TB_CONSENT_LOG` stores the immutable evidence history;
+- `TB_POLICY_VERSION` and `TB_POLICY_CLAUSE` store the legal and textual context;
+- `V_PENDING_CONSENT` derives the current pending-consent state;
+- authentication and middleware enforce access restrictions when consent is pending.
+
+### Tamper Resistance and Retention
+
+Consent records are protected as append-only evidence. Existing consent events must not be updated or deleted. Revocation or re-acceptance must be represented by inserting a new event.
+
+This preserves the evidentiary sequence required for LGPD compliance and legal defense.
+
+After anonymization, the consent history may be preserved as non-identifying institutional evidence, provided that the remaining `USER_ID` can no longer identify a natural person. This supports LGPD Art. 12 regarding anonymized data and Art. 16 regarding justified post-termination retention for legal compliance and defense of rights.
+
+### Consent Proof and Evidence Hash
+
+Consent is recorded as an append-only event history in `TB_CONSENT_LOG`. The system does not use a mutable consent flag. Each acceptance or revocation creates a new event linked to `USER_ID`, `CLAUSE_ID`, `POLICY_VERSION_ID`, `ACTION` and `CREATED_AT`.
+
+This model supports LGPD Art. 8 because it preserves evidence that consent was free, informed, specific and unambiguous. It also supports the controller’s burden of proof under Art. 8, §5 and the accountability principle under Art. 6, X.
+
+To strengthen the proof model, each consent event should also store a deterministic `CONSENT_HASH`. This hash is calculated from the core evidentiary fields of the row:
+
+```text
+USER_ID + CLAUSE_ID + POLICY_VERSION_ID + ACTION + CREATED_AT
+```
+
+The hash is stored alongside the consent event and works as an additional integrity check. If any of these fields are changed after insertion, recalculating the hash will expose the mismatch.
+
+The consent hash complements the existing append-only protection. The append-only trigger prevents `UPDATE` and `DELETE` operations on `TB_CONSENT_LOG`; the hash provides a verifiable seal over the main values of the event.
+
+A simplified verification query is:
+
+```sql
+SELECT
+    LOG_UUID,
+    CONSENT_HASH,
+    fn_compute_consent_log_hash(
+        USER_ID,
+        CLAUSE_ID,
+        POLICY_VERSION_ID,
+        ACTION,
+        CREATED_AT
+    ) AS RECALCULATED_HASH,
+    CONSENT_HASH = fn_compute_consent_log_hash(
+        USER_ID,
+        CLAUSE_ID,
+        POLICY_VERSION_ID,
+        ACTION,
+        CREATED_AT
+    ) AS HASH_VALID
+FROM TB_CONSENT_LOG
+WHERE USER_ID = :user_id;
+```
+
+The complete evidence chain is reconstructed by joining:
+
+```text
+TB_CONSENT_LOG
+TB_POLICY_CLAUSE
+TB_POLICY_VERSION
+```
+
+This allows the system to prove who consented, which clause was accepted or revoked, which policy version applied, when the event occurred and whether the stored evidence remains consistent.
+
+`TB_CONSENT_LOG` is a shared table for all users. The consent history of a specific person is retrieved directly through `USER_ID`; the system does not need to list all users to find the required individual.
+
+The consent proof model is therefore based on:
+
+- clause-level consent records;
+- policy version traceability;
+- append-only storage;
+- deterministic evidence hash;
+- pending-consent enforcement through `V_PENDING_CONSENT`;
+- post-anonymization preservation when legally justified under LGPD Art. 12 and Art. 16.
+
+
 ## 👤 Data Subject Rights (Art. 18, LGPD)
 
 | Right | Implementation |

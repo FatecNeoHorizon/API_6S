@@ -10,7 +10,7 @@ import {
 import "../App.css"
 import "@/index.css" // Ensure base classes are present if needed
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip } from 'react-leaflet'
 
 export function Heatmap({ convertedConjs }) {
 
@@ -48,7 +48,17 @@ export function Heatmap({ convertedConjs }) {
             let coordinates = conj.coordinates
             coordinates = invertCoordinates(coordinates)
             return (
-                <Polygon pathOptions={defineColor(conj)} positions={coordinates} />
+                <Polygon pathOptions={defineColor(conj)} positions={coordinates}>
+                     <Tooltip>
+                        Name: {conj.name ? conj.name : "-"}
+                        <br />
+                        Indicator Type: {conj.indicator_type_code ? conj.indicator_type_code : "-"}
+                        <br />
+                        Limit: {conj.limit ? conj.limit : "-"}
+                        <br />
+                        Accumulated Value: {conj.accumulated_value ? conj.accumulated_value : "-"}
+                     </Tooltip>
+                </Polygon>
             )
         }
 

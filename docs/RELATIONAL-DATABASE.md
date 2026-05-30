@@ -104,8 +104,8 @@ Records every authentication attempt. Does not have a FK to `TB_USER` because th
 
 ---
 
-### `TB_LOG`
-Records all relevant system actions for accountability. This table is **append-only** — UPDATE and DELETE are blocked at the database level via trigger.
+### `TB_LOG` ⚠️ Planned — not yet implemented
+Describes the intended general-purpose audit table. **No migration creates this table** (V001–V008). Until implemented, general action audit is handled via structured JSON logs. The schema below is the planned design for reference only.
 
 | Column | Type | Rules |
 |---|---|---|

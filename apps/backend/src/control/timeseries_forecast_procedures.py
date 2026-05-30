@@ -351,6 +351,7 @@ class TimeSeriesForecastProcedures:
         Returns:
             Dictionary with keys:
                 - success (bool)
+                - partial (bool): True when only some requested indicators completed
                 - consumer_unit_id (str)
                 - metrics (dict): {indicator: {mae, n_train, n_test}}
                 - forecasts (list[dict]): Consolidated forecasts
@@ -389,7 +390,7 @@ class TimeSeriesForecastProcedures:
             print(f"  ✓ Model trained (MAE: {mae:.4f})")
             
             metrics[indicator] = {
-                "success": True,
+                "success": False,
                 "mae": mae,
                 "n_train": train_result["n_train"],
                 "n_test": train_result["n_test"],
@@ -416,10 +417,12 @@ class TimeSeriesForecastProcedures:
             )
             
             if not forecast_result["success"]:
+                metrics[indicator]["message"] = forecast_result["message"]
                 print(f"  ✗ {forecast_result['message']}")
                 continue
             
             forecasts = forecast_result["forecasts"]
+            metrics[indicator]["success"] = True
             print(f"  ✓ Generated {len(forecasts)} forecasts")
             
             # Enrich each forecast with the unit and indicator so the API can persist it directly.
@@ -428,15 +431,31 @@ class TimeSeriesForecastProcedures:
                 f["indicator"] = indicator
                 all_forecasts.append(f)
         
+        completed_indicators = [
+            indicator
+            for indicator in indicator_types
+            if metrics.get(indicator, {}).get("success") is True
+        ]
+        failed_indicators = [
+            indicator for indicator in indicator_types if indicator not in completed_indicators
+        ]
+        success = bool(indicator_types) and not failed_indicators
+        partial = bool(completed_indicators) and not success
+
         return {
-            "success": len(metrics) > 0,
+            "success": success,
+            "partial": partial,
             "consumer_unit_id": consumer_unit_set_id,
             "year_range": f"{year_start}-{year_end}",
             "metrics": metrics,
             "forecasts": all_forecasts,
             "models": models if not save_models else None,
             "models_directory": str(self.models_dir) if save_models else None,
-            "message": f"Processed {len(indicator_types)} indicators",
+            "message": (
+                f"Processed all {len(indicator_types)} indicators successfully"
+                if success
+                else f"Failed indicators: {', '.join(failed_indicators)}"
+            ),
         }
 
 

@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class Prediction(BaseModel):
@@ -11,6 +13,7 @@ class Prediction(BaseModel):
     forecast_value: float
     model: str  # e.g., "RandomForestRegressor"
     generated_on: datetime
+    validation_metrics: dict[str, Any] | None = None
 
     class Config:
         json_schema_extra = {
@@ -21,6 +24,13 @@ class Prediction(BaseModel):
                 "forecast_period": 1,
                 "forecast_value": 1.234,
                 "model": "RandomForestRegressor",
-                "generated_on": "2025-01-03T10:30:00Z"
+                "generated_on": "2025-01-03T10:30:00Z",
+                "validation_metrics": {
+                    "success": True,
+                    "mae": 0.2278,
+                    "n_train": 80,
+                    "n_test": 20,
+                    "n_records": 100
+                }
             }
         }

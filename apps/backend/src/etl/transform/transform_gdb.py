@@ -25,6 +25,8 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
             if layer_name == "CONJ":
                 conj_name = _to_str(row.get("NOM"))
                 code = _to_str(row.get("COD_ID"))
+                shape_length = _to_float(row.get("Shape_Length"))
+                shape_area = _to_float(row.get("Shape_Area"))
 
                 if not conj_name or not code:
                     rejected_docs.append({
@@ -35,6 +37,8 @@ def transform_gdb(chunk, layer_name: str, geodatabase_id: str) -> dict:
                 valid_docs.append({
                     "name": conj_name,
                     "code": code,
+                    "shape_length": shape_length,
+                    "shape_area": shape_area,
                     "geometry": row.get("geometry_geojson"),
                     "geodatabase_id": ObjectId(geodatabase_id),
                     "layer_source": layer_name

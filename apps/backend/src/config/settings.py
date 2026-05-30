@@ -83,13 +83,12 @@ class Settings(BaseSettings):
     model_retrain_strategy: str = Field(default="per_load")
     model_retrain_min_new_records: int = Field(default=1)
 
-    # PostgreSQL Configuration
-    postgres_host: str = Field(default="postgres")
-    postgres_port: int = Field(default=5432)
-    postgres_user: str = Field(default="postgres")
-    postgres_password: str = Field(default="")
-    postgres_db: str = Field(default="postgres")
-    postgres_sslmode: str = Field(default="prefer")
+    blacklist_postgres_host: str = Field(default="")
+    blacklist_postgres_port: int = Field(default=0)
+    blacklist_postgres_user: str = Field(default="")
+    blacklist_postgres_password: str = Field(default="")
+    blacklist_postgres_db: str = Field(default="tecsys_blacklist")
+    blacklist_postgres_sslmode: str = Field(default="prefer")
 
     # User Security Configuration
     email_hash_salt: str = Field(default="")
@@ -98,7 +97,7 @@ class Settings(BaseSettings):
     jwt_private_key: str = Field(default="")
     jwt_public_key: str = Field(default="")
     jwt_algorithm: str = Field(default="RS256")
-    jwt_access_token_expire_minutes: int = Field(default=15)
+    jwt_access_token_expire_minutes: int = Field(default=480)
     jwt_refresh_token_expire_days: int = Field(default=7)
 
     @field_validator("jwt_private_key", "jwt_public_key", mode="before")
@@ -151,6 +150,21 @@ class Settings(BaseSettings):
         if not self.postgres_password:
             raise ValueError("POSTGRES_PASSWORD is missing.")
 
+        if not self.blacklist_postgres_password:
+            self.blacklist_postgres_password = self.postgres_password
+
+        if not self.blacklist_postgres_user:
+            self.blacklist_postgres_user = self.postgres_user
+
+        if not self.blacklist_postgres_host:
+            self.blacklist_postgres_host = self.postgres_host
+
+        if not self.blacklist_postgres_port:
+            self.blacklist_postgres_port = self.postgres_port
+
+        if not self.blacklist_postgres_db:
+            self.blacklist_postgres_db = f"{self.postgres_db}_blacklist"
+
         if not self.email_hash_salt:
             raise ValueError("EMAIL_HASH_SALT is missing.")
 
@@ -193,6 +207,16 @@ class Settings(BaseSettings):
             f"user={self.postgres_user} "
             f"password={self.postgres_password} "
             f"dbname={self.postgres_db}"
+        )
+
+    @property
+    def blacklist_postgres_dsn(self) -> str:
+        return (
+            f"host={self.blacklist_postgres_host} "
+            f"port={self.blacklist_postgres_port} "
+            f"user={self.blacklist_postgres_user} "
+            f"password={self.blacklist_postgres_password} "
+            f"dbname={self.blacklist_postgres_db}"
         )
 
 

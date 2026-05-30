@@ -11,10 +11,7 @@ _settings = Settings()
 
 def build_year_period_filter(year_min, period_min, year_max, period_max):
     if not all(v is not None for v in (year_min, period_min, year_max, period_max)):
-        return {
-            "period": {"$gte": period_min, "$lte": period_max},
-            "year": {"$gte": year_min, "$lte": year_max},
-        }
+        return {}
 
     start = (year_min, period_min)
     end = (year_max, period_max)

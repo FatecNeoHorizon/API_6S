@@ -137,6 +137,107 @@ def list_current_mandatory_clauses(conn) -> list[dict]:
         return cur.fetchall()
 
 
+def list_user_current_consent_preferences(conn, user_id: str) -> list[dict]:
+    """
+    Lists all current policy clauses and their latest consent state for one user.
+    """
+    with dict_cursor(conn) as cur:
+        cur.execute(
+            """
+            WITH current_versions AS (
+                SELECT
+                    pv.VERSION_UUID,
+                    pv.VERSION,
+                    pv.POLICY_TYPE,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY pv.POLICY_TYPE
+                        ORDER BY pv.EFFECTIVE_FROM DESC, pv.CREATED_AT DESC
+                    ) AS rn
+                FROM TB_POLICY_VERSION pv
+                WHERE pv.DELETED_AT IS NULL
+                  AND pv.EFFECTIVE_FROM <= NOW()
+            )
+            SELECT
+                c.CLAUSE_UUID AS clause_uuid,
+                c.POLICY_VERSION_ID AS policy_version_id,
+                pv.POLICY_TYPE AS policy_type,
+                pv.VERSION AS policy_version,
+                c.CODE AS clause_code,
+                c.TITLE AS clause_title,
+                c.DESCRIPTION AS clause_description,
+                c.MANDATORY AS mandatory,
+                last_log.ACTION AS last_action,
+                last_log.CREATED_AT AS last_action_at,
+                CASE
+                    WHEN last_log.ACTION IN ('CONSENT', 'CONSENT_ACCEPTED') THEN TRUE
+                    ELSE FALSE
+                END AS accepted,
+                COALESCE(last_log.ACTION, 'PENDING') AS current_status
+            FROM TB_POLICY_CLAUSE c
+            JOIN current_versions pv
+              ON pv.VERSION_UUID = c.POLICY_VERSION_ID
+             AND pv.rn = 1
+            LEFT JOIN LATERAL (
+                SELECT
+                    cl.ACTION,
+                    cl.CREATED_AT
+                FROM TB_CONSENT_LOG cl
+                WHERE cl.USER_ID = %s
+                  AND cl.CLAUSE_ID = c.CLAUSE_UUID
+                ORDER BY cl.CREATED_AT DESC, cl.LOG_UUID DESC
+                LIMIT 1
+            ) last_log ON TRUE
+            WHERE c.DELETED_AT IS NULL
+            ORDER BY pv.POLICY_TYPE, pv.VERSION, c.DISPLAY_ORDER
+            """,
+            (user_id,),
+        )
+
+        return cur.fetchall()
+
+
+def get_current_clause_for_consent_update(conn, clause_id: str) -> dict | None:
+    """
+    Resolves a clause from the current effective policy versions.
+    """
+    with dict_cursor(conn) as cur:
+        cur.execute(
+            """
+            WITH current_versions AS (
+                SELECT
+                    pv.VERSION_UUID,
+                    pv.POLICY_TYPE,
+                    pv.VERSION,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY pv.POLICY_TYPE
+                        ORDER BY pv.EFFECTIVE_FROM DESC, pv.CREATED_AT DESC
+                    ) AS rn
+                FROM TB_POLICY_VERSION pv
+                WHERE pv.DELETED_AT IS NULL
+                  AND pv.EFFECTIVE_FROM <= NOW()
+            )
+            SELECT
+                c.CLAUSE_UUID AS clause_uuid,
+                c.POLICY_VERSION_ID AS policy_version_id,
+                c.MANDATORY AS mandatory,
+                c.CODE AS code,
+                c.TITLE AS title,
+                pv.POLICY_TYPE AS policy_type,
+                pv.VERSION AS version
+            FROM TB_POLICY_CLAUSE c
+            JOIN current_versions pv
+              ON pv.VERSION_UUID = c.POLICY_VERSION_ID
+             AND pv.rn = 1
+            WHERE c.CLAUSE_UUID = %s
+              AND c.DELETED_AT IS NULL
+            LIMIT 1
+            """,
+            (clause_id,),
+        )
+
+        return cur.fetchone()
+
+
 def insert_consent_event(
     conn,
     user_id: str,

@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from psycopg2.errors import UniqueViolation
 from psycopg2.extensions import connection as PgConnection
@@ -300,17 +301,71 @@ def set_user_active(
 
 def delete_user(conn: PgConnection, user_uuid: UUID) -> bool:
     query = """
-        UPDATE TB_USER
-        SET DELETED_AT = NOW(),
-            ACTIVE = FALSE,
-            UPDATED_AT = NOW()
+        DELETE FROM TB_USER
         WHERE USER_UUID = %s
-          AND DELETED_AT IS NULL
     """
 
     with conn.cursor() as cursor:
         cursor.execute(query, (str(user_uuid),))
         return cursor.rowcount > 0
+
+
+def remove_user_encryption_material(conn: PgConnection, user_uuid: UUID) -> bool:
+    replacement_hash = hashlib.sha256(
+        f"deleted:{user_uuid}:{uuid4()}".encode("utf-8")
+    ).hexdigest()
+
+    query = """
+        UPDATE TB_USER
+        SET EMAIL_HASH = %s,
+            EMAIL_ENC = %s,
+            KEYCLOAK_SUB = NULL,
+            UPDATED_AT = NOW()
+        WHERE USER_UUID = %s
+          AND DELETED_AT IS NULL
+        RETURNING USER_UUID
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            query,
+            (
+                replacement_hash,
+                "ENCRYPTED::deleted",
+                str(user_uuid),
+            ),
+        )
+        return cursor.fetchone() is not None
+
+
+def delete_user_sessions(conn: PgConnection, user_uuid: UUID) -> None:
+    query = """
+        DELETE FROM TB_SESSION
+        WHERE USER_ID = %s
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
+
+
+def delete_user_first_access_tokens(conn: PgConnection, user_uuid: UUID) -> None:
+    query = """
+        DELETE FROM TB_FIRST_ACCESS_TOKEN
+        WHERE USER_ID = %s
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
+
+
+def delete_user_password_reset_tokens(conn: PgConnection, user_uuid: UUID) -> None:
+    query = """
+        DELETE FROM TB_PASSWORD_RESET
+        WHERE USER_UUID = %s
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(query, (str(user_uuid),))
 
 
 def list_profiles(conn: PgConnection) -> List[ProfileResult]:

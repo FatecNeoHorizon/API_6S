@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from ipaddress import ip_address
 import secrets
 
 import httpx
@@ -20,6 +19,7 @@ from src.config.auth_security import (
     create_access_token,
     hash_token,
     is_valid_uuid,
+    mask_source_ip,
 )
 from src.config.log_events import DATA_EXPORT_REQUESTED
 from src.config.settings import Settings
@@ -61,23 +61,6 @@ def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
 
-def _mask_source_ip(source_ip: str | None) -> str:
-    value = (source_ip or "").strip()
-
-    if not value or value.lower() == "unknown":
-        return "unknown"
-
-    try:
-        parsed_ip = ip_address(value)
-    except ValueError:
-        return "unknown"
-
-    if parsed_ip.version == 4:
-        octets = value.split(".")
-        return f"{octets[0]}.{octets[1]}.{octets[2]}.0"
-
-    hextets = parsed_ip.exploded.split(":")
-    return f"{':'.join(hextets[:4])}::"
 
 
 def _create_session_and_token(
@@ -99,7 +82,7 @@ def _create_session_and_token(
     session_id = create_user_session(
         conn,
         user_id=user_id,
-        source_ip=source_ip,
+        source_ip=mask_source_ip(source_ip),
         user_agent=user_agent,
         expires_at=refresh_expires_at,
         refresh_token_hash=hash_token(refresh_token),

@@ -11,7 +11,7 @@ function decodeJwtPayload(token) {
       return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
     }).join("")));
     return json;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

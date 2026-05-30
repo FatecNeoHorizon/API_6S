@@ -3,6 +3,17 @@
   "enabled": true,
   "sslRequired": "none",
   "loginTheme": "zeus",
+  "smtpServer": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "from": "tecsys.fatec@gmail.com",
+    "fromDisplayName": "Zeus",
+    "auth": "true",
+    "user": "tecsys.fatec@gmail.com",
+    "password": "iatzghlqokoftevi",
+    "ssl": "false",
+    "starttls": "true"
+  },
   "roles": {
     "realm": [
       {
@@ -34,7 +45,7 @@
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/"
+        "post.logout.redirect.uris": "http://localhost:5173/##http://localhost:5173"
       },
       "protocolMappers": [
         {
@@ -73,21 +84,24 @@
           "manage-users",
           "view-users",
           "query-users",
-          "query-realms"
+          "query-realms",
+          "view-realm",
+          "manage-realm"
         ]
       }
     },
     {
       "id": "a1b2c3d4-0000-0000-0000-000000000001",
       "username": "admin",
-      "email": "admin@admin.com",
+      "email": "tecsys.fatec@gmail.com",
       "emailVerified": true,
       "enabled": true,
       "credentials": [
         {
           "type": "password",
-          "value": "Admin@123",
-          "temporary": false
+          "temporary": false,
+          "secretData": "{\"value\":\"190UkWuIURqtjHM/3XuuGJFRsEyiBN/aUr7hiAGNaPz8JRJRXFutsllHMNyRc0th8Bpl+MjPUCUSDYiXug3yUA==\",\"salt\":\"3q2+78r+AADerb7vyv4AAA==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":210000,\"algorithm\":\"pbkdf2-sha512\",\"additionalParameters\":{}}"
         }
       ],
       "realmRoles": [

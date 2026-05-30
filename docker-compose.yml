@@ -167,7 +167,7 @@ services:
     env_file:
       - envs/.env.keycloak.${APP_ENV:-dev}
     ports:
-      - "8180:8080"
+      - "8080:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
       - ./keycloak/themes:/opt/keycloak/themes

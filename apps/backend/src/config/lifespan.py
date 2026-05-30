@@ -9,6 +9,7 @@ from src.database.connection import get_db
 from src.database.setup import setup
 from src.database import connection
 from src.database.postgres import init_postgres_pool, close_postgres_pool
+from src.database.blacklist_postgres import init_blacklist_pool, close_blacklist_pool
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,12 +27,14 @@ async def lifespan(app: FastAPI):
     connection._client = mongo_client
 
     init_postgres_pool()
+    init_blacklist_pool()
 
     setup()
 
     yield
 
     close_postgres_pool()
+    close_blacklist_pool()
 
     connection._client = None
 

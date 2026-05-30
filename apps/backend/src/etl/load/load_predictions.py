@@ -69,6 +69,7 @@ def persist_predictions(
             total_inserted += e.details.get("nUpserted", 0)
             total_updated += e.details.get("nUpdated", 0)
             logger.error(f"[persist_predictions] BulkWriteError: {e.details}")
+            raise
     
     metrics = {
         "inserted": total_inserted,

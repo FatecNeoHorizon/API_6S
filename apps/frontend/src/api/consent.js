@@ -1,17 +1,22 @@
 import { apiClient } from "./client";
 
-const SESSION_KEYS = [
+const ACCESS_TOKEN_KEYS = [
   "session_uuid",
   "sessionUuid",
   "access_token",
   "accessToken",
-  "refresh_token",
-  "refreshToken",
   "token",
 ];
 
-export function getSessionToken() {
-  for (const key of SESSION_KEYS) {
+const REFRESH_TOKEN_KEYS = [
+  "refresh_token",
+  "refreshToken",
+];
+
+const SESSION_KEYS = [...ACCESS_TOKEN_KEYS, ...REFRESH_TOKEN_KEYS];
+
+function getStoredValue(keys) {
+  for (const key of keys) {
     const sessionValue = sessionStorage.getItem(key);
     const localValue = localStorage.getItem(key);
 
@@ -20,6 +25,14 @@ export function getSessionToken() {
   }
 
   return null;
+}
+
+export function getSessionToken() {
+  return getStoredValue(ACCESS_TOKEN_KEYS);
+}
+
+export function getRefreshToken() {
+  return getStoredValue(REFRESH_TOKEN_KEYS);
 }
 
 export function getAuthOptions() {

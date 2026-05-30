@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from ipaddress import ip_address
 import secrets
 
 import structlog
@@ -22,6 +21,7 @@ from src.config.auth_security import (
     hash_password,
     hash_token,
     is_valid_uuid,
+    mask_source_ip,
     verify_password,
 )
 from src.config.email_hasher import EmailHasher
@@ -63,25 +63,6 @@ def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
 
-def _mask_source_ip(source_ip: str | None) -> str:
-    value = (source_ip or "").strip()
-
-    if not value or value.lower() == "unknown":
-        return "unknown"
-
-    try:
-        parsed_ip = ip_address(value)
-    except ValueError:
-        return "unknown"
-
-    if parsed_ip.version == 4:
-        octets = value.split(".")
-        return f"{octets[0]}.{octets[1]}.{octets[2]}.0"
-
-    hextets = parsed_ip.exploded.split(":")
-    return f"{':'.join(hextets[:4])}::"
-
-
 def _record_auth_attempt(
     conn,
     *,
@@ -93,7 +74,7 @@ def _record_auth_attempt(
     log_auth_attempt(
         conn,
         email_hash=email_hash,
-        source_ip=_mask_source_ip(source_ip),
+        source_ip=mask_source_ip(source_ip),
         success=success,
         blocked=blocked,
     )
@@ -138,7 +119,7 @@ def _create_session_and_token(
     session_id = create_user_session(
         conn,
         user_id=user_id,
-        source_ip=source_ip,
+        source_ip=mask_source_ip(source_ip),
         user_agent=user_agent,
         expires_at=refresh_expires_at,
         refresh_token_hash=hash_token(refresh_token),

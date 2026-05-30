@@ -81,7 +81,7 @@ class Tam_sam_procedures:
         )
 
         if not doc:
-            return self.calculate_and_persist_tam_total()
+            return None
 
         calculated_on = doc.get("calculated_on")
         if isinstance(calculated_on, datetime):
@@ -89,13 +89,14 @@ class Tam_sam_procedures:
 
         return doc
     
-    def get_sam_total(self, year):
+    def get_sam_total(self, year, indicator_type_code):
 
         pipeline = [
             {"$unwind": "$annual_summaries"},
             {
                 "$match": {
                     "annual_summaries.year": year,
+                    "annual_summaries.indicator_type_code": indicator_type_code,
                     "annual_summaries.limit": {"$ne": None},
                 }
             },

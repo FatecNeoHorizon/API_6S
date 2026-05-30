@@ -59,12 +59,20 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
+_SENSITIVE_FIELDS = {"password", "senha", "new_password", "confirm_password", "token"}
+
+
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     from src.config.validation import format_validation_errors
+    safe_errors = [
+        e for e in exc.errors()
+        if not any(f in _SENSITIVE_FIELDS for f in e.get("loc", []))
+    ]
     log.warning(
         "validation_error",
         path=request.url.path,
-        errors=exc.errors(),
+        error_count=len(exc.errors()),
+        errors=safe_errors,
     )
     return JSONResponse(
         status_code=422,

@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -355,34 +356,41 @@ const formatMonthLabel = (m) =>
   m ? `${MONTH_NAMES[m.month - 1]}/${m.year}` : "—";
 
 const calcAverage = (records) => {
-  if (!records.length) return null;
+  const valid = records.filter((r) => r.value != null);
+  if (!valid.length) return null;
   return parseFloat(
-    (records.reduce((acc, r) => acc + r.value, 0) / records.length).toFixed(2),
+    (valid.reduce((acc, r) => acc + r.value, 0) / valid.length).toFixed(2),
   );
 };
+
+const avgOrNull = (values) =>
+  values.length
+    ? parseFloat((values.reduce((a, v) => a + v, 0) / values.length).toFixed(2))
+    : null;
 
 const buildRanking = (data) => {
   const agentMap = {};
   data.forEach((item) => {
     if (!agentMap[item.agent_acronym])
       agentMap[item.agent_acronym] = { decValues: [], fecValues: [] };
-    if (item.indicator_type_code === "DEC")
+    if (item.indicator_type_code === "DEC" && item.value != null)
       agentMap[item.agent_acronym].decValues.push(item.value);
-    if (item.indicator_type_code === "FEC")
+    if (item.indicator_type_code === "FEC" && item.value != null)
       agentMap[item.agent_acronym].fecValues.push(item.value);
   });
   return Object.entries(agentMap)
-    .filter(([, v]) => v.decValues.length && v.fecValues.length)
     .map(([nome, { decValues, fecValues }]) => ({
       nome,
-      dec: parseFloat(
-        (decValues.reduce((a, v) => a + v, 0) / decValues.length).toFixed(2),
-      ),
-      fec: parseFloat(
-        (fecValues.reduce((a, v) => a + v, 0) / fecValues.length).toFixed(2),
-      ),
+      dec: avgOrNull(decValues),
+      fec: avgOrNull(fecValues),
     }))
-    .sort((a, b) => b.dec - a.dec || b.fec - a.fec);
+    .sort((a, b) => {
+      if (a.dec === null && b.dec !== null) return 1;
+      if (a.dec !== null && b.dec === null) return -1;
+      if (a.dec === null && b.dec === null)
+        return (b.fec ?? -Infinity) - (a.fec ?? -Infinity);
+      return b.dec - a.dec || (b.fec ?? 0) - (a.fec ?? 0);
+    });
 };
 
 const buildChartData = (data) => {
@@ -459,6 +467,17 @@ const buildPreviewChartData = (data) => {
     }));
 };
 
+const buildPreviewMetrics = (data) =>
+  ["DEC", "FEC"].reduce((metrics, indicator) => {
+    const record = data.find(
+      (item) =>
+        item.indicator === indicator &&
+        Number.isFinite(item.validation_metrics?.mae),
+    );
+    if (record) metrics[indicator] = record.validation_metrics;
+    return metrics;
+  }, {});
+
 // ─── Helpers Perdas ───────────────────────────────────────────────────────────
 const toISODate = (d) => d.toISOString().split("T")[0];
 
@@ -514,6 +533,7 @@ export default function IndicadoresPage() {
   const [rankingData, setRankingData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [decFecLoading, setDecFecLoading] = useState(false);
+  const [rankingSearch, setRankingSearch] = useState("");
 
   // Perdas
   const [perdasPeriod, setPerdasPeriod] = useState(null);
@@ -524,14 +544,20 @@ export default function IndicadoresPage() {
 
   // TAM/SAM
   const [tamTotal, setTamTotal] = useState(null);
+  const [tamLoading, setTamLoading] = useState(false);
   const [samTotal, setSamTotal] = useState(null);
+  const [samLoading, setSamLoading] = useState(false);
+  const [samYear, setSamYear] = useState(null);
+  const [samIndicator, setSamIndicator] = useState("DEC");
 
   //ML Preview
   const [previewChartData, setpreviewChartData] = useState([])
+  const [previewMetrics, setPreviewMetrics] = useState({})
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const fetchTamTotal = async () => {
     const url = `/tam-sam/tam`;
-    setDecFecLoading(true);
+    setTamLoading(true);
     try {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
@@ -544,28 +570,31 @@ export default function IndicadoresPage() {
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setTamLoading(false);
     }
   }
 
-  const fetchSamTotal = async (from, to) => {
+  const fetchSamTotal = async (from, indicator = samIndicator) => {
 
-    const params = new URLSearchParams({ year: from.year })
+    const params = new URLSearchParams({ year: from.year, indicator })
     const url = `/tam-sam/sam?${params.toString()}`;
-    setDecFecLoading(true);
+    setSamLoading(true);
     try {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
         console.error("[tam-sam] Expected JSON, got text:", data);
         setSamTotal(null);
+        setSamYear(null);
         return;
       }
       const payload = unwrapApiData(data);
       setSamTotal(payload?.sam_total ?? payload)
+      setSamYear(payload?.year ?? from.year)
+      setSamIndicator(payload?.indicator ?? indicator)
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setSamLoading(false);
     }
   }
 
@@ -600,31 +629,31 @@ export default function IndicadoresPage() {
   };
 
   // ── Preview DEC/FEC handlers ─────────────────────────────────────────────────────────
-  const fetchPreviewDecFec = async (from, to) => {
-
+  const fetchPreviewDecFec = async () => {
     const params = new URLSearchParams({
       consumer_unit_set_id: 16648,
-      year_start: 2014,
-      year_end: 2024,
-      save_models: false,
+      limit: 1000,
     });
 
-    const url = `/timeseries/forecast-unit?${params.toString()}`;
-    console.log("[get-dec-fec] Fetching:", url);
-    setDecFecLoading(true);
+    const url = `/predictions/?${params.toString()}`;
+    console.log("[get-preview-dec-fec] Fetching:", url);
+    setPreviewLoading(true);
     try {
-      const data = await apiClient.post(url);
+      const data = await apiClient.get(url);
       if (typeof data === "string") {
         console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
         setpreviewChartData([])
+        setPreviewMetrics({})
         return;
       }
       const payload = unwrapApiData(data);
-      setpreviewChartData(buildPreviewChartData(payload?.forecasts ?? []))
+      const predictions = payload?.predictions ?? [];
+      setpreviewChartData(buildPreviewChartData(predictions))
+      setPreviewMetrics(buildPreviewMetrics(predictions))
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
-      setDecFecLoading(false);
+      setPreviewLoading(false);
     }
   };
 
@@ -635,8 +664,8 @@ export default function IndicadoresPage() {
     setMonthRange({ from, to });
     fetchDecFec(from, to);
     fetchTamTotal();
-    fetchSamTotal(from, to);
-    fetchPreviewDecFec(from, to);
+    fetchSamTotal(from);
+    fetchPreviewDecFec();
   };
 
   const handleMonthRangeChange = (range) => {
@@ -646,8 +675,15 @@ export default function IndicadoresPage() {
       fetchDecFec(range.from, range.to);
       setDecFecPopoverOpen(false);
       fetchTamTotal();
-      fetchSamTotal(range.from, range.to);
-      fetchPreviewDecFec(range.from, range.to);
+      fetchSamTotal(range.from);
+      fetchPreviewDecFec();
+    }
+  };
+
+  const handleSamIndicatorChange = (indicator) => {
+    setSamIndicator(indicator);
+    if (monthRange.from) {
+      fetchSamTotal(monthRange.from, indicator);
     }
   };
 
@@ -907,11 +943,11 @@ export default function IndicadoresPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
-                    {decFecLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
+                    {tamLoading ? "..." : tamTotal !== null ? tamTotal : "—"}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                      Total geral
                     </span>
                   </div>
                 </CardContent>
@@ -925,12 +961,29 @@ export default function IndicadoresPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
-                    {decFecLoading ? "..." : samTotal !== null ? samTotal : "—"}
+                    {samLoading ? "..." : samTotal !== null ? samTotal : "—"}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {decFecPeriodLabel ? decFecPeriodLabel : "Selecione um período"}
+                      {samYear !== null ? `Ano ${samYear}` : "Selecione um ano"}
+                      {" · "}{samIndicator}
                     </span>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    {["DEC", "FEC"].map((indicator) => (
+                      <button
+                        key={indicator}
+                        type="button"
+                        className={`rounded px-2 py-1 text-xs ${
+                          samIndicator === indicator
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                        onClick={() => handleSamIndicatorChange(indicator)}
+                      >
+                        {indicator}
+                      </button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -1045,6 +1098,30 @@ export default function IndicadoresPage() {
                     </span>
                   </div>
                 </div>
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    Validacao do modelo (MAE)
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm text-foreground">
+                    <span>
+                      DEC:{" "}
+                      {Number.isFinite(previewMetrics.DEC?.mae)
+                        ? previewMetrics.DEC.mae.toFixed(4)
+                        : "indisponivel"}
+                    </span>
+                    <span>
+                      FEC:{" "}
+                      {Number.isFinite(previewMetrics.FEC?.mae)
+                        ? previewMetrics.FEC.mae.toFixed(4)
+                        : "indisponivel"}
+                    </span>
+                  </div>
+                  {!previewMetrics.DEC && !previewMetrics.FEC && previewChartData.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Metricas nao disponiveis para previsoes salvas anteriormente.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -1054,7 +1131,9 @@ export default function IndicadoresPage() {
                   Previsão DEC/FEC
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  {decFecPeriodLabel
+                  {previewLoading
+                    ? "Carregando previsão..."
+                    : decFecPeriodLabel
                     ? `Previsão · ${decFecPeriodLabel}`
                     : "Selecione um período"}
                 </CardDescription>
@@ -1168,11 +1247,16 @@ export default function IndicadoresPage() {
           >
             <CardHeader className="flex-shrink-0">
               <CardTitle className="text-foreground">
-                Ranking de Distribuidoras
+                Ranking por DEC médio
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Ordenado por indicador DEC
-              </CardDescription>
+              <div className="mt-2">
+                <Input
+                  placeholder="Buscar distribuidora..."
+                  value={rankingSearch}
+                  onChange={(e) => setRankingSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-auto max-h-[780px]">
@@ -1201,22 +1285,28 @@ export default function IndicadoresPage() {
                         </td>
                       </tr>
                     ) : rankingData.length > 0 ? (
-                      rankingData.map((dist) => (
-                        <tr
-                          key={dist.nome}
-                          className="border-b border-border/50 hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="py-3 px-4 text-sm text-foreground font-medium">
-                            {dist.nome}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.dec}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-foreground text-center">
-                            {dist.fec}
-                          </td>
-                        </tr>
-                      ))
+                      rankingData
+                        .filter((dist) =>
+                          dist.nome
+                            .toLowerCase()
+                            .includes(rankingSearch.toLowerCase()),
+                        )
+                        .map((dist) => (
+                          <tr
+                            key={dist.nome}
+                            className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-sm text-foreground font-medium">
+                              {dist.nome}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
+                              {dist.dec ?? "—"}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-foreground text-center">
+                              {dist.fec ?? "—"}
+                            </td>
+                          </tr>
+                        ))
                     ) : (
                       <tr>
                         <td

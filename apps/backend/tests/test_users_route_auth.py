@@ -7,7 +7,11 @@ from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.dependencies.auth import AuthenticatedUser, get_current_user
+from src.api.dependencies.auth import (
+    AuthenticatedUser,
+    get_current_user,
+    get_current_user_no_consent_check,
+)
 from src.api.routes import users
 from src.api.schemas.user_schemas import UserCreateResponse, UserResult
 
@@ -22,6 +26,7 @@ def create_test_client(current_user: AuthenticatedUser | None = None) -> TestCli
 
     if current_user is not None:
         app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_current_user_no_consent_check] = lambda: current_user
 
     return TestClient(app)
 
@@ -30,7 +35,10 @@ def authenticated_user(profile_name: str = "USER") -> AuthenticatedUser:
     return AuthenticatedUser(
         user_id=USER_ID,
         session_id=SESSION_ID,
+        username="test_user",
         profile_name=profile_name,
+        first_access_completed=True,
+        active=True,
     )
 
 
@@ -84,8 +92,8 @@ def test_users_routes_require_authentication_without_token():
         assert response.status_code == 401
 
 
-def test_read_users_routes_allow_authenticated_user(monkeypatch):
-    client = create_test_client(authenticated_user("USER"))
+def test_read_users_routes_allow_authenticated_manager(monkeypatch):
+    client = create_test_client(authenticated_user("MANAGER"))
     user_uuid = uuid4()
     profile_id = uuid4()
 
@@ -145,7 +153,7 @@ def test_write_users_routes_allow_admin(monkeypatch):
         ),
     )
     monkeypatch.setattr(users, "update_user_service", lambda *_: sample_user_result(user_uuid))
-    monkeypatch.setattr(users, "set_user_active_service", lambda *_: sample_user_result(user_uuid))
+    monkeypatch.setattr(users, "set_user_active_service", lambda *_, **__: sample_user_result(user_uuid))
     monkeypatch.setattr(users, "delete_user_service", lambda _: None)
 
     assert client.post(
@@ -165,3 +173,11 @@ def test_write_users_routes_allow_admin(monkeypatch):
 
     assert client.patch(f"/users/{user_uuid}/active", json={"active": False}).status_code == 200
     assert client.delete(f"/users/{user_uuid}").status_code == 204
+
+
+def test_authenticated_user_can_delete_own_account(monkeypatch):
+    client = create_test_client(authenticated_user("USER"))
+
+    monkeypatch.setattr(users, "delete_user_service", lambda _: None)
+
+    assert client.delete(f"/users/{USER_ID}").status_code == 204

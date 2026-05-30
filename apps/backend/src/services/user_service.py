@@ -185,6 +185,15 @@ def delete_user_service(user_uuid: UUID) -> None:
     try:
         with get_pg_connection() as conn:
             deleted = delete_user(conn, user_uuid)
+            if deleted:
+                invalidated = invalidate_user_sessions(conn, str(user_uuid))
+                for session_uuid in invalidated:
+                    _log.info(
+                        SESSION_INVALIDATED_ALL,
+                        acting_user_id=str(user_uuid),
+                        target_session_uuid=session_uuid,
+                        reason="USER_DELETION",
+                    )
     except IntegrityError as exc:
         handle_db_integrity_error(exc, context="delete_user_service")
         raise HTTPException(status_code=409, detail="conflict")

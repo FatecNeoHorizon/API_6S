@@ -33,8 +33,8 @@ def test_optional_consent_revocation_only_logs_event():
         "src.services.consent_service.consent_repository.insert_consent_event",
         return_value=True,
     ) as mock_insert, patch(
-        "src.services.consent_service.anonymize_user"
-    ) as mock_anonymize, patch(
+        "src.services.consent_service.delete_user"
+    ) as mock_delete, patch(
         "src.services.consent_service.invalidate_user_sessions"
     ) as mock_invalidate, patch(
         "src.services.consent_service.get_user_consent_preferences",
@@ -55,7 +55,7 @@ def test_optional_consent_revocation_only_logs_event():
     }
     mock_insert.assert_called_once()
     assert mock_insert.call_args.kwargs["event_action"] == "CONSENT_REVOKED"
-    mock_anonymize.assert_not_called()
+    mock_delete.assert_not_called()
     mock_invalidate.assert_not_called()
 
 
@@ -76,8 +76,8 @@ def test_optional_consent_acceptance_only_logs_event():
         "src.services.consent_service.consent_repository.insert_consent_event",
         return_value=True,
     ) as mock_insert, patch(
-        "src.services.consent_service.anonymize_user"
-    ) as mock_anonymize, patch(
+        "src.services.consent_service.delete_user"
+    ) as mock_delete, patch(
         "src.services.consent_service.invalidate_user_sessions"
     ) as mock_invalidate, patch(
         "src.services.consent_service.get_user_consent_preferences",
@@ -95,11 +95,11 @@ def test_optional_consent_acceptance_only_logs_event():
     assert result["updated_count"] == 1
     assert result["consents"] == []
     assert mock_insert.call_args.kwargs["event_action"] == "CONSENT_ACCEPTED"
-    mock_anonymize.assert_not_called()
+    mock_delete.assert_not_called()
     mock_invalidate.assert_not_called()
 
 
-def test_mandatory_consent_revocation_anonymizes_and_invalidates_sessions():
+def test_mandatory_consent_revocation_deletes_and_invalidates_sessions():
     conn = MagicMock()
     user_id = str(uuid4())
     clause_id = str(uuid4())
@@ -116,9 +116,9 @@ def test_mandatory_consent_revocation_anonymizes_and_invalidates_sessions():
         "src.services.consent_service.consent_repository.insert_consent_event",
         return_value=True,
     ) as mock_insert, patch(
-        "src.services.consent_service.anonymize_user",
+        "src.services.consent_service.delete_user",
         return_value=True,
-    ) as mock_anonymize, patch(
+    ) as mock_delete, patch(
         "src.services.consent_service.invalidate_user_sessions",
         return_value=True,
     ) as mock_invalidate:
@@ -136,7 +136,7 @@ def test_mandatory_consent_revocation_anonymizes_and_invalidates_sessions():
         "consents": None,
     }
     assert mock_insert.call_args.kwargs["event_action"] == "CONSENT_REVOKED"
-    mock_anonymize.assert_called_once_with(conn, user_id)
+    mock_delete.assert_called_once_with(conn, user_id)
     mock_invalidate.assert_called_once_with(conn, user_id)
 
 
@@ -157,8 +157,8 @@ def test_mandatory_consent_acceptance_does_not_delete_account():
         "src.services.consent_service.consent_repository.insert_consent_event",
         return_value=True,
     ), patch(
-        "src.services.consent_service.anonymize_user"
-    ) as mock_anonymize, patch(
+        "src.services.consent_service.delete_user"
+    ) as mock_delete, patch(
         "src.services.consent_service.invalidate_user_sessions"
     ) as mock_invalidate, patch(
         "src.services.consent_service.get_user_consent_preferences",
@@ -174,7 +174,7 @@ def test_mandatory_consent_acceptance_does_not_delete_account():
 
     assert result["account_deleted"] is False
     assert result["updated_count"] == 1
-    mock_anonymize.assert_not_called()
+    mock_delete.assert_not_called()
     mock_invalidate.assert_not_called()
 
 

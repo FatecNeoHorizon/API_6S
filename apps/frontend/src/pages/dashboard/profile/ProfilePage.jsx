@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, ShieldCheck, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
+import { clearClientSession } from "@/api/consent";
+import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,11 +51,16 @@ function formatDateTime(value) {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ username: "", email: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -119,6 +125,32 @@ export default function ProfilePage() {
       toast.error("Nao foi possivel exportar seus dados. Tente novamente.");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setDeleteConfirmation("");
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setShowDeleteModal(false);
+    setDeleteConfirmation("");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!profile?.user_uuid || deleteConfirmation !== "DELETE") return;
+
+    setIsDeleting(true);
+
+    try {
+      await deleteMyAccount(profile.user_uuid);
+      clearClientSession();
+      navigate("/goodbye", { replace: true });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Não foi possível excluir sua conta."));
+      setIsDeleting(false);
     }
   };
 
@@ -331,10 +363,10 @@ export default function ProfilePage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base text-destructive">
                 <Trash2 className="h-4 w-4" />
-                Exclusao da conta
+                Exclusão da conta
               </CardTitle>
               <CardDescription>
-                Acao reservada para a proxima etapa do fluxo de LGPD.
+                Exclui sua conta e remove seu acesso imediatamente.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -342,11 +374,11 @@ export default function ProfilePage() {
                 type="button"
                 variant="destructive"
                 className="w-full"
-                disabled
-                title="Funcionalidade ainda nao implementada"
+                onClick={openDeleteModal}
+                disabled={isDeleting}
               >
                 <Trash2 className="h-4 w-4" />
-                Solicitar exclusao
+                Solicitar exclusão
               </Button>
             </CardContent>
           </Card>
@@ -363,6 +395,53 @@ export default function ProfilePage() {
           </div>
         </aside>
       </div>
+
+      {showDeleteModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-lg border border-destructive/30 bg-card p-6 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-destructive/10 p-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Confirmar exclusão da conta</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Esta ação excluirá sua conta e encerrará suas sessões ativas.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+              <p className="font-medium text-destructive">Esta ação não poderá ser desfeita.</p>
+              <p className="mt-2 text-muted-foreground">
+                Para confirmar, digite <strong className="text-foreground">DELETE</strong> abaixo.
+              </p>
+              <Input
+                className="mt-3"
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                placeholder="DELETE"
+                disabled={isDeleting}
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={closeDeleteModal} disabled={isDeleting}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || deleteConfirmation !== "DELETE"}
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Excluir conta
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

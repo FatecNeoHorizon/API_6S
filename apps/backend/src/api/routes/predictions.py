@@ -114,6 +114,7 @@ def generate_predictions_task(
                         "forecast_value": forecast.get("forecast_value"),
                         "model": "RandomForestRegressor",
                         "generated_on": datetime.now(timezone.utc),
+                        "validation_metrics": result.get("metrics", {}).get(forecast.get("indicator")),
                     }
                     all_predictions.append(pred)
                 
@@ -274,7 +275,8 @@ async def get_predictions(
                 "forecast_period": 1,
                 "forecast_value": 1.234,
                 "model": "RandomForestRegressor",
-                "generated_on": "2025-01-03T10:30:00Z"
+                "generated_on": "2025-01-03T10:30:00Z",
+                "validation_metrics": {"success": true, "mae": 0.2278}
             },
             ...
         ]

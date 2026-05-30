@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from psycopg2 import IntegrityError, OperationalError
 
+from src.config.auth_security import mask_source_ip
 from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.repositories import consent_repository
 from src.repositories.anonymization_repository import anonymize_user
@@ -361,7 +362,7 @@ def submit_consent(
             clause_uuid=clause_uuid,
             policy_version_id=policy_version_id,
             event_action=EVENT_ACTIONS[action],
-            source_ip=source_ip,
+            source_ip=mask_source_ip(source_ip),
             user_agent=user_agent,
         )
     except IntegrityError as exc:

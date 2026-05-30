@@ -37,9 +37,7 @@ from src.repositories.user_repository import (
     UserProfileNotFoundError,
     UserResult,
     create_user,
-    delete_user_first_access_tokens,
     delete_user,
-    delete_user_password_reset_tokens,
     delete_user_sessions,
     exists_by_profile_name,
     exists_by_username,
@@ -77,11 +75,20 @@ def create_user_service(payload: UserCreateRequest) -> UserCreateResponse:
                 email=normalized_email,
                 enabled=True,
             )
-            keycloak.assign_realm_role(keycloak_sub, payload.profile_name)
         except KeycloakUserAlreadyExistsError as exc:
             raise UserAlreadyExistsError("E-mail já cadastrado no servidor de identidade.") from exc
         except KeycloakAdminError as exc:
             raise HTTPException(status_code=502, detail="Falha ao criar usuário no servidor de identidade.") from exc
+
+        try:
+            keycloak.assign_realm_role(keycloak_sub, payload.profile_name)
+            keycloak.send_required_actions_email(keycloak_sub, ["UPDATE_PASSWORD"])
+        except KeycloakAdminError as exc:
+            try:
+                keycloak.delete_user(keycloak_sub)
+            except Exception:
+                pass
+            raise HTTPException(status_code=502, detail="Falha ao atribuir perfil no servidor de identidade.") from exc
 
         try:
             with get_pg_connection() as conn:
@@ -269,8 +276,6 @@ def delete_user_service(user_uuid: UUID) -> None:
             )
 
         delete_user_sessions(main_conn, user_uuid)
-        delete_user_first_access_tokens(main_conn, user_uuid)
-        delete_user_password_reset_tokens(main_conn, user_uuid)
 
         deleted = delete_user(main_conn, user_uuid)
         if not deleted:
@@ -359,8 +364,9 @@ def _decrypt_email(email_enc: str, settings: Settings) -> str:
     key = _resolve_email_encryption_key(settings)
     try:
         return Fernet(key).decrypt(email_enc.encode("utf-8")).decode("utf-8")
-    except (InvalidToken, ValueError) as exc:
-        raise RuntimeError("Falha ao descriptografar o e-mail do usuario.") from exc
+    except (InvalidToken, ValueError):
+        # Fallback: plain-text email stored in dev seed (V014 migration)
+        return email_enc
 
 
 def _format_current_user_profile(row: dict) -> dict:

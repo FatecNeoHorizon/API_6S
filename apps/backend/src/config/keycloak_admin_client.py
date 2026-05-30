@@ -155,6 +155,23 @@ class KeycloakAdminClient:
 
         return [r["name"] for r in response.json()]
 
+    def send_required_actions_email(self, keycloak_sub: str, actions: list[str]) -> None:
+        """Sends an email to the user with links to complete the required actions."""
+        response = httpx.put(
+            self._url(f"users/{keycloak_sub}/execute-actions-email"),
+            json=actions,
+            headers=self._headers(),
+            timeout=10,
+        )
+
+        if response.status_code not in (200, 204):
+            raise KeycloakAdminError(
+                f"Failed to send required actions email to '{keycloak_sub}': "
+                f"{response.status_code} {response.text}"
+            )
+
+        log.info("keycloak.user.actions_email_sent", keycloak_sub=keycloak_sub, actions=actions)
+
     def assign_realm_role(self, keycloak_sub: str, role_name: str) -> None:
         """Assigns a realm role to a user."""
         role_resp = httpx.get(

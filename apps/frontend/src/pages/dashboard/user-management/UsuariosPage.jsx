@@ -12,7 +12,7 @@ const ALLOWED_PROFILE_NAMES = new Set(["ADMIN", "ANALYST", "MANAGER"])
 const normalizeUser = (user) => ({
   user_uuid: user.user_uuid,
   username: user.username,
-  profile_id: user.profile_id,
+  profile_name: user.profile_name,
   created_at: user.created_at,
   updated_at: user.updated_at,
 })
@@ -38,10 +38,12 @@ const formatDate = (value) => {
   return parsedDate.toLocaleDateString("pt-BR")
 }
 
-const getProfileName = (profileId, profiles) => {
-  const found = profiles.find((profile) => profile.profile_uuid === profileId)
-  return found?.profile_name || profileId
+const PROFILE_LABELS = {
+  ADMIN: "Administrador",
+  ANALYST: "Analista",
+  MANAGER: "Gerente",
 }
+const getProfileLabel = (name) => PROFILE_LABELS[name] ?? name
 
 const buildPaginatedUsersResponse = ({ page, pageSize, username, sourceUsers }) => {
   const normalizedSearch = username.trim().toLowerCase()
@@ -73,13 +75,13 @@ const buildPaginatedUsersResponse = ({ page, pageSize, username, sourceUsers }) 
   }
 }
 
-const getPerfilClassName = (perfil) => {
-  if (perfil === "ADMIN") return "bg-primary/10 text-primary"
-  if (perfil === "ANALYST") return "bg-chart-2/10 text-chart-2"
+const getPerfilClassName = (profileName) => {
+  if (profileName === "ADMIN") return "bg-primary/10 text-primary"
+  if (profileName === "ANALYST") return "bg-chart-2/10 text-chart-2"
   return "bg-muted text-muted-foreground"
 }
 
-import { deleteUserRequest } from "@/api/users"
+import { deactivateUserRequest } from "@/api/users"
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
@@ -135,14 +137,14 @@ export default function UsuariosPage() {
   const [createForm, setCreateForm] = useState({
     username: "",
     email: "",
-    profile_id: "",
+    profile_name: "",
   })
   const [createError, setCreateError] = useState("")
   const [isCreatingUser, setIsCreatingUser] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [editForm, setEditForm] = useState({
     username: "",
-    profile_id: "",
+    profile_name: "",
   })
   const [editError, setEditError] = useState("")
   const [isEditingUser, setIsEditingUser] = useState(false)
@@ -215,7 +217,7 @@ export default function UsuariosPage() {
     setCreateForm({
       username: "",
       email: "",
-      profile_id: "",
+      profile_name: "",
     })
     setCreateError("")
     setShowCreateModal(true)
@@ -233,9 +235,9 @@ export default function UsuariosPage() {
   const handleCreateUser = async () => {
     const username = createForm.username.trim()
     const email = createForm.email.trim()
-    const profile_id = createForm.profile_id
+    const profile_name = createForm.profile_name
 
-    if (!username || !email || !profile_id) {
+    if (!username || !email || !profile_name) {
       setCreateError("Preencha todos os campos obrigatórios.")
       return
     }
@@ -252,7 +254,7 @@ export default function UsuariosPage() {
       await createUserRequest({
         username,
         email,
-        profile_id,
+        profile_name,
       })
 
       toast.success("Usuário criado com sucesso")
@@ -278,7 +280,7 @@ export default function UsuariosPage() {
     setSelectedUser(user)
     setEditForm({
       username: user.username,
-      profile_id: user.profile_id,
+      profile_name: user.profile_name ?? "",
     })
     setEditError("")
     setShowEditModal(true)
@@ -311,9 +313,9 @@ export default function UsuariosPage() {
     if (!selectedUser) return
 
     const username = editForm.username.trim()
-    const profile_id = editForm.profile_id
+    const profile_name = editForm.profile_name
 
-    if (!username || !profile_id) {
+    if (!username || !profile_name) {
       setEditError("Preencha os campos obrigatórios.")
       return
     }
@@ -323,7 +325,7 @@ export default function UsuariosPage() {
 
     const payload = {
       username,
-      profile_id,
+      profile_name,
     }
 
     try {
@@ -343,29 +345,29 @@ export default function UsuariosPage() {
     if (!selectedUser) return
 
     setIsConfirmingDeleteAction(true)
-    const deletedUserId = selectedUser.user_uuid
+    const targetUserId = selectedUser.user_uuid
 
     try {
-      await deleteUserRequest(deletedUserId)
-      toast.success("Usuário excluído com sucesso")
+      await deactivateUserRequest(targetUserId)
+      toast.success("Usuário desativado com sucesso")
       closeDeleteModal()
     } catch (error) {
       if (error?.status === 404) {
-        toast.success("Usuário já estava excluído")
+        toast.error("Usuário não encontrado.")
         closeDeleteModal()
       } else {
-        toast.error(getApiErrorMessage(error, "Não foi possível excluir o usuário. Tente novamente."))
+        toast.error(getApiErrorMessage(error, "Não foi possível desativar o usuário. Tente novamente."))
         setIsConfirmingDeleteAction(false)
         return
       }
     }
 
-    setAllUsers((currentUsers) => currentUsers.filter((user) => user.user_uuid !== deletedUserId))
+    setAllUsers((currentUsers) => currentUsers.filter((user) => user.user_uuid !== targetUserId))
 
     try {
       await loadUsersAndProfiles()
     } catch {
-      toast.error("Usuário excluído, mas não foi possível atualizar a lista agora.")
+      toast.error("Usuário desativado, mas não foi possível atualizar a lista agora.")
     }
   }
 
@@ -374,7 +376,7 @@ export default function UsuariosPage() {
   )
 
   const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
-  const deleteActionButtonLabel = "Excluir Usuário"
+  const deleteActionButtonLabel = "Desativar Usuário"
 
   return (
     <>
@@ -484,9 +486,9 @@ export default function UsuariosPage() {
                         </td>
                         <td className="px-2 py-3 text-center">
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPerfilClassName(getProfileName(user.profile_id, profiles))}`}
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPerfilClassName(user.profile_name)}`}
                           >
-                            {getProfileName(user.profile_id, profiles)}
+                            {getProfileLabel(user.profile_name)}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center text-sm text-muted-foreground">{formatDate(user.created_at)}</td>
@@ -593,13 +595,13 @@ export default function UsuariosPage() {
                 </label>
                 <select
                   id="edit-user-profile"
-                  name="profile_id"
-                  value={editForm.profile_id}
+                  name="profile_name"
+                  value={editForm.profile_name}
                   onChange={handleEditFormChange}
                   className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
                 >
                   {profiles.map((profile) => (
-                    <option key={profile.profile_uuid} value={profile.profile_uuid}>
+                    <option key={profile.profile_uuid} value={profile.profile_name}>
                       {profile.profile_name}
                     </option>
                   ))}
@@ -702,15 +704,15 @@ export default function UsuariosPage() {
                 </label>
                 <select
                   id="create-user-profile"
-                  name="profile_id"
-                  value={createForm.profile_id}
+                  name="profile_name"
+                  value={createForm.profile_name}
                   onChange={handleCreateFormChange}
                   className="w-full rounded-md border border-border bg-input px-3 py-2 text-foreground"
                   disabled={isCreatingUser}
                 >
                   <option value="">Selecione um perfil</option>
                   {createProfileOptions.map((profile) => (
-                    <option key={profile.profile_uuid} value={profile.profile_uuid}>
+                    <option key={profile.profile_uuid} value={profile.profile_name}>
                       {profile.profile_name}
                     </option>
                   ))}
@@ -776,12 +778,12 @@ export default function UsuariosPage() {
               <div className="mb-4 rounded-full bg-destructive/10 p-3">
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-foreground">Excluir Usuário</h3>
+              <h3 className="mb-2 text-xl font-semibold text-foreground">Desativar Usuário</h3>
               <p className="mb-6 text-muted-foreground">
-                Você tem certeza que deseja excluir o usuário{" "}
+                Você tem certeza que deseja desativar o usuário{" "}
                 <strong className="font-medium text-foreground">{selectedUser.username}</strong>?
                 <br />
-                Esta ação não pode ser desfeita.
+                O acesso será bloqueado imediatamente. A ação pode ser revertida.
               </p>
             </div>
 

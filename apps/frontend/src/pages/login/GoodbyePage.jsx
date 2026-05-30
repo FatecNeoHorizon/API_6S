@@ -12,17 +12,17 @@ export default function GoodbyePage() {
         </div>
 
         <h1 className="text-2xl font-semibold text-foreground">
-          Account access ended
+          Acesso à conta encerrado
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Your mandatory consent was revoked. Your account was anonymized and
-          all active sessions were invalidated according to the LGPD consent
-          management flow.
+          Seu consentimento obrigatório foi revogado. Sua conta foi anonimizada
+          e todas as sessões ativas foram invalidadas conforme o fluxo de
+          gerenciamento de consentimentos da LGPD.
         </p>
 
         <Button asChild className="mt-6">
-          <Link to="/login">Return to login</Link>
+          <Link to="/login">Voltar ao login</Link>
         </Button>
       </div>
     </div>

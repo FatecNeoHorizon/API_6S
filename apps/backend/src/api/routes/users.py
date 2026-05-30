@@ -258,7 +258,19 @@ def delete_user_sessions(
 
 
 @router.delete("/{user_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_admin)):
+def delete_user(
+    user_uuid: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user_no_consent_check),
+):
+    is_self_delete = str(user_uuid) == current_user.user_id
+    is_admin = current_user.profile_name == "ADMIN"
+
+    if not is_self_delete and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="cannot_delete_other_user",
+        )
+
     try:
         delete_user_service(user_uuid)
         log.info(USER_DELETED, actor_id=current_user.user_id, target_user_id=str(user_uuid))

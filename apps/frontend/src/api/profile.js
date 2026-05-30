@@ -24,3 +24,7 @@ export function updateMyConsentPreferences(userId, consents) {
     getAuthOptions(),
   );
 }
+
+export function deleteMyAccount(userId) {
+  return apiClient.delete(`/users/${userId}`, getAuthOptions());
+}

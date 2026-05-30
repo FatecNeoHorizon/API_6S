@@ -9,8 +9,7 @@ from psycopg2 import IntegrityError, OperationalError
 from src.config.auth_security import mask_source_ip
 from src.config.exception_handlers import handle_db_integrity_error, handle_db_operational_error
 from src.repositories import consent_repository
-from src.repositories.anonymization_repository import anonymize_user
-from src.repositories.user_repository import invalidate_user_sessions
+from src.repositories.user_repository import delete_user, invalidate_user_sessions
 from src.config.log_events import  CONSENT_REGISTERED, CONSENT_REVOKED
 
 log = structlog.get_logger()
@@ -173,7 +172,8 @@ def update_user_consent_preferences(
     Updates consent preferences after onboarding.
 
     Every change is recorded as a new append-only TB_CONSENT_LOG row.
-    Revoking a mandatory clause anonymizes the user and invalidates all active
+    Revoking a mandatory clause deletes the user through the same soft-delete
+    flow used by the account deletion endpoint and invalidates all active
     sessions before the response is returned.
     """
     if not updates:
@@ -240,7 +240,10 @@ def update_user_consent_preferences(
                 mandatory_revoked = True
 
         if mandatory_revoked:
-            anonymize_user(conn, user_id)
+            deleted = delete_user(conn, user_id)
+            if not deleted:
+                raise HTTPException(status_code=404, detail="user_not_found")
+
             invalidate_user_sessions(conn, user_id)
 
             return {

@@ -215,6 +215,15 @@ def delete_user_service(user_uuid: UUID) -> None:
         remove_user_encryption_material(main_conn, user_uuid)
         insert_blacklisted_user(blacklist_conn, user_uuid)
 
+        invalidated = invalidate_user_sessions(main_conn, str(user_uuid))
+        for session_uuid in invalidated:
+            _log.info(
+                SESSION_INVALIDATED_ALL,
+                acting_user_id=str(user_uuid),
+                target_session_uuid=session_uuid,
+                reason="USER_DELETION",
+            )
+
         delete_user_sessions(main_conn, user_uuid)
         delete_user_first_access_tokens(main_conn, user_uuid)
         delete_user_password_reset_tokens(main_conn, user_uuid)

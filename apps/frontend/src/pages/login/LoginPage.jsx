@@ -61,15 +61,13 @@ export default function LoginPage() {
       if (response.pending_consent) {
         navigate("/consent")
       } else {
-        navigate("/dashboard/indicadores")
+        navigate("/indicators")
       }
     } catch (error) {
       const detail = error?.data?.detail || ""
 
       if (detail === "invalid_credentials" || error?.status === 401) {
         setSubmissionError("Email ou senha inválidos. Verifique e tente novamente.")
-      } else if (detail === "first_access_required") {
-        navigate("/first-access")
       } else {
         setSubmissionError("Não foi possível autenticar. Tente novamente mais tarde.")
       }

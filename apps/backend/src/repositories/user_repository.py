@@ -348,24 +348,6 @@ def delete_user_sessions(conn: PgConnection, user_uuid: UUID) -> None:
         cursor.execute(query, (str(user_uuid),))
 
 
-def delete_user_first_access_tokens(conn: PgConnection, user_uuid: UUID) -> None:
-    query = """
-        DELETE FROM TB_FIRST_ACCESS_TOKEN
-        WHERE USER_ID = %s
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(user_uuid),))
-
-
-def delete_user_password_reset_tokens(conn: PgConnection, user_uuid: UUID) -> None:
-    query = """
-        DELETE FROM TB_PASSWORD_RESET
-        WHERE USER_UUID = %s
-    """
-
-    with conn.cursor() as cursor:
-        cursor.execute(query, (str(user_uuid),))
 
 
 def list_profiles(conn: PgConnection) -> List[ProfileResult]:

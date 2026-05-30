@@ -1,137 +1,99 @@
-"use client";
-
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import "../App.css"
-import "@/index.css" // Ensure base classes are present if needed
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip } from 'react-leaflet'
+import { MapContainer, TileLayer, Polygon, Tooltip } from "react-leaflet";
+import { Loader2, Info } from "lucide-react";
 
-export function Heatmap({ convertedConjs }) {
+const COLOR_MAP = {
+  green: "#22c55e",
+  orange: "#fb923c",
+  red: "#ef4444",
+  gray: "#9ca3af",
+};
 
-    function defineColor(conj) {
-        let colorString = 'gray'
-        if (conj.limit && conj.accumulated_value) {
-            let limit = conj.limit
-            let halfLimit = limit / 2
-            let value = conj.accumulated_value
+export function Heatmap({ convertedConjs, loading }) {
+  function defineColor(conj) {
+    if (!conj.limit || !conj.accumulated_value) return "gray";
+    const { limit, accumulated_value: value } = conj;
+    if (value >= limit) return "red";
+    if (value >= limit / 2) return "orange";
+    return "green";
+  }
 
-            if (value < halfLimit) {
-                colorString = 'green'
-            }
+  function getPathOptions(conj) {
+    const key = defineColor(conj);
+    return { color: COLOR_MAP[key], fillColor: COLOR_MAP[key], fillOpacity: 0.4, weight: 2 };
+  }
 
-            if (value >= halfLimit) {
-                colorString = 'orange'
-            }
+  function invertCoordinates(coordinates) {
+    return coordinates.map(([x, y]) => [y, x]);
+  }
 
-            if (value >= limit) {
-                colorString = 'red'
-            }
-        }
-        return { color: colorString }
+  function getCoordinateCenter(conjArray) {
+    if (conjArray && conjArray.length > 0) {
+      const conj = conjArray[0];
+      if (conj?.coordinates) {
+        return [conj.coordinates[0][1], conj.coordinates[0][0]];
+      }
     }
+    return [-22.97, -45.5];
+  }
 
-    function invertCoordinates(coordinates) {
-        return coordinates.map(([x, y]) => [
-            y,
-            x
-        ]);
-    }
+  function formatValue(value) {
+    if (value == null) return "—";
+    return typeof value === "number" ? value.toFixed(2) : value;
+  }
 
-    function mappedPolygons(conj) {
-        if (conj.coordinates) {
-            let coordinates = conj.coordinates
-            coordinates = invertCoordinates(coordinates)
-            return (
-                <Polygon pathOptions={defineColor(conj)} positions={coordinates}>
-                     <Tooltip>
-                        Name: {conj.name ? conj.name : "-"}
-                        <br />
-                        Indicator Type: {conj.indicator_type_code ? conj.indicator_type_code : "-"}
-                        <br />
-                        Limit: {conj.limit ? conj.limit : "-"}
-                        <br />
-                        Accumulated Value: {conj.accumulated_value ? conj.accumulated_value : "-"}
-                     </Tooltip>
-                </Polygon>
-            )
-        }
+  const hasData = convertedConjs && convertedConjs.length > 0 && convertedConjs[0]?.coordinates;
 
-        return (<></>)
-    }
+  return (
+    <div className="relative w-full h-full">
+      <MapContainer
+        center={getCoordinateCenter(convertedConjs)}
+        zoom={9}
+        scrollWheelZoom
+        style={{ width: "100%", height: "100%" }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {hasData && convertedConjs.map((conj, index) => {
+          if (!conj.coordinates) return null;
+          return (
+            <Polygon
+              key={index}
+              pathOptions={getPathOptions(conj)}
+              positions={invertCoordinates(conj.coordinates)}
+            >
+              <Tooltip>
+                <div className="text-xs flex flex-col gap-0.5">
+                  <span className="font-semibold">{conj.name || "—"}</span>
+                  <span>Indicador: {conj.indicator_type_code || "—"}</span>
+                  <span>Limite: {formatValue(conj.limit)}</span>
+                  <span>Valor acumulado: {formatValue(conj.accumulated_value)}</span>
+                </div>
+              </Tooltip>
+            </Polygon>
+          );
+        })}
+      </MapContainer>
 
-    function getCoordinateCenter(conjArray) {
-        if (conjArray) {
-            let conj = conjArray[0]
-            if (conj.coordinates) {
-                let firstCoordinate = [conj.coordinates[0][1], conj.coordinates[0][0]]
-                return firstCoordinate
-            }
-            return [51.505, -0.09]
-        }
+      {loading && (
+        <div className="absolute inset-0 z-1000 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <span className="text-sm">Carregando dados...</span>
+          </div>
+        </div>
+      )}
 
-    }
-
-    function colorLabels() {
-        return (
-            <Card className="max-w-[10vw] bg-card border-border">
-                <CardContent>
-                    <div className="text-2xl font-bold text-foreground">
-                        Labels
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm text-muted-foreground">
-                            🔴 Critical
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm text-muted-foreground">
-                            🟠 Attention
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm text-muted-foreground">
-                            🟢 Normal
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm text-muted-foreground">
-                            ⚪ No Data
-                        </span>
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    return (
-        <>
-            {convertedConjs && convertedConjs[0].coordinates && (
-                <MapContainer center={getCoordinateCenter(convertedConjs)} zoom={9} scrollWheelZoom={true}>
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={[51.505, -0.09]}>
-                        <Popup>
-                            A pretty CSS3 popup. <br /> Easily customizable.
-                        </Popup>
-                    </Marker>
-
-                    <div className={'leaflet-bottom leaflet-right'}>
-                        <div className="leaflet-control leaflet-bar">{colorLabels()}</div>
-                    </div>
-
-                    {convertedConjs.map(mappedPolygons)}
-                </MapContainer>
-            )}
-
-
-        </>
-    )
+      {!loading && !hasData && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-1000">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border shadow-md text-sm text-muted-foreground">
+            <Info className="w-4 h-4 shrink-0" />
+            Sem dados para o período selecionado
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

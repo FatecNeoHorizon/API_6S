@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -667,6 +667,11 @@ export default function IndicadoresPage() {
     fetchSamTotal(from);
     fetchPreviewDecFec();
   };
+
+  useEffect(() => {
+    const defaultPeriod = DEC_FEC_QUICK_PERIODS.find((p) => p.months === 12);
+    if (defaultPeriod) handleQuickPeriod(defaultPeriod);
+  }, []);
 
   const handleMonthRangeChange = (range) => {
     setMonthRange(range);

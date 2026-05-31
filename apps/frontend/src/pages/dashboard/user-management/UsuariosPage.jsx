@@ -13,6 +13,7 @@ const normalizeUser = (user) => ({
   user_uuid: user.user_uuid,
   username: user.username,
   profile_name: user.profile_name,
+  active: user.active ?? true,
   created_at: user.created_at,
   updated_at: user.updated_at,
 })
@@ -449,6 +450,7 @@ export default function UsuariosPage() {
                   <tr className="border-b border-border">
                     <th className="px-2 py-3 text-left text-sm font-medium text-muted-foreground">Username</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Perfil</th>
+                    <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Status</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Data de Criação</th>
                     <th className="px-2 py-3 text-center text-sm font-medium text-muted-foreground">Ações</th>
                   </tr>
@@ -456,7 +458,7 @@ export default function UsuariosPage() {
                 <tbody>
                   {isLoading && (
                     <tr>
-                      <td colSpan={4} className="py-10">
+                      <td colSpan={5} className="py-10">
                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Carregando usuários...</span>
@@ -467,7 +469,7 @@ export default function UsuariosPage() {
 
                   {!isLoading && usersPage.data.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-10 text-center text-muted-foreground">
+                      <td colSpan={5} className="py-10 text-center text-muted-foreground">
                         Nenhum usuário encontrado para os filtros aplicados.
                       </td>
                     </tr>
@@ -489,6 +491,13 @@ export default function UsuariosPage() {
                             className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPerfilClassName(user.profile_name)}`}
                           >
                             {getProfileLabel(user.profile_name)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${user.active ? "bg-chart-1/10 text-chart-1" : "bg-destructive/10 text-destructive"}`}
+                          >
+                            {user.active ? "Ativo" : "Inativo"}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center text-sm text-muted-foreground">{formatDate(user.created_at)}</td>

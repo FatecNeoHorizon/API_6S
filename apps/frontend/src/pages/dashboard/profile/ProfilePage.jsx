@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, ShieldCheck, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { clearClientSession } from "@/api/consent";
+import { clearClientSession, getRefreshToken, saveClientSession } from "@/api/consent";
+import { refreshToken } from "@/api/auth";
 import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,6 +182,21 @@ export default function ProfilePage() {
         email: updated.email || "",
       });
       window.dispatchEvent(new CustomEvent("profile:updated", { detail: updated }));
+
+      const currentRefreshToken = getRefreshToken();
+      if (currentRefreshToken) {
+        try {
+          const tokens = await refreshToken({ refresh_token: currentRefreshToken });
+          saveClientSession(tokens.access_token, {
+            remember: localStorage.getItem("refresh_token") === currentRefreshToken
+              || localStorage.getItem("refreshToken") === currentRefreshToken,
+            refreshToken: tokens.refresh_token,
+          });
+        } catch {
+          // Token refresh is best-effort; profile was saved successfully
+        }
+      }
+
       toast.success("Perfil atualizado com sucesso.");
     } catch (err) {
       setError(getApiErrorMessage(err, "Nao foi possivel atualizar seu perfil."));

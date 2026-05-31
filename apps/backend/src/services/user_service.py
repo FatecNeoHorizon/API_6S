@@ -179,22 +179,42 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
     if result is None:
         raise UserNotFoundError("Usuário não encontrado.")
 
+    role_updated_in_keycloak = False
+
     if keycloak_sub:
         keycloak = get_keycloak_admin_client()
-        new_username = data["username"].strip().upper()
+        new_username = data["username"].strip()
 
-        if old_profile_name != new_profile_name:
+        # Always read the current Keycloak role rather than relying on the DB value.
+        # If a prior request updated the DB but failed at Keycloak, old_profile_name
+        # would already equal new_profile_name and the Keycloak update would be skipped.
+        keycloak_current_role = old_profile_name
+        try:
+            keycloak_roles = keycloak.get_user_realm_roles(keycloak_sub)
+            app_role = next((r for r in keycloak_roles if r in {"ADMIN", "MANAGER", "ANALYST"}), None)
+            if app_role:
+                keycloak_current_role = app_role
+        except Exception:
+            pass  # fallback: use DB value; worst case we skip an already-applied change
+
+        if keycloak_current_role != new_profile_name:
             try:
-                keycloak.update_user_role(keycloak_sub, old_profile_name, new_profile_name)
-            except Exception:
-                _log.warning(
+                keycloak.update_user_role(keycloak_sub, keycloak_current_role, new_profile_name)
+                role_updated_in_keycloak = True
+            except Exception as exc:
+                _log.error(
                     "keycloak.user.role_update_failed",
                     keycloak_sub=keycloak_sub,
-                    old_role=old_profile_name,
+                    old_role=keycloak_current_role,
                     new_role=new_profile_name,
+                    error=str(exc),
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail="Não foi possível sincronizar o perfil com o serviço de autenticação. Tente novamente.",
                 )
 
-        if current.username.upper() != new_username:
+        if current.username.upper() != new_username.upper():
             try:
                 keycloak.update_user(keycloak_sub, username=new_username)
             except Exception:
@@ -203,6 +223,18 @@ def update_user_service(user_uuid: UUID, data: dict) -> UserResult:
                     keycloak_sub=keycloak_sub,
                     new_username=new_username,
                 )
+
+    if old_profile_name != new_profile_name or role_updated_in_keycloak:
+        try:
+            with get_pg_connection() as conn:
+                invalidate_user_sessions(conn, str(user_uuid))
+            _log.info(
+                SESSION_INVALIDATED_ALL,
+                target_user_id=str(user_uuid),
+                reason="PROFILE_CHANGE",
+            )
+        except Exception:
+            _log.warning("user.sessions_invalidation_failed", user_id=str(user_uuid))
 
     return result
 
@@ -402,7 +434,7 @@ def get_current_user_profile_service(user_id: str) -> dict:
 
 def update_current_user_profile_service(user_id: str, username: str, email: str) -> dict:
     settings = Settings()
-    normalized_username = username.strip().upper()
+    normalized_username = username.strip()
     normalized_email = str(email).strip().lower()
     keycloak_sub: str | None = None
 
@@ -415,7 +447,7 @@ def update_current_user_profile_service(user_id: str, username: str, email: str)
                 raise UserNotFoundError("Usuario nao encontrado.")
 
             if (
-                current_user["username"].upper() != normalized_username
+                current_user["username"].upper() != normalized_username.upper()
                 and exists_by_username(conn, normalized_username)
             ):
                 raise UserAlreadyExistsError("Nome de usuario ja cadastrado.")
@@ -449,9 +481,13 @@ def update_current_user_profile_service(user_id: str, username: str, email: str)
                 email=normalized_email,
             )
         except Exception:
-            _log.warning(
+            _log.error(
                 "keycloak.user.profile_update_failed",
                 keycloak_sub=keycloak_sub,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Não foi possível sincronizar com o serviço de autenticação. Tente novamente.",
             )
 
     return _format_current_user_profile(result)

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
-import { getSessionToken, clearClientSession, logoutUser, getKeycloakIdToken } from "@/api/consent";
+import { getSessionToken, getKeycloakIdToken } from "@/api/consent";
 import { buildKeycloakLogoutUrl } from "@/api/auth";
 
 const menuItems = [
@@ -210,6 +210,7 @@ export default function DashboardLayout() {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const rawDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
   const userDisplayName = formatDisplayName(rawDisplayName);
@@ -228,12 +229,10 @@ export default function DashboardLayout() {
     return () => window.removeEventListener("profile:updated", handleProfileUpdated);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => setLogoutDialogOpen(true);
+
+  const confirmLogout = () => {
     const idToken = getKeycloakIdToken();
-    try {
-      await logoutUser();
-    } catch {}
-    clearClientSession();
     window.location.href = buildKeycloakLogoutUrl(idToken);
   };
 
@@ -804,6 +803,43 @@ export default function DashboardLayout() {
                     : fileList.length < REQUIRED_COUNT
                       ? `Enviar (${fileList.length}/${REQUIRED_COUNT})`
                       : `Enviar (${fileList.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de logout */}
+      {logoutDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setLogoutDialogOpen(false)}
+        >
+          <div
+            className="bg-background border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-4 text-muted-foreground">
+              <LogOut size={36} strokeWidth={1.5} />
+            </div>
+            <h2 className="text-base font-semibold text-foreground text-center mb-1">
+              Deseja encerrar a sessão?
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Você será desconectado de todas as aplicações Zeus.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={confirmLogout}
+                className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold rounded-lg transition-colors"
+              >
+                Sair
+              </button>
+              <button
+                onClick={() => setLogoutDialogOpen(false)}
+                className="w-full py-2.5 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
+              >
+                Voltar ao sistema
               </button>
             </div>
           </div>

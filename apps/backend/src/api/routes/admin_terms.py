@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 
-from src.api.dependencies.auth import AuthenticatedUser, require_admin
+from src.api.dependencies.auth import AuthenticatedUser, require_admin_or_manager
 from src.api.schemas.admin_terms import CreateClauseIn, CreatePolicyVersionIn
 from src.config.log_events import (
     POLICY_VERSION_CREATED,
@@ -31,7 +31,7 @@ log = structlog.get_logger()
 def post_policy_version(
     payload: CreatePolicyVersionIn,
     background_tasks: BackgroundTasks,
-    admin: AuthenticatedUser = Depends(require_admin),
+    admin: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     with get_pg_connection() as conn:
         set_current_user(conn, admin.user_id)
@@ -74,7 +74,7 @@ def post_policy_version(
 
 @router.get("/versions")
 def get_policy_versions(
-    admin: AuthenticatedUser = Depends(require_admin),
+    admin: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     with get_pg_connection() as conn:
         set_current_user(conn, admin.user_id)
@@ -83,7 +83,7 @@ def get_policy_versions(
 @router.get("/versions/{version_id}")
 def get_version(
     version_id: UUID,
-    admin: AuthenticatedUser = Depends(require_admin),
+    admin: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     with get_pg_connection() as conn:
         set_current_user(conn, admin.user_id)
@@ -93,7 +93,7 @@ def get_version(
 def post_clause(
     version_id: UUID,
     payload: CreateClauseIn,
-    admin: AuthenticatedUser = Depends(require_admin),
+    admin: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     with get_pg_connection() as conn:
         set_current_user(conn, admin.user_id)
@@ -120,7 +120,7 @@ def post_clause(
 @router.get("/versions/{version_id}/clauses")
 def get_clauses(
     version_id: UUID,
-    admin: AuthenticatedUser = Depends(require_admin),
+    admin: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     with get_pg_connection() as conn:
         set_current_user(conn, admin.user_id)

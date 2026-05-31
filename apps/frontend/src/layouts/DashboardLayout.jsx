@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
-import { getSessionToken, getKeycloakIdToken } from "@/api/consent";
+import { getSessionToken, getKeycloakIdToken, logoutUser } from "@/api/consent";
 import { buildKeycloakLogoutUrl } from "@/api/auth";
 
 const menuItems = [
@@ -231,8 +231,9 @@ export default function DashboardLayout() {
 
   const handleLogout = () => setLogoutDialogOpen(true);
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     const idToken = getKeycloakIdToken();
+    await logoutUser();
     window.location.href = buildKeycloakLogoutUrl(idToken);
   };
 

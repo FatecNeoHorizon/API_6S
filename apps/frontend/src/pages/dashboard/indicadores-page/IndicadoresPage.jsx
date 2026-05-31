@@ -34,6 +34,25 @@ import {
   Tooltip,
 } from "recharts";
 import { apiClient } from "@/api/client";
+import { getSessionToken } from "@/api/consent";
+
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(
+      decodeURIComponent(
+        atob(payload)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(""),
+      ),
+    );
+  } catch {
+    return null;
+  }
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MONTH_NAMES = [
@@ -522,6 +541,10 @@ const sumField = (data, field) =>
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function IndicadoresPage() {
+  const isAdmin =
+    (decodeJwtPayload(getSessionToken())?.profile ?? "").toUpperCase() ===
+    "ADMIN";
+
   const [selectedTab, setSelectedTab] = useState("dec_fec");
 
   // DEC/FEC
@@ -628,8 +651,10 @@ export default function IndicadoresPage() {
     }
   };
 
-  // ── Preview DEC/FEC handlers ─────────────────────────────────────────────────────────
+  // ── Preview DEC/FEC — apenas para admins ──────────────────────────────────
   const fetchPreviewDecFec = async () => {
+    if (!isAdmin) return;
+
     const params = new URLSearchParams({
       consumer_unit_set_id: 16648,
       limit: 1000,
@@ -1130,6 +1155,7 @@ export default function IndicadoresPage() {
               </CardContent>
             </Card>
 
+            {isAdmin && (
             <Card className="bg-card border-border flex-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">
@@ -1244,6 +1270,7 @@ export default function IndicadoresPage() {
                 </div>
               </CardContent>
             </Card>
+            )}
           </div>
 
           <Card

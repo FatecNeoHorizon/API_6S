@@ -21,42 +21,43 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../utils/utils";
-import { getSessionToken, clearClientSession, logoutUser } from "@/api/consent";
+import { getSessionToken, getKeycloakIdToken, logoutUser } from "@/api/consent";
+import { buildKeycloakLogoutUrl } from "@/api/auth";
 
 const menuItems = [
   {
     label: "Indicadores DEC/FEC e Perdas",
-    href: "/dashboard/indicadores",
+    href: "/indicators",
     icon: BarChart3,
     allowedProfiles: [],
   },
   {
     label: "Heat Map",
-    href: "/dashboard/heatmap",
+    href: "/heatmap",
     icon: Map,
     allowedProfiles: [],
   },
   {
     label: "Estrutura das Redes",
-    href: "/dashboard/estrutura-redes",
+    href: "/network-structure",
     icon: Network,
     allowedProfiles: [],
   },
   {
     label: "Gestão de Usuários",
-    href: "/dashboard/usuarios",
+    href: "/users",
     icon: Users,
     allowedProfiles: ["ADMIN", "MANAGER"],
   },
   {
     label: "Gestão de Termos",
-    href: "/dashboard/termos",
+    href: "/terms",
     icon: FileText,
     allowedProfiles: ["ADMIN"],
   },
   {
     label: "Notificação de Incidente",
-    href: "/dashboard/incident-notification",
+    href: "/incident-notification",
     icon: ShieldAlert,
     allowedProfiles: ["ADMIN"],
   },
@@ -74,6 +75,13 @@ function decodeJwtPayload(token) {
   } catch {
     return null;
   }
+}
+
+function formatDisplayName(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getUserDisplayName(token) {
@@ -202,9 +210,11 @@ export default function DashboardLayout() {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
-  const userDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
-  const userInitials = getUserInitials(userDisplayName);
+  const rawDisplayName = profileDisplayName || getUserDisplayName(getSessionToken()) || "Admin";
+  const userDisplayName = formatDisplayName(rawDisplayName);
+  const userInitials = getUserInitials(rawDisplayName);
   const userProfile = getUserProfile(getSessionToken());
 
   useEffect(() => {
@@ -219,10 +229,12 @@ export default function DashboardLayout() {
     return () => window.removeEventListener("profile:updated", handleProfileUpdated);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => setLogoutDialogOpen(true);
+
+  const confirmLogout = async () => {
+    const idToken = getKeycloakIdToken();
     await logoutUser();
-    clearClientSession();
-    window.location.href = "/login";
+    window.location.href = buildKeycloakLogoutUrl(idToken);
   };
 
   // Lista de arquivos: [{ file, status: 'idle'|'uploading'|'processing'|'done'|'error', progress: 0-100, error: null }]
@@ -300,6 +312,28 @@ export default function DashboardLayout() {
     setFileList((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const triggerForecastTraining = useCallback(async () => {
+    const token = getSessionToken();
+    if (!token) return;
+    toast.info("Calculando previsões DEC/FEC em background...");
+    try {
+      const params = new URLSearchParams({
+        consumer_unit_set_id: "16648",
+        year_start: "2020",
+        year_end: "2025",
+        indicator_types: "DEC",
+      });
+      params.append("indicator_types", "FEC");
+      await fetch(`http://localhost:8000/timeseries/forecast-unit?${params}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Previsões DEC/FEC geradas com sucesso!");
+    } catch {
+      // falha silenciosa — previsões podem ser geradas depois
+    }
+  }, []);
+
   const startBatchPolling = useCallback((id) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
 
@@ -338,6 +372,10 @@ export default function DashboardLayout() {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setIsUploading(false);
+
+          if (data.status === "SUCCESS" || data.status === "SUCCESS_WITH_WARNINGS") {
+            triggerForecastTraining();
+          }
 
           if (data.status === "SUCCESS") {
             toast.success("Todos os arquivos processados com sucesso!");
@@ -503,7 +541,7 @@ export default function DashboardLayout() {
                 <Menu className="w-5 h-5 text-foreground" />
               </button>
               <h1 className="text-lg font-semibold text-foreground">
-                {pathname === "/dashboard/perfil"
+                {pathname === "/profile"
                   ? "Meu Perfil"
                   : menuItems.find((item) => item.href === pathname)?.label || "Dashboard"}
               </h1>
@@ -533,9 +571,9 @@ export default function DashboardLayout() {
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1">
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-[2000]">
                     <Link
-                      to="/dashboard/perfil"
+                      to="/profile"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setUserMenuOpen(false)}
                     >
@@ -766,6 +804,43 @@ export default function DashboardLayout() {
                     : fileList.length < REQUIRED_COUNT
                       ? `Enviar (${fileList.length}/${REQUIRED_COUNT})`
                       : `Enviar (${fileList.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de logout */}
+      {logoutDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setLogoutDialogOpen(false)}
+        >
+          <div
+            className="bg-background border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-4 text-muted-foreground">
+              <LogOut size={36} strokeWidth={1.5} />
+            </div>
+            <h2 className="text-base font-semibold text-foreground text-center mb-1">
+              Deseja encerrar a sessão?
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Você será desconectado de todas as aplicações Zeus.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={confirmLogout}
+                className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold rounded-lg transition-colors"
+              >
+                Sair
+              </button>
+              <button
+                onClick={() => setLogoutDialogOpen(false)}
+                className="w-full py-2.5 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
+              >
+                Voltar ao sistema
               </button>
             </div>
           </div>

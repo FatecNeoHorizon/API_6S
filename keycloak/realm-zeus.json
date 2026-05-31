@@ -2,6 +2,24 @@
   "realm": "zeus",
   "enabled": true,
   "sslRequired": "none",
+  "loginTheme": "zeus",
+  "accountTheme": "zeus",
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR"],
+  "defaultLocale": "pt-BR",
+  "smtpServer": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "from": "tecsys.fatec@gmail.com",
+    "fromDisplayName": "Zeus",
+    "auth": "true",
+    "user": "tecsys.fatec@gmail.com",
+    "password": "iatzghlqokoftevi",
+    "ssl": "false",
+    "starttls": "true"
+  },
   "roles": {
     "realm": [
       {
@@ -25,16 +43,95 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
+      "baseUrl": "http://localhost:5173/",
       "redirectUris": [
-        "http://localhost:5173/auth/callback"
+        "http://localhost:5173/auth/callback",
+        "http://localhost:5173/",
+        "http://localhost:5173/*"
       ],
       "webOrigins": [
         "http://localhost:5173"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/"
-      }
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "false",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "zeus-backend",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "zeus-backend-secret-dev"
     }
-  ]
+  ],
+  "users": [
+    {
+      "username": "service-account-zeus-backend",
+      "enabled": true,
+      "serviceAccountClientId": "zeus-backend",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users",
+          "query-realms",
+          "view-realm",
+          "manage-realm"
+        ]
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000001",
+      "username": "admin",
+      "email": "tecsys.fatec@gmail.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "temporary": false,
+          "secretData": "{\"value\":\"190UkWuIURqtjHM/3XuuGJFRsEyiBN/aUr7hiAGNaPz8JRJRXFutsllHMNyRc0th8Bpl+MjPUCUSDYiXug3yUA==\",\"salt\":\"3q2+78r+AADerb7vyv4AAA==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":210000,\"algorithm\":\"pbkdf2-sha512\",\"additionalParameters\":{}}"
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ],
+      "firstName": "Admin",
+      "lastName": "Zeus",
+      "requiredActions": []
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"up-username-not-idn-homograph\": {}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"email\", \"displayName\": \"${email}\", \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}], \"groups\": []}"
+          ]
+        }
+      }
+    ]
+  }
 }

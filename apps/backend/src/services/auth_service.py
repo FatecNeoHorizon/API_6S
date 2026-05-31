@@ -1,30 +1,26 @@
 from datetime import datetime, timedelta, timezone
 import secrets
 
+import httpx
+import jwt as _jwt
+from jwt import PyJWKClient
 import structlog
 from fastapi import HTTPException, status
 
 from src.api.schemas.user_schemas import (
     ConsentExportItem,
     DataExportResponse,
-    FirstAccessRequest,
-    ForgotPasswordResponse,
     IdentityExport,
-    LoginRequest,
     RefreshTokenRequest,
-    ResetPasswordRequest,
     SessionExportItem,
 )
 from src.config.log_events import SESSION_INVALIDATED_ALL, SESSION_LISTED, SESSION_REVOKED
 from src.config.auth_security import (
     create_access_token,
-    hash_password,
     hash_token,
     is_valid_uuid,
     mask_source_ip,
-    verify_password,
 )
-from src.config.email_hasher import EmailHasher
 from src.config.log_events import DATA_EXPORT_REQUESTED
 from src.config.settings import Settings
 from src.database.postgres import get_pg_connection, set_current_user
@@ -32,72 +28,40 @@ from src.repositories.consent_repository import list_user_consent_history
 from src.services.user_service import _decrypt_email
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
-    complete_first_access,
-    consume_valid_first_access_token,
-    create_password_reset_token,
     create_user_session,
+    get_keycloak_sub,
     get_sessions_for_export,
-    get_user_auth_by_email_hash,
+    get_user_by_keycloak_sub,
     get_user_for_export,
     get_user_sessions,
-    get_valid_password_reset_token,
     invalidate_single_session,
     invalidate_user_sessions,
     invalidate_session,
-    log_auth_attempt,
-    mark_password_reset_token_used,
     rotate_refresh_token,
-    update_user_password,
 )
 
 
 settings = Settings()
 log = structlog.get_logger()
 
+_jwks_client: PyJWKClient | None = None
 
-def _build_email_hash(email: str) -> str:
-    return EmailHasher.hash(email)
+
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        jwks_uri = (
+            f"{settings.keycloak_url}/realms/{settings.keycloak_realm}"
+            "/protocol/openid-connect/certs"
+        )
+        _jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
+    return _jwks_client
 
 
 def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
 
-def _record_auth_attempt(
-    conn,
-    *,
-    email_hash: str,
-    source_ip: str,
-    success: bool,
-    blocked: bool,
-) -> None:
-    log_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=mask_source_ip(source_ip),
-        success=success,
-        blocked=blocked,
-    )
-
-
-def _record_failed_auth_attempt_and_commit(
-    conn,
-    *,
-    email_hash: str,
-    source_ip: str,
-    blocked: bool = False,
-) -> None:
-    _record_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=source_ip,
-        success=False,
-        blocked=blocked,
-    )
-
-    # Failed logins are followed by HTTPException. The request-level connection
-    # manager rolls back on exceptions, so commit the audit row before raising.
-    conn.commit()
 
 
 def _create_session_and_token(
@@ -150,6 +114,94 @@ def _create_session_and_token(
     }
 
 
+def oauth_callback(
+    conn,
+    *,
+    code: str,
+    code_verifier: str,
+    redirect_uri: str,
+    source_ip: str,
+    user_agent: str,
+) -> dict:
+    response = httpx.post(
+        f"{settings.keycloak_url}/realms/{settings.keycloak_realm}/protocol/openid-connect/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "code_verifier": code_verifier,
+            "redirect_uri": redirect_uri,
+            "client_id": settings.keycloak_client_id,
+        },
+        timeout=10,
+    )
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_authorization_code",
+        )
+
+    kc_tokens = response.json()
+    kc_access_token = kc_tokens.get("access_token")
+    kc_id_token = kc_tokens.get("id_token", "")
+    try:
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(kc_access_token)
+        kc_payload = _jwt.decode(
+            kc_access_token,
+            signing_key,
+            algorithms=["RS256"],
+            options={"verify_aud": False},
+        )
+    except (_jwt.InvalidTokenError, Exception) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_keycloak_token",
+        ) from exc
+    keycloak_sub = kc_payload.get("sub")
+    if not keycloak_sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_keycloak_token",
+        )
+
+    # Keycloak is source of truth: extract identity claims from the token
+    kc_roles: list[str] = kc_payload.get("realm_access", {}).get("roles", [])
+    profile_name = next(
+        (r for r in kc_roles if r in ("ADMIN", "MANAGER", "ANALYST")),
+        None,
+    )
+    if not profile_name:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="no_valid_profile_role",
+        )
+
+    username: str = kc_payload.get("preferred_username", "")
+
+    user = get_user_by_keycloak_sub(conn, keycloak_sub)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="user_not_registered",
+        )
+
+    if not user["active"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="inactive_user",
+        )
+
+    result = _create_session_and_token(
+        conn,
+        user_id=str(user["user_uuid"]),
+        profile_name=profile_name,
+        source_ip=source_ip,
+        user_agent=user_agent,
+        username=username,
+    )
+    result["kc_id_token"] = kc_id_token
+    return result
+
+
 def refresh_access_token(conn, *, payload: RefreshTokenRequest) -> dict:
     new_refresh_token = _generate_refresh_token()
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(
@@ -192,119 +244,6 @@ def refresh_access_token(conn, *, payload: RefreshTokenRequest) -> dict:
     }
 
 
-def first_access(
-    conn,
-    *,
-    payload: FirstAccessRequest,
-    source_ip: str,
-    user_agent: str,
-):
-    token_hash = hash_token(payload.token)
-    token_data = consume_valid_first_access_token(conn, token_hash)
-
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="invalid_or_expired_first_access_token",
-        )
-
-    if not token_data["active"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="inactive_user",
-        )
-
-    user_id = str(token_data["user_id"])
-
-    set_current_user(conn, user_id)
-
-    complete_first_access(
-        conn,
-        user_id=user_id,
-        password_hash=hash_password(payload.new_password),
-    )
-
-    return _create_session_and_token(
-        conn,
-        user_id=user_id,
-        profile_name=token_data["profile_name"],
-        source_ip=source_ip,
-        user_agent=user_agent,
-        username=token_data["username"],
-    )
-
-
-def login(
-    conn,
-    *,
-    payload: LoginRequest,
-    source_ip: str,
-    user_agent: str,
-):
-    email_hash = _build_email_hash(payload.email)
-    user = get_user_auth_by_email_hash(conn, email_hash)
-
-    generic_error = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="invalid_credentials",
-    )
-
-    if not user:
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-        )
-        raise generic_error
-
-    if not user["active"]:
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-            blocked=True,
-        )
-        raise generic_error
-
-    if not user["first_access_completed"]:
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-            blocked=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="first_access_required",
-        )
-
-    if not verify_password(payload.password, user["password_hash"]):
-        _record_failed_auth_attempt_and_commit(
-            conn,
-            email_hash=email_hash,
-            source_ip=source_ip,
-        )
-        raise generic_error
-
-    response = _create_session_and_token(
-        conn,
-        user_id=str(user["user_uuid"]),
-        profile_name=user["profile_name"],
-        source_ip=source_ip,
-        user_agent=user_agent,
-        username=user["username"],
-    )
-
-    _record_auth_attempt(
-        conn,
-        email_hash=email_hash,
-        source_ip=source_ip,
-        success=True,
-        blocked=False,
-    )
-
-    return response
-
 
 def logout(conn, *, user_id: str, session_id: str) -> None:
     set_current_user(conn, user_id)
@@ -317,88 +256,14 @@ def logout(conn, *, user_id: str, session_id: str) -> None:
             detail="invalid_or_expired_session",
         )
 
-
-def logout(conn, *, user_id: str, session_id: str) -> None:
-    set_current_user(conn, user_id)
-
-    was_invalidated = invalidate_session(conn, session_id)
-
-    if not was_invalidated:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_or_expired_session",
-        )
-
-
-
-def forgot_password(conn, *, email: str) -> ForgotPasswordResponse:
-    email_hash = _build_email_hash(email)
-    user = get_user_auth_by_email_hash(conn, email_hash)
-
-    generic_response = ForgotPasswordResponse(
-        detail="If the email is registered, a password recovery link will be sent."
-    )
-
-    if not user or not user["active"]:
-        return generic_response
-
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hash_token(raw_token)
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-
-    create_password_reset_token(
-        conn,
-        user_id=str(user["user_uuid"]),
-        token_hash=token_hash,
-        expires_at=expires_at,
-    )
-
-    if settings.app_env != "prod":
-        generic_response.dev_reset_token = raw_token
-        frontend_base_url = (settings.frontend_url or "http://localhost:5173").rstrip("/")
-        generic_response.dev_reset_url = f"{frontend_base_url}/reset-password?token={raw_token}"
-
-    return generic_response
-
-
-def reset_password(conn, *, payload: ResetPasswordRequest) -> dict:
-    token_hash = hash_token(payload.token)
-    reset_data = get_valid_password_reset_token(conn, token_hash)
-
-    if not reset_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="invalid_or_expired_reset_token",
-        )
-
-    if not reset_data["active"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="inactive_user",
-        )
-
-    user_id = str(reset_data["user_uuid"])
-
-    set_current_user(conn, user_id)
-
-    update_user_password(
-        conn,
-        user_id=user_id,
-        password_hash=hash_password(payload.new_password),
-    )
-
-    mark_password_reset_token_used(conn, str(reset_data["reset_uuid"]))
-
-    invalidated = invalidate_user_sessions(conn, user_id)
-    for session_uuid in invalidated:
-        log.info(
-            SESSION_INVALIDATED_ALL,
-            acting_user_id=user_id,
-            target_session_uuid=session_uuid,
-            reason="PASSWORD_CHANGE",
-        )
-
-    return {"detail": "password_reset_successfully"}
+    try:
+        from uuid import UUID
+        from src.config.keycloak_admin_client import get_keycloak_admin_client
+        keycloak_sub = get_keycloak_sub(conn, UUID(user_id))
+        if keycloak_sub:
+            get_keycloak_admin_client().delete_user_sessions(keycloak_sub)
+    except Exception:
+        pass
 
 
 def export_user_data(conn, *, user_id: str) -> DataExportResponse:
@@ -423,7 +288,6 @@ def export_user_data(conn, *, user_id: str) -> DataExportResponse:
         email=_decrypt_email(user["email_enc"], settings),
         profile=user["profile_name"],
         active=user["active"],
-        first_access_completed=user["first_access_completed"],
         created_at=user["created_at"],
         updated_at=user["updated_at"],
     )

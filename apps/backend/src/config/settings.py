@@ -4,7 +4,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -83,14 +83,6 @@ class Settings(BaseSettings):
     model_retrain_strategy: str = Field(default="per_load")
     model_retrain_min_new_records: int = Field(default=1)
 
-    # PostgreSQL Configuration
-    postgres_host: str = Field(default="postgres")
-    postgres_port: int = Field(default=5432)
-    postgres_user: str = Field(default="postgres")
-    postgres_password: str = Field(default="")
-    postgres_db: str = Field(default="postgres")
-    postgres_sslmode: str = Field(default="prefer")
-
     blacklist_postgres_host: str = Field(default="")
     blacklist_postgres_port: int = Field(default=0)
     blacklist_postgres_user: str = Field(default="")
@@ -102,10 +94,29 @@ class Settings(BaseSettings):
     email_hash_salt: str = Field(default="")
     email_encryption_key: Optional[str] = Field(default=None)
 
-    jwt_secret_key: str = Field(default="")
-    jwt_algorithm: str = Field(default="HS256")
+    jwt_private_key: str = Field(default="")
+    jwt_public_key: str = Field(default="")
+    jwt_algorithm: str = Field(default="RS256")
     jwt_access_token_expire_minutes: int = Field(default=480)
     jwt_refresh_token_expire_days: int = Field(default=7)
+
+    @field_validator("jwt_private_key", "jwt_public_key", mode="before")
+    @classmethod
+    def normalize_pem_newlines(cls, v: str) -> str:
+        # Env files (especially via Docker env_file) store PEM as single-line
+        # with literal \n — decode them into real newlines.
+        if isinstance(v, str) and r"\n" in v:
+            return v.replace(r"\n", "\n")
+        return v
+
+    # Keycloak / OAuth 2.0
+    keycloak_url: str = Field(default="http://keycloak:8080")
+    keycloak_realm: str = Field(default="zeus")
+    keycloak_client_id: str = Field(default="zeus-frontend")
+
+    # Keycloak backend service account (client_credentials grant)
+    keycloak_backend_client_id: str = Field(default="zeus-backend")
+    keycloak_backend_client_secret: str = Field(default="")
 
     # SMTP Email Configuration
     smtp_host: str = Field(default="")
@@ -157,8 +168,11 @@ class Settings(BaseSettings):
         if not self.email_hash_salt:
             raise ValueError("EMAIL_HASH_SALT is missing.")
 
-        if not self.jwt_secret_key:
-            raise ValueError("JWT_SECRET_KEY is missing.")
+        if not self.jwt_private_key:
+            raise ValueError("JWT_PRIVATE_KEY is missing.")
+
+        if not self.jwt_public_key:
+            raise ValueError("JWT_PUBLIC_KEY is missing.")
 
         return self
 

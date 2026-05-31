@@ -102,8 +102,12 @@ def compute_annual_summaries(conj_collection: Collection) -> dict:
                 UpdateOne(
                     {
                         "code": code,
-                        "annual_summaries.indicator_type_code": indicator_type_code,
-                        "annual_summaries.year": year,
+                        "annual_summaries": {
+                            "$elemMatch": {
+                                "indicator_type_code": indicator_type_code,
+                                "year": year,
+                            }
+                        },
                     },
                     {
                         "$set": {

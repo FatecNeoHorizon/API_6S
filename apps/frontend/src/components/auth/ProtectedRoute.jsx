@@ -34,7 +34,7 @@ function AuthRequiredScreen({ title = "Precisa logar para usar o sistema", messa
         <h1 className="text-2xl font-bold mb-4">{title}</h1>
         <p className="mb-6 text-muted-foreground">{message}</p>
         <div className="flex justify-center">
-          <Link to="/login" className="px-4 py-2 rounded bg-primary text-primary-foreground">Voltar ao login</Link>
+          <Link to="/" className="px-4 py-2 rounded bg-primary text-primary-foreground">Voltar ao login</Link>
         </div>
       </div>
     </div>
@@ -82,12 +82,12 @@ export function RoleRequiredRoute({ children, allowedProfiles = [] }) {
   const token = getSessionToken();
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (!isTokenValid(token)) {
     clearClientSession();
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const payload = decodeJwtPayload(token);

@@ -185,7 +185,7 @@ export default function ConsentPage() {
       }
       
       await submitConsent(actions)
-      navigate("/dashboard/indicadores")
+      navigate("/indicators")
     } catch (error) {
       const serverError = error.data?.detail ? JSON.stringify(error.data.detail) : "Erro desconhecido"
       setSubmissionError(`Não foi possível concluir o consentimento: ${serverError}`)
@@ -331,7 +331,7 @@ export default function ConsentPage() {
 
               <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
                 <Link
-                  to="/login"
+                  to="/"
                   className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Voltar
@@ -355,7 +355,7 @@ export default function ConsentPage() {
                 <Button
                   type="button"
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/")}
                 >
                   Voltar para Login
                 </Button>

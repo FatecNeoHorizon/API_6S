@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Literal
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Depends
+from src.api.dependencies.auth import AuthenticatedUser, get_current_user
 from pymongo.database import Database
 from bson.objectid import ObjectId
 
@@ -13,6 +14,7 @@ def get_conj(
     year: Optional[int] = Query(default=None, ge=1900, le=2100),
     indicator_type_code: Optional[Literal["DEC", "FEC"]] = Query(default=None),
     db: Database = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Return CONJ documents as a GeoJSON FeatureCollection.
 
@@ -85,6 +87,7 @@ def update_conj(
     new_value: Optional[float] = Query(default=None),
     new_name: Optional[str] = Query(default=None),
     db: Database = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     try:
         filter = {'_id': ObjectId(id)}

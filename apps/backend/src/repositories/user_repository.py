@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import hashlib
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from psycopg2.errors import UniqueViolation
 from psycopg2.extensions import connection as PgConnection
@@ -311,14 +310,9 @@ def delete_user(conn: PgConnection, user_uuid: UUID) -> bool:
 
 
 def remove_user_encryption_material(conn: PgConnection, user_uuid: UUID) -> bool:
-    replacement_hash = hashlib.sha256(
-        f"deleted:{user_uuid}:{uuid4()}".encode("utf-8")
-    ).hexdigest()
-
     query = """
         UPDATE TB_USER
-        SET EMAIL_HASH = %s,
-            EMAIL_ENC = %s,
+        SET EMAIL_ENC = %s,
             KEYCLOAK_SUB = NULL,
             UPDATED_AT = NOW()
         WHERE USER_UUID = %s
@@ -330,7 +324,6 @@ def remove_user_encryption_material(conn: PgConnection, user_uuid: UUID) -> bool
         cursor.execute(
             query,
             (
-                replacement_hash,
                 "ENCRYPTED::deleted",
                 str(user_uuid),
             ),

@@ -32,7 +32,6 @@ structlog processors
   - JSONRenderer       → serializes to a single JSON line
         ↓
 stdlib root logger
-  - StreamHandler      → writes to container stdout
   - TimedRotatingFileHandler → writes to logs/app.log
         ↓
 LoggingMiddleware
@@ -47,7 +46,7 @@ LoggingMiddleware
 | Path | Description |
 |---|---|
 | `logs/app.log` | Current active log file |
-| `logs/app.log.YYYY-MM-DD_HH-MM-SS.gz` | Rotated and compressed files |
+| `logs/app.log.YYYY-MM-DD.gz` | Rotated and compressed files |
 
 The `logs/` directory is mapped as a Docker volume (`./logs:/app/logs`) and persists across container restarts.
 
@@ -110,11 +109,7 @@ The following fields must **never** appear in any log entry:
 
 Use only UUIDs and operational metadata (counts, status codes, durations, flags).
 
-The script `scripts/validate_log_privacy.py` can be used to audit the log file:
-
-```bash
-docker compose --profile backend exec backend python scripts/validate_log_privacy.py logs/app.log
-```
+To audit the log file manually, search for prohibited field names using `grep` or any JSON log viewer against `logs/app.log`.
 
 ---
 
@@ -125,21 +120,27 @@ Request lifecycle with a successful user creation:
 ```json
 {"event": "request_started", "path": "/users/", "method": "POST", "user_id": null, "request_id": "9da79a28-913f-4928-9a95-e263110572f3", "level": "info", "logger": "src.config.logging_middleware", "timestamp": "2026-04-27T01:09:08.223352Z"}
 {"event": "user.created", "user_id": "1933c4ff-5b63-4189-b1b7-293a11cfc2a0", "profile_id": "dbdeb4a7-ec76-4643-931a-78616c1e3f68", "path": "/users/", "method": "POST", "request_id": "9da79a28-913f-4928-9a95-e263110572f3", "level": "info", "logger": "src.api.routes.users", "timestamp": "2026-04-27T01:09:08.447733Z"}
-{"event": "request_finished", "status_code": 201, "duration_ms": 225.01, "path": "/users/", "method": "POST", "request_id": "9da79a28-913f-4928-9a95-e263110572f3", "level": "info", "logger": "src.config.logging_middleware", "timestamp": "2026-04-27T01:09:08.448862Z"}
+{"event": "request_finished", "status_code": 201, "duration_ms": 225.01, "path": "/users/", "method": "POST", "user_id": null, "request_id": "9da79a28-913f-4928-9a95-e263110572f3", "level": "info", "logger": "src.config.logging_middleware", "timestamp": "2026-04-27T01:09:08.448862Z"}
 ```
 
-Validation error example:
+Validation error example (sensitive fields are filtered from `errors` before logging):
 
 ```json
-{"event": "validation_error", "path": "/users/", "errors": [{"type": "value_error", "loc": ["body", "password"], "msg": "A senha deve conter pelo menos uma letra maiúscula."}], "request_id": "bdaa2f89-5bac-4701-b764-3039ee881040", "level": "warning", "logger": "src.config.exception_handlers", "timestamp": "2026-04-27T01:37:04.313103Z"}
+{"event": "validation_error", "path": "/users/", "error_count": 1, "errors": [{"type": "value_error", "loc": ["body", "password"], "msg": "A senha deve conter pelo menos uma letra maiúscula."}], "request_id": "bdaa2f89-5bac-4701-b764-3039ee881040", "level": "warning", "logger": "src.config.exception_handlers", "timestamp": "2026-04-27T01:37:04.313103Z"}
 ```
 
 Unhandled exception example:
 
 ```json
-{"event": "unhandled_exception", "exception_type": "RuntimeError", "message": "unexpected error", "exc_info": true, "request_id": "61303840-b9bc-40f5-8240-97102a36e5e1", "level": "error", "logger": "src.config.exception_handlers", "timestamp": "2026-04-27T01:41:22.284878Z"}
+{"event": "unhandled_exception", "error_code": "internal_server_error", "category": "internal", "status_code": 500, "exception_type": "RuntimeError", "message": "unexpected error", "exc_info": true, "request_id": "61303840-b9bc-40f5-8240-97102a36e5e1", "level": "error", "logger": "src.config.exception_handlers", "timestamp": "2026-04-27T01:41:22.284878Z"}
+```
+
+Request finished with server error (status ≥ 500 is logged at `error` level):
+
+```json
+{"event": "request_finished", "status_code": 500, "duration_ms": 12.5, "path": "/users/", "method": "POST", "user_id": "1933c4ff-5b63-4189-b1b7-293a11cfc2a0", "request_id": "61303840-b9bc-40f5-8240-97102a36e5e1", "level": "error", "logger": "src.config.logging_middleware", "timestamp": "2026-04-27T01:41:22.295000Z"}
 ```
 
 ---
 
-*Last updated: 04/26/2026*
+*Last updated: 05/31/2026*

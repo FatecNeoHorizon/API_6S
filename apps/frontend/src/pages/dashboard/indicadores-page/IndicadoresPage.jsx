@@ -36,6 +36,7 @@ import {
 import { apiClient } from "@/api/client";
 import { getSessionToken } from "@/api/consent";
 
+// ─── Auth helper ──────────────────────────────────────────────────────────────
 function decodeJwtPayload(token) {
   try {
     const parts = token.split(".");
@@ -541,6 +542,7 @@ const sumField = (data, field) =>
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function IndicadoresPage() {
+  // ── Perfil do usuário ─────────────────────────────────────────────────────
   const isAdmin =
     (decodeJwtPayload(getSessionToken())?.profile ?? "").toUpperCase() ===
     "ADMIN";
@@ -573,10 +575,10 @@ export default function IndicadoresPage() {
   const [samYear, setSamYear] = useState(null);
   const [samIndicator, setSamIndicator] = useState("DEC");
 
-  //ML Preview
-  const [previewChartData, setpreviewChartData] = useState([])
-  const [previewMetrics, setPreviewMetrics] = useState({})
-  const [previewLoading, setPreviewLoading] = useState(false)
+  // ML Preview — só carregado para admins
+  const [previewChartData, setpreviewChartData] = useState([]);
+  const [previewMetrics, setPreviewMetrics] = useState({});
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const fetchTamTotal = async () => {
     const url = `/tam-sam/tam`;
@@ -589,17 +591,16 @@ export default function IndicadoresPage() {
         return;
       }
       const payload = unwrapApiData(data);
-      setTamTotal(payload?.tam_total ?? null)
+      setTamTotal(payload?.tam_total ?? null);
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
       setTamLoading(false);
     }
-  }
+  };
 
   const fetchSamTotal = async (from, indicator = samIndicator) => {
-
-    const params = new URLSearchParams({ year: from.year, indicator })
+    const params = new URLSearchParams({ year: from.year, indicator });
     const url = `/tam-sam/sam?${params.toString()}`;
     setSamLoading(true);
     try {
@@ -611,17 +612,17 @@ export default function IndicadoresPage() {
         return;
       }
       const payload = unwrapApiData(data);
-      setSamTotal(payload?.sam_total ?? payload)
-      setSamYear(payload?.year ?? from.year)
-      setSamIndicator(payload?.indicator ?? indicator)
+      setSamTotal(payload?.sam_total ?? payload);
+      setSamYear(payload?.year ?? from.year);
+      setSamIndicator(payload?.indicator ?? indicator);
     } catch (error) {
       console.error("[tam-sam] Erro:", error);
     } finally {
       setSamLoading(false);
     }
-  }
+  };
 
-  // ── DEC/FEC handlers ─────────────────────────────────────────────────────────
+  // ── DEC/FEC handlers ──────────────────────────────────────────────────────
   const fetchDecFec = async (from, to) => {
     const url = buildDecFecUrl(from, to);
     console.log("[get-dec-fec] Fetching:", url);
@@ -659,7 +660,6 @@ export default function IndicadoresPage() {
       consumer_unit_set_id: 16648,
       limit: 1000,
     });
-
     const url = `/predictions/?${params.toString()}`;
     console.log("[get-preview-dec-fec] Fetching:", url);
     setPreviewLoading(true);
@@ -667,14 +667,14 @@ export default function IndicadoresPage() {
       const data = await apiClient.get(url);
       if (typeof data === "string") {
         console.error("[get-preview-dec-fec] Expected JSON, got text:", data);
-        setpreviewChartData([])
-        setPreviewMetrics({})
+        setpreviewChartData([]);
+        setPreviewMetrics({});
         return;
       }
       const payload = unwrapApiData(data);
       const predictions = payload?.predictions ?? [];
-      setpreviewChartData(buildPreviewChartData(predictions))
-      setPreviewMetrics(buildPreviewMetrics(predictions))
+      setpreviewChartData(buildPreviewChartData(predictions));
+      setPreviewMetrics(buildPreviewMetrics(predictions));
     } catch (error) {
       console.error("[get-preview-dec-fec] Erro:", error);
     } finally {
@@ -723,7 +723,7 @@ export default function IndicadoresPage() {
       ? `${formatMonthLabel(monthRange.from)} → ${formatMonthLabel(monthRange.to)}`
       : null);
 
-  // ── Perdas handlers ───────────────────────────────────────────────────────────
+  // ── Perdas handlers ───────────────────────────────────────────────────────
   const fetchPerdas = async (from, to) => {
     const url = buildPerdasUrl(from, to);
     console.log("[get-energy-losses] Fetching:", url);
@@ -766,7 +766,7 @@ export default function IndicadoresPage() {
       ? `${formatDateLabel(dateRange.from)} → ${formatDateLabel(dateRange.to)}`
       : null);
 
-  // ── Totais perdas ─────────────────────────────────────────────────────────────
+  // ── Totais perdas ─────────────────────────────────────────────────────────
   const perdasCards = [
     {
       id: "tech_mwh",
@@ -1018,6 +1018,7 @@ export default function IndicadoresPage() {
                 </CardContent>
               </Card>
             </div>
+
             <Card className="bg-card border-border flex-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">
@@ -1128,148 +1129,156 @@ export default function IndicadoresPage() {
                     </span>
                   </div>
                 </div>
-                <div className="mt-4 border-t border-border pt-3">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    Validacao do modelo (MAE)
-                  </p>
-                  <div className="flex flex-wrap gap-4 text-sm text-foreground">
-                    <span>
-                      DEC:{" "}
-                      {Number.isFinite(previewMetrics.DEC?.mae)
-                        ? previewMetrics.DEC.mae.toFixed(4)
-                        : "indisponivel"}
-                    </span>
-                    <span>
-                      FEC:{" "}
-                      {Number.isFinite(previewMetrics.FEC?.mae)
-                        ? previewMetrics.FEC.mae.toFixed(4)
-                        : "indisponivel"}
-                    </span>
-                  </div>
-                  {!previewMetrics.DEC && !previewMetrics.FEC && previewChartData.length > 0 && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Metricas nao disponiveis para previsoes salvas anteriormente.
+                {isAdmin && (
+                  <div className="mt-4 border-t border-border pt-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      Validacao do modelo (MAE)
                     </p>
-                  )}
-                </div>
+                    <div className="flex flex-wrap gap-4 text-sm text-foreground">
+                      <span>
+                        DEC:{" "}
+                        {Number.isFinite(previewMetrics.DEC?.mae)
+                          ? previewMetrics.DEC.mae.toFixed(4)
+                          : "indisponivel"}
+                      </span>
+                      <span>
+                        FEC:{" "}
+                        {Number.isFinite(previewMetrics.FEC?.mae)
+                          ? previewMetrics.FEC.mae.toFixed(4)
+                          : "indisponivel"}
+                      </span>
+                    </div>
+                    {!previewMetrics.DEC &&
+                      !previewMetrics.FEC &&
+                      previewChartData.length > 0 && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Metricas nao disponiveis para previsoes salvas
+                          anteriormente.
+                        </p>
+                      )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
+            {/* ── Card Previsão — somente admin ── */}
             {isAdmin && (
-            <Card className="bg-card border-border flex-1">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-foreground">
-                  Previsão DEC/FEC
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  {previewLoading
-                    ? "Carregando previsão..."
-                    : decFecPeriodLabel
-                    ? `Previsão · ${decFecPeriodLabel}`
-                    : "Selecione um período"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="h-40 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={previewChartData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="hsl(var(--border))"
-                      />
-                      <XAxis
-                        dataKey="mes"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
-                        tickFormatter={(label, index) => {
-                          const item = previewChartData[index];
-                          if (!item) return label;
-                          const years = [
-                            ...new Set(previewChartData.map((d) => d.year)),
-                          ];
-                          return years.length > 1
-                            ? `${label}/${String(item.year).slice(2)}`
-                            : label;
-                        }}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "hsl(var(--muted-foreground))",
-                          fontSize: 12,
-                        }}
-                        domain={([dataMin, dataMax]) => [
-                          0,
-                          Math.ceil(dataMax * 1.2),
-                        ]}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                        labelFormatter={(label, payload) => {
-                          if (payload && payload[0]) {
-                            const item = payload[0].payload;
+              <Card className="bg-card border-border flex-1">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-foreground">
+                    Previsão DEC/FEC
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    {previewLoading
+                      ? "Carregando previsão..."
+                      : decFecPeriodLabel
+                        ? `Previsão · ${decFecPeriodLabel}`
+                        : "Selecione um período"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="h-40 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={previewChartData}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="hsl(var(--border))"
+                        />
+                        <XAxis
+                          dataKey="mes"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "hsl(var(--muted-foreground))",
+                            fontSize: 12,
+                          }}
+                          tickFormatter={(label, index) => {
+                            const item = previewChartData[index];
+                            if (!item) return label;
                             const years = [
                               ...new Set(previewChartData.map((d) => d.year)),
                             ];
                             return years.length > 1
-                              ? `${label}/${item.year}`
+                              ? `${label}/${String(item.year).slice(2)}`
                               : label;
-                          }
-                          return label;
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="dec"
-                        name="DEC (horas)"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: "#3b82f6" }}
-                        connectNulls
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="fec"
-                        name="FEC (interrupções)"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                        dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: "#22c55e" }}
-                        connectNulls
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center justify-center gap-4 mt-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#3b82f6]" />
-                    <span className="text-sm text-muted-foreground">
-                      Previsão DEC (horas)
-                    </span>
+                          }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "hsl(var(--muted-foreground))",
+                            fontSize: 12,
+                          }}
+                          domain={([dataMin, dataMax]) => [
+                            0,
+                            Math.ceil(dataMax * 1.2),
+                          ]}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                          labelFormatter={(label, payload) => {
+                            if (payload && payload[0]) {
+                              const item = payload[0].payload;
+                              const years = [
+                                ...new Set(
+                                  previewChartData.map((d) => d.year),
+                                ),
+                              ];
+                              return years.length > 1
+                                ? `${label}/${item.year}`
+                                : label;
+                            }
+                            return label;
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="dec"
+                          name="DEC (horas)"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: "#3b82f6" }}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="fec"
+                          name="FEC (interrupções)"
+                          stroke="#22c55e"
+                          strokeWidth={2}
+                          dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: "#22c55e" }}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#22c55e]" />
-                    <span className="text-sm text-muted-foreground">
-                      Previsão FEC (interrupções)
-                    </span>
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#3b82f6]" />
+                      <span className="text-sm text-muted-foreground">
+                        Previsão DEC (horas)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#22c55e]" />
+                      <span className="text-sm text-muted-foreground">
+                        Previsão FEC (interrupções)
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             )}
           </div>
 

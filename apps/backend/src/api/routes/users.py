@@ -8,7 +8,6 @@ from src.api.dependencies.auth import (
     AuthenticatedUser,
     get_current_user,
     get_current_user_no_consent_check,
-    require_admin,
     require_admin_or_manager,
 )
 from src.api.schemas.user_schemas import (
@@ -189,7 +188,7 @@ def get_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_
 
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = Depends(require_admin)):
+def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = Depends(require_admin_or_manager)):
     try:
         result = create_user_service(payload)
         log.info(USER_CREATED, actor_id=current_user.user_id, target_user_id=str(result.user_uuid), profile_name=result.profile_name)
@@ -213,7 +212,7 @@ def create_user(payload: UserCreateRequest, current_user: AuthenticatedUser = De
 def update_user(
     user_uuid: UUID,
     payload: UserUpdateRequest,
-    current_user: AuthenticatedUser = Depends(require_admin),
+    current_user: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     try:
         data = {"username": payload.username, "profile_name": payload.profile_name}
@@ -235,7 +234,7 @@ def update_user(
 def set_active(
     user_uuid: UUID,
     payload: UserSetActiveRequest,
-    current_user: AuthenticatedUser = Depends(require_admin),
+    current_user: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     try:
         result = set_user_active_service(user_uuid, payload.active, acting_user_id=current_user.user_id)
@@ -249,7 +248,7 @@ def set_active(
 @router.delete("/{user_uuid}/sessions", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user_sessions(
     user_uuid: UUID,
-    current_user: AuthenticatedUser = Depends(require_admin),
+    current_user: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     admin_invalidate_user_sessions_service(
         target_user_id=str(user_uuid),

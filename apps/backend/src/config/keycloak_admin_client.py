@@ -28,6 +28,9 @@ class KeycloakAdminClient:
         self._realm = settings.keycloak_realm
         self._client_id = settings.keycloak_backend_client_id
         self._client_secret = settings.keycloak_backend_client_secret
+        self._frontend_client_id = settings.keycloak_client_id
+        _base = (settings.frontend_url or "").rstrip("/")
+        self._frontend_callback_url = f"{_base}/auth/callback" if _base else ""
         self._token: str | None = None
         self._token_expires_at: float = 0.0
 
@@ -159,6 +162,10 @@ class KeycloakAdminClient:
         """Sends an email to the user with links to complete the required actions."""
         response = httpx.put(
             self._url(f"users/{keycloak_sub}/execute-actions-email"),
+            params={
+                "client_id": self._frontend_client_id,
+                "redirect_uri": self._frontend_callback_url,
+            },
             json=actions,
             headers=self._headers(),
             timeout=10,
@@ -255,6 +262,22 @@ class KeycloakAdminClient:
             )
 
         log.info("keycloak.user.updated", keycloak_sub=keycloak_sub, fields=list(payload.keys()))
+
+    def delete_user_sessions(self, keycloak_sub: str) -> None:
+        """Deletes all active Keycloak SSO sessions for a user."""
+        response = httpx.delete(
+            self._url(f"users/{keycloak_sub}/sessions"),
+            headers=self._headers(),
+            timeout=10,
+        )
+        if response.status_code not in (200, 204):
+            log.warning(
+                "keycloak.user.sessions_delete_failed",
+                keycloak_sub=keycloak_sub,
+                status=response.status_code,
+            )
+        else:
+            log.info("keycloak.user.sessions_deleted", keycloak_sub=keycloak_sub)
 
     def delete_user(self, keycloak_sub: str) -> None:
         """Deletes a user from Keycloak."""

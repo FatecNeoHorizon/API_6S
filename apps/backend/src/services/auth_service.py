@@ -29,6 +29,7 @@ from src.services.user_service import _decrypt_email
 from src.services.consent_service import get_pending_consent
 from src.repositories.user_repository import (
     create_user_session,
+    get_keycloak_sub,
     get_sessions_for_export,
     get_user_by_keycloak_sub,
     get_user_for_export,
@@ -254,6 +255,15 @@ def logout(conn, *, user_id: str, session_id: str) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_or_expired_session",
         )
+
+    try:
+        from uuid import UUID
+        from src.config.keycloak_admin_client import get_keycloak_admin_client
+        keycloak_sub = get_keycloak_sub(conn, UUID(user_id))
+        if keycloak_sub:
+            get_keycloak_admin_client().delete_user_sessions(keycloak_sub)
+    except Exception:
+        pass
 
 
 def export_user_data(conn, *, user_id: str) -> DataExportResponse:

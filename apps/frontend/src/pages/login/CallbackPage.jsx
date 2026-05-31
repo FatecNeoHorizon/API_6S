@@ -32,10 +32,10 @@ export function CallbackPage() {
     }
 
     // Fallback: direct navigation (popup was blocked or user navigated manually)
-    const storedState  = sessionStorage.getItem("pkce_state");
-    const codeVerifier = sessionStorage.getItem("pkce_verifier");
-    sessionStorage.removeItem("pkce_state");
-    sessionStorage.removeItem("pkce_verifier");
+    const storedState  = localStorage.getItem("pkce_state");
+    const codeVerifier = localStorage.getItem("pkce_verifier");
+    localStorage.removeItem("pkce_state");
+    localStorage.removeItem("pkce_verifier");
 
     if (!storedState || state !== storedState || !codeVerifier) {
       navigate("/", { replace: true });
@@ -49,7 +49,8 @@ export function CallbackPage() {
     })
       .then((res) => {
         saveClientSession(res.access_token, { refreshToken: res.refresh_token });
-        navigate(res.pending_consent ? "/consent" : "/dashboard", { replace: true });
+        if (res.kc_id_token) sessionStorage.setItem("kc_id_token", res.kc_id_token);
+        navigate(res.pending_consent ? "/consent" : "/indicators", { replace: true });
       })
       .catch(() => navigate("/", { replace: true }));
   }, [navigate]);

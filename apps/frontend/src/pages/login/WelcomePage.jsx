@@ -1,12 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { initiateOAuthLogin, exchangeCodeForToken } from '@/api/auth'
-import { saveClientSession } from '@/api/consent'
+import { saveClientSession, logoutUser } from '@/api/consent'
 import zeusWelcomeImage from '@/assets/zeus_welcome_image.jpg'
 
 export function WelcomePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('kc_logout') === 'true') {
+      window.history.replaceState(null, '', '/')
+      logoutUser()
+    }
+  }, [])
 
   async function handleLogin() {
     if (loading) return
@@ -32,10 +40,10 @@ export function WelcomePage() {
       clearInterval(pollClosed)
 
       const { code, state } = event.data
-      const storedState   = sessionStorage.getItem('pkce_state')
-      const codeVerifier  = sessionStorage.getItem('pkce_verifier')
-      sessionStorage.removeItem('pkce_state')
-      sessionStorage.removeItem('pkce_verifier')
+      const storedState   = localStorage.getItem('pkce_state')
+      const codeVerifier  = localStorage.getItem('pkce_verifier')
+      localStorage.removeItem('pkce_state')
+      localStorage.removeItem('pkce_verifier')
 
       if (!storedState || state !== storedState || !codeVerifier) {
         setLoading(false)

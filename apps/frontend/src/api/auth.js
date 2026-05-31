@@ -14,9 +14,10 @@ export function exchangeCodeForToken(payload) {
 
 export function buildKeycloakLogoutUrl(idToken) {
   const params = new URLSearchParams({
-    post_logout_redirect_uri: window.location.origin + "/",
-    ...(idToken && { id_token_hint: idToken }),
+    client_id: "zeus-frontend",
+    post_logout_redirect_uri: window.location.origin + "/?kc_logout=true",
   });
+  if (idToken) params.set("id_token_hint", idToken);
   return `${import.meta.env.VITE_KEYCLOAK_URL}/realms/zeus/protocol/openid-connect/logout?${params}`;
 }
 
@@ -53,8 +54,8 @@ export async function initiateOAuthLogin() {
   const challenge = await generateCodeChallenge(verifier)
   const state     = generateState()
 
-  sessionStorage.setItem("pkce_verifier", verifier)
-  sessionStorage.setItem("pkce_state",    state)
+  localStorage.setItem("pkce_verifier", verifier)
+  localStorage.setItem("pkce_state",    state)
 
   const params = new URLSearchParams({
     client_id:             "zeus-frontend",

@@ -64,6 +64,8 @@ log = structlog.get_logger()
 @router.get("/", response_model=List[UserResult], status_code=status.HTTP_200_OK)
 def list_users(current_user: AuthenticatedUser = Depends(require_admin_or_manager)):
     users = list_users_service()
+    if current_user.profile_name == "MANAGER":
+        users = [u for u in users if u.profile_name != "ADMIN"]
     log.info(USER_LISTED, count=len(users))
     return users
 
@@ -181,10 +183,13 @@ def patch_user_consents(
 @router.get("/{user_uuid}", response_model=UserResult, status_code=status.HTTP_200_OK)
 def get_user(user_uuid: UUID, current_user: AuthenticatedUser = Depends(require_admin_or_manager)):
     try:
-        return get_user_by_id_service(user_uuid)
+        user = get_user_by_id_service(user_uuid)
     except UserNotFoundError as exc:
         log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if current_user.profile_name == "MANAGER" and user.profile_name == "ADMIN":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+    return user
 
 
 @router.post("/", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -215,6 +220,15 @@ def update_user(
     current_user: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
     try:
+        target = get_user_by_id_service(user_uuid)
+    except UserNotFoundError:
+        log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
+    if current_user.profile_name == "MANAGER" and target.profile_name == "ADMIN":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
+    try:
         data = {"username": payload.username, "profile_name": payload.profile_name}
         result = update_user_service(user_uuid, data)
         log.info(USER_UPDATED, actor_id=current_user.user_id, target_user_id=str(user_uuid), fields_changed=list(data.keys()))
@@ -236,6 +250,21 @@ def set_active(
     payload: UserSetActiveRequest,
     current_user: AuthenticatedUser = Depends(require_admin_or_manager),
 ):
+    if str(user_uuid) == current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Não é possível alterar o status da própria conta.",
+        )
+
+    try:
+        target = get_user_by_id_service(user_uuid)
+    except UserNotFoundError:
+        log.warning(USER_NOT_FOUND, user_id=str(user_uuid))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
+    if current_user.profile_name == "MANAGER" and target.profile_name == "ADMIN":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
     try:
         result = set_user_active_service(user_uuid, payload.active, acting_user_id=current_user.user_id)
         log.info(USER_DEACTIVATED, actor_id=current_user.user_id, target_user_id=str(user_uuid), active=payload.active)

@@ -270,6 +270,8 @@ class KeycloakAdminClient:
             headers=self._headers(),
             timeout=10,
         )
+        if response.status_code == 404:
+            return
         if response.status_code not in (200, 204):
             log.warning(
                 "keycloak.user.sessions_delete_failed",
@@ -313,7 +315,8 @@ class KeycloakAdminClient:
         )
         if old_role_resp.status_code == 200:
             old_role_data = old_role_resp.json()
-            httpx.delete(
+            httpx.request(
+                "DELETE",
                 self._url(f"users/{keycloak_sub}/role-mappings/realm"),
                 json=[{"id": old_role_data["id"], "name": old_role_data["name"]}],
                 headers=self._headers(),

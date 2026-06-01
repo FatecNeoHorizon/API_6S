@@ -68,7 +68,7 @@
 
 ---
 
-### 3. **[ISSUE-TRACKING.md](ISSUE-TRACKING.md)**
+### 3. **[ISSUE_TRACKING.md](ISSUE_TRACKING.md)**
 
 **Who is it for?** Mainly Scrum Masters and DevOps (tracking visualizations)
 
@@ -101,7 +101,7 @@
 - ✅ Full diagram of the Authorization Code Flow with PKCE
 - ✅ Step-by-step flow walkthrough (Frontend → Keycloak → Backend)
 - ✅ Local token validation via JWKS (no Keycloak call per request)
-- ✅ Profile-based authorization (ADMIN, ANALYST, VIEWER)
+- ✅ Profile-based authorization (ADMIN, MANAGER, ANALYST)
 - ✅ Keycloak configuration in Docker Compose
 - ✅ Relation to LGPD principles (Art. 6)
 
@@ -110,6 +110,47 @@
 - 🖥️ Integrating the login flow in the frontend
 - 🐳 Setting up Keycloak in the local environment
 - 📋 Reviewing the profile-based authorization model
+
+---
+
+### 4a. **[SESSION_MANAGEMENT.md](SESSION_MANAGEMENT.md)**
+
+**Who is it for?** Backend developers
+
+**What is it?** Platform session lifecycle — creation on OAuth callback, token rotation on refresh, logout, and per-session revocation
+
+**Contains:**
+- ✅ Session creation flow (callback → TB_SESSION)
+- ✅ Token types (access JWT vs opaque refresh token) and their lifetimes
+- ✅ Token rotation on `POST /auth/refresh`
+- ✅ Logout flow including Keycloak session revocation
+- ✅ Session listing and selective revocation
+- ✅ Consent gate behavior for session-related routes
+- ✅ LGPD: session data included in user data export
+
+**When to read?**
+- 🔐 Implementing or debugging the token refresh flow
+- 🚪 Changing the logout or session revocation behavior
+- 📋 Reviewing LGPD data export session history
+
+---
+
+### 4b. **[GEO_ENDPOINTS.md](GEO_ENDPOINTS.md)**
+
+**Who is it for?** Backend and frontend developers working on the heatmap
+
+**What is it?** Reference for the `GET /conj` and `PUT /update-conj` endpoints that serve the geographic heatmap GeoJSON data
+
+**Contains:**
+- ✅ MongoDB `conj` collection schema (geometry + annual_summaries)
+- ✅ `GET /conj` — GeoJSON FeatureCollection with year/indicator filters
+- ✅ `PUT /update-conj` — administrative correction of accumulated values
+- ✅ How the frontend heatmap consumes the data
+
+**When to read?**
+- 🗺️ Implementing or changing the heatmap data layer
+- 🔧 Debugging missing or incorrect CONJ geometries
+- 📊 Understanding the annual_summaries data model
 
 ---
 
@@ -135,7 +176,7 @@
 
 ## 🔄 Quick Differences
 
-| Aspect | CONTRIBUTING.md | ISSUE-TRACKING.md |
+| Aspect | CONTRIBUTING.md | ISSUE_TRACKING.md |
 |--------|----------------|-------------------|
 | **Main Focus** | Commit and branch standards | Issue tracking |
 | **Audience** | Everyone | Scrum + DevOps |
@@ -153,7 +194,7 @@
 
 **Read first:**
 1. [CONTRIBUTING.md](CONTRIBUTING.md) — Understand the standards
-2. [ISSUE-TRACKING.md](ISSUE-TRACKING.md) — Understand the workflow
+2. [ISSUE_TRACKING.md](ISSUE_TRACKING.md) — Understand the workflow
 
 **Quick reference:**
 ```bash
@@ -178,7 +219,7 @@ Closes #456
 ### 👨‍💼 Scrum Master
 
 **Read first:**
-1. [ISSUE-TRACKING.md](ISSUE-TRACKING.md) — Progress tracking
+1. [ISSUE_TRACKING.md](ISSUE_TRACKING.md) — Progress tracking
 2. [CONTRIBUTING.md](CONTRIBUTING.md) — Understand the full flow
 
 **What to monitor:**
@@ -197,7 +238,7 @@ Closes #456
 
 **Read first:**
 1. [CONTRIBUTING.md](CONTRIBUTING.md) — Automations and workflows
-2. [ISSUE-TRACKING.md](ISSUE-TRACKING.md) — Tracking for reports
+2. [ISSUE_TRACKING.md](ISSUE_TRACKING.md) — Tracking for reports
 
 **Responsibilities:**
 - ✅ Validate commit standard (hook validates automatically, including footer)
@@ -223,9 +264,9 @@ git log feature/123-description
 ## 🔗 Cross-Reference
 
 **If you are in CONTRIBUTING.md and want to understand tracking:**
-→ See the "🔄 Full Flow" section or go to [ISSUE-TRACKING.md](ISSUE-TRACKING.md)
+→ See the "🔄 Full Flow" section or go to [ISSUE_TRACKING.md](ISSUE_TRACKING.md)
 
-**If you are in ISSUE-TRACKING.md and want commit details:**
+**If you are in ISSUE_TRACKING.md and want commit details:**
 → See the "📌 Linking in Commits and Pull Requests" section or go to [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
@@ -272,8 +313,8 @@ git log feature/123-description
 |----------|----------|
 | "How do I write a commit?" | [CONTRIBUTING.md](CONTRIBUTING.md#-commit-standards) |
 | "How do I name a branch?" | [CONTRIBUTING.md](CONTRIBUTING.md#-branch-standards) |
-| "How do I track issues?" | [ISSUE-TRACKING.md](ISSUE-TRACKING.md) |
-| "Why does merging close the issue?" | [ISSUE-TRACKING.md](ISSUE-TRACKING.md) |
+| "How do I track issues?" | [ISSUE_TRACKING.md](ISSUE_TRACKING.md) |
+| "Why does merging close the issue?" | [ISSUE_TRACKING.md](ISSUE_TRACKING.md) |
 | "What are the commit types?" | [CONTRIBUTING.md](CONTRIBUTING.md#accepted-types) |
 | "How do I link an issue in a commit?" | [CONTRIBUTING.md](CONTRIBUTING.md#5️⃣-footer-required) |
 | "How does login work with Keycloak?" | [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) |
@@ -282,5 +323,5 @@ git log feature/123-description
 
 ---
 
-**Last updated:** February 28, 2026
+**Last updated:** May 31, 2026
 **Consistency:** ✅ Validated

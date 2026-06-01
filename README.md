@@ -102,17 +102,17 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 ## 🗓️ Sprint Backlog <a id="sprint-backlog"></a>
 
 <details>
-<summary><b>Sprint 1</b></summary>
+<summary><b>Sprint 1</b></summary><br>
 
-[View Sprint 1 documentation](docs/SPRINT1.md)
+[View Sprint 1 documentation](docs/SPRINT_1.md)
 
 - **Sprint video:** [Watch Sprint 1 demonstration](https://www.youtube.com/watch?v=w10nwgCj9kc)
 </details>
 
 <details>
-<summary><b>Sprint 2</b></summary>
+<summary><b>Sprint 2</b></summary><br>
 
-[View Sprint 2 documentation](docs/SPRINT2.md)
+[View Sprint 2 documentation](docs/SPRINT_2.md)
 
 - **Sprint video:** | [Watch Sprint 2 demonstration](https://drive.google.com/drive/folders/1xhPzqp9PZmWwpUhA6LugZi4Wq-HRTqhF?usp=sharing
 ) | Video presenting the deliveries completed during Sprint 2. |
@@ -122,7 +122,7 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 </details>
 
 <details>
-<summary><b>Sprint 3</b></summary>
+<summary><b>Sprint 3</b></summary><br>
 
 [View Sprint 3 documentation](docs/SPRINT3.md)
 
@@ -141,7 +141,7 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 |  2  | Sprint review / Planning  | Apr 06 | Apr 10 | Ok |
 |  3  | Sprint 2                  | Apr 13 | May 03 | Ok |
 |  4  | Sprint review / Planning  | May 04 | May 08 | Ok |
-|  5  | Sprint 3                  | May 11 | May 31 |    |
+|  5  | Sprint 3                  | May 11 | May 31 | Ok |
 |  6  | Sprint review             | Jun 01 | Jun 05 |    |
 |  7  | Solutions Fair            | Jun 11 |        |    |
 |  8  | TG Presentations          | Jun 15 | Jun 19 |    |
@@ -204,7 +204,7 @@ This solution consists of a main application and a support module for tracking p
 |:---------|:------------|
 | [General Documentation](docs/DOCUMENTATION.md) | Centralized index of all project standards |
 | [Commit and Branch Standards](docs/CONTRIBUTING.md) | Conventional Commits, branch naming and Git hooks |
-| [Issue Tracking](docs/ISSUE-TRACKING.md) | How to trace issues, branches and PRs |
+| [Issue Tracking](docs/ISSUE_TRACKING.md) | How to trace issues, branches and PRs |
 | [LGPD](docs/LGPD.md) | LGPD guidelines and data privacy compliance |
 | [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | ROPA entry and professor-validated argument for PostgreSQL/MongoDB separation |
 
@@ -216,11 +216,13 @@ This solution consists of a main application and a support module for tracking p
 |:---------|:------------|
 | [Installation Manual](docs/INSTALLATION_MANUAL.md) | Complete setup guide for deploying the Z application via Docker Compose |
 | [User Manual](docs/USER_MANUAL.MD) | Operating guide with focus on interface navigation, APIs, and ETL execution |
-| [Prototyping](docs/UI-DESIGN.md) | User flows, screens, and UI components (Figma) |
-| [How to Run the Project](docs/GETTING-STARTED.md) | Step-by-step setup, configuration, and local execution guide |
-| [Relational database](docs/RELATIONAL-DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
-| [Non-Relational database](docs/NON-RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
+| [Prototyping](docs/UI_DESIGN.md) | User flows, screens, and UI components (Figma) |
+| [How to Run the Project](docs/GETTING_STARTED.md) | Step-by-step setup, configuration, and local execution guide |
+| [Relational database](docs/RELATIONAL_DATABASE.md) | Data model, architecture, and design decisions for PostgreSQL |
+| [Non-Relational database](docs/NON_RELATIONAL_DATABASE.md) | MongoDB collections, schema validation, and indexes for ANEEL data |
 | [LGPD Data Separation](docs/LGPD_DATA_SEPARATION.md) | Dual-database architecture as a structural LGPD compliance measure |
 | [API Patterns](docs/API_PATTERN_FRONTEND.md) | Conventions and best practices for frontend-backend API integration |
 | [Components Pattern](docs/COMPONENTS_PATTERN.md)| UI component standardization and reuse guidelines |
 | [Authentication Architecture](docs/AUTH_ARCHITECTURE.md) | OAuth 2.0 + PKCE flow with Keycloak, token validation, and profile-based authorization |
+| [Session Management](docs/SESSION_MANAGEMENT.md) | Session lifecycle, token rotation, logout, and session revocation |
+| [Geographic Endpoints](docs/GEO_ENDPOINTS.md) | CONJ GeoJSON endpoints that power the heatmap feature |

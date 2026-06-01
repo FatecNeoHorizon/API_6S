@@ -35,6 +35,8 @@ The main installation method is via the `docker-compose.yml` file in the project
 | **mongo-express** | MongoDB administration web interface | 8081 |
 | **backend** | FastAPI and ETL trigger | 8000 |
 | **frontend** | React/Vite application | 5173 |
+| **keycloak-postgres** | Dedicated PostgreSQL for Keycloak internal storage | --- |
+| **keycloak** | Identity and authorization server (OAuth 2.0 + PKCE) | 8180 |
 
 ### 1.2 Compose Profiles
 
@@ -42,6 +44,7 @@ The main installation method is via the `docker-compose.yml` file in the project
 |---------|------------------|----------|
 | **backend** | `postgres`, `flyway`, `mongo`, `backend` | Backend and ETL development |
 | **frontend** | `postgres`, `flyway`, `mongo`, `backend`, `frontend` | UI development with complete backend stack |
+| **auth** | `keycloak-postgres`, `keycloak` | Keycloak identity server only |
 | **full** | All services | Full integration environment |
 | **tools** | `mongo`, `mongo-express` | MongoDB administration interface |
 
@@ -49,7 +52,7 @@ The main installation method is via the `docker-compose.yml` file in the project
 
 ## 2. Prerequisites
 
-Before starting, ensure your machine has sufficient resources to run multiple containers and handle large data loads. The `docs/SPRINT1.md` file highlights that the CSV file `indicadores-continuidade-coletivos-2020-2029.csv` contains **5 million rows**, requiring adequate memory allocation for MongoDB and backend processing.
+Before starting, ensure your machine has sufficient resources to run multiple containers and handle large data loads. The `docs/SPRINT_1.md` file highlights that the CSV file `indicadores-continuidade-coletivos-2020-2029.csv` contains **5 million rows**, requiring adequate memory allocation for MongoDB and backend processing.
 
 - Docker Desktop or Docker Engine with Docker Compose enabled
 - Terminal access to the `API_6S` root directory
@@ -213,7 +216,29 @@ The backend calls `load_decfec.py`, filters DEC/FEC indicators, applies the tran
 
 ---
 
-## 7. Local Installation Without Docker (Optional)
+## 7. Keycloak Configuration (First Run)
+
+Keycloak starts with the `auth` or `full` profile and is available at `http://localhost:8180`.
+
+On first startup the `zeus` realm is imported automatically from `keycloak/realm-zeus.json`. It includes:
+- The `zeus-app` client (public, PKCE-only, redirect to `http://localhost:5173/*`)
+- Realm roles: `ADMIN`, `MANAGER`, `ANALYST`
+
+The only manual step is creating users and assigning roles:
+
+1. Access `http://localhost:8180/admin` with the credentials set in `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`
+2. Select the `zeus` realm
+3. Go to **Users → Add user**, create the user, then go to **Role Mapping** and assign the appropriate role
+
+The environment files for Keycloak are:
+- `envs/.env.keycloak.dev` — admin credentials and `KC_DB_*` connection settings
+- `envs/.env.keycloak-postgres.dev` — dedicated PostgreSQL credentials for Keycloak storage
+
+> For the full authentication and authorization flow, see [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md).
+
+---
+
+## 9. Local Installation Without Docker (Optional)
 
 Although the project's main flow is Docker-oriented, it is possible to install applications manually for development. This option requires separate configuration of Python, Node.js, PostgreSQL, and MongoDB.
 
@@ -224,7 +249,7 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 
 ---
 
-## 8. Common Issues and Quick Fixes
+## 10. Common Issues and Quick Fixes
 
 | Symptom | Likely Cause | Suggested Action |
 |-----------|-------------|-------------------|
@@ -236,7 +261,7 @@ Although the project's main flow is Docker-oriented, it is possible to install a
 
 ---
 
-## 9. Final Installation Checklist
+## 11. Final Installation Checklist
 
 - [ ] Service-specific files (`.env.*.dev` or `.env.*.prod`) have been created and filled
 - [ ] A profile-based command (for example `docker compose --profile full up --build`) completed without critical errors

@@ -15,38 +15,42 @@ This document describes the complete flow of the **Zeus** application — ANEEL 
 ## 🗺️ Flow Overview
 
 ```
-Login
-  ├── First Access (new user)
-  │     ├── Step 1 — Set Password
-  │     └── Step 2 — Accept Terms
-  └── Existing user
-        └── Dashboard
-              ├── Heatmap
-              ├── DEC/FEC Indicators
-              │     ├── DEC/FEC Tab
-              │     └── Losses Tab
-              ├── Network Structure
-              ├── User Management
-              │     ├── Create User
-              │     ├── Edit User
-              │     └── Delete User
-              ├── Terms Management
-              │     ├── Create Term
-              │     ├── Edit Term
-              │     └── Delete Draft
-              └── My Profile
+Welcome (/)
+  └── Sign In → Keycloak login page
+        └── OAuth callback (/auth/callback)
+              ├── Pending consent → Consent (/consent)
+              │     └── Accept → Dashboard
+              └── Already consented → Dashboard
+                    ├── Heatmap (/heatmap)
+                    ├── DEC/FEC Indicators (/indicators)
+                    │     ├── DEC/FEC Tab
+                    │     └── Losses Tab
+                    ├── Network Structure (/network-structure)
+                    ├── User Management (/users)  [ADMIN, MANAGER]
+                    │     ├── Create User
+                    │     ├── Edit User
+                    │     └── Toggle Active / Delete
+                    ├── Terms Management (/terms)  [ADMIN]
+                    │     ├── Create Term
+                    │     ├── Edit Term
+                    │     └── Delete Draft
+                    ├── Consent Management (/consents)
+                    ├── Incident Notification (/incident-notification)  [ADMIN]
+                    └── My Profile (/profile)
+
+Logout → Goodbye (/goodbye)
 ```
 
 ---
 
-## 1. Login
+## 1. Welcome / Login
 
-**Route:** `/login`  
+**Route:** `/`  
 **Access:** Public
 
 ### Description
 
-The platform's initial screen. The user enters their credentials to access the system.
+The platform's landing screen. The user initiates the authentication flow via Keycloak by clicking **Sign In**. There are no email/password fields in the application — credentials are entered directly on the Keycloak login page.
 
 ![Login](/image/figma/login.png)
 
@@ -55,87 +59,51 @@ The platform's initial screen. The user enters their credentials to access the s
 | Element | Description |
 |:--------|:------------|
 | Logo + Name | Centered Zeus icon with subtitle "ANEEL Data Analysis Platform" |
-| Email Field | Text input with placeholder `your@email.com` |
-| Password Field | Password input with visibility toggle (eye icon) |
-| "Remember me" Checkbox | Keeps the session active between accesses |
-| "Forgot password?" Link | Redirects to the password recovery flow |
-| "Sign In" Button | Submits credentials for authentication |
+| "Sign In" Button | Initiates the OAuth 2.0 Authorization Code Flow with PKCE |
 | Footer | "Tecsys do Brasil - All rights reserved" |
 
 ### User Actions
 
-- Fill in email and password and click **Sign In**
-- Check "Remember me" for a persistent session
-- Click "Forgot password?" to recover access
+- Click **Sign In** to be redirected to the Keycloak login page
+- Enter credentials on Keycloak's page
+- After successful authentication, Keycloak redirects to `/auth/callback`
 
 ### Business Rules
 
-- Credentials validated via PostgreSQL (sensitive data/LGPD)
-- If it is the user's **first access**, redirects to the First Access flow
-- If credentials are valid and the user has completed registration, redirects to the **Dashboard**
+- Authentication is handled exclusively by **Keycloak** (OAuth 2.0 + PKCE). The application never receives or stores passwords.
+- If the user has pending consent (new user or updated terms), they are redirected to `/consent` before accessing the dashboard.
+- If authentication succeeds and consent is up to date, the user lands on the main dashboard.
+- Password recovery and account management are handled directly in Keycloak.
+- The route `/login` redirects to `/`.
 
 ---
 
-## 2. First Access
+## 2. Consent
 
-**Route:** `/first-access`  
-**Access:** Users with pending registration (created by the administrator)
-
-**2 mandatory steps** before accessing the system.
-
----
-
-### 2.1 Step 1 — Set Password
+**Route:** `/consent`  
+**Access:** Authenticated users with pending consent (requires a valid token)
 
 ### Description
 
-The user sets their access password. The system displays the requirements in real time as the password is typed.
-
-![First Access - Step 1](/image/figma/first-access-1.png)
+Displayed after authentication when the user has not yet accepted the current active terms of use and/or privacy policy. The user must accept all required documents before accessing the platform.
 
 ### Components
 
 | Element | Description |
 |:--------|:------------|
-| Stepper (1 → 2) | Progress indicator with step 1 active |
-| "New Password" Field | Password input with visibility toggle |
-| Requirements Checklist | Real-time validation: minimum 8 characters, lowercase letter, uppercase letter, number, special character |
-| "Confirm Password" Field | Password confirmation with visibility toggle |
-| "Continue" Button | Advances to Step 2 (enabled only when all requirements are met) |
-
-### Business Rules
-
-- The "Continue" button remains disabled until all 5 password requirements are met and the passwords match
-- The password is stored encrypted in PostgreSQL
-
----
-
-### 2.2 Step 2 — Accept Terms
-
-### Description
-
-The user reads and accepts the mandatory terms before completing registration.
-
-![First Access - Step 2](/image/figma/first-access-2.png)
-
-### Components
-
-| Element | Description |
-|:--------|:------------|
-| Stepper (✓ → 2) | Step 1 marked as complete, step 2 active |
 | "Terms of Use" Accordion | Expandable for full document reading |
 | "I have read and accept the Terms of Use" Checkbox | Mandatory confirmation |
 | "Privacy Policy (LGPD)" Accordion | Expandable for full document reading |
 | "I have read and accept the Privacy Policy" Checkbox | Mandatory confirmation |
-| "Back" Button | Returns to Step 1 |
-| "Complete Registration" Button | Finishes onboarding and redirects to Dashboard (enabled only when both checkboxes are checked) |
+| "Continue" Button | Completes consent and redirects to the dashboard (enabled only when all required checkboxes are checked) |
 
 ### Business Rules
 
-- The terms displayed are from the most recent **active** version registered in Terms Management
-- Acceptance is recorded with date/time and linked to the user (LGPD audit)
-- The "Complete Registration" button is only enabled when **both** documents have been accepted
-- After completion, the user is redirected to the **Dashboard**
+- Terms displayed are from the most recent **active** version registered in Terms Management
+- Acceptance is recorded with timestamp and linked to the user (LGPD audit — `TB_CONSENT_LOG`)
+- The "Continue" button is only enabled when **all required** documents have been accepted
+- After consent, the user is redirected to the main dashboard
+- This route requires a valid JWT token (`TokenRequiredRoute`)
 
 ---
 
@@ -325,8 +293,8 @@ Visualization of the physical electrical grid infrastructure by region, with an 
 
 ## 7. User Management
 
-**Route:** `/user-management`  
-**Access:** **Administrator** profile only (restricted)
+**Route:** `/users`  
+**Access:** **Administrator** and **Manager** profiles (restricted)
 
 ### Description
 
@@ -353,9 +321,9 @@ Complete user management with LGPD compliance.
 
 | Profile | Badge |
 |:--------|:------|
-| Administrator | Dark blue |
-| Analyst | Green |
-| Viewer | Gray |
+| ADMIN | Dark blue |
+| MANAGER | Blue |
+| ANALYST | Green |
 
 ---
 
@@ -369,15 +337,15 @@ Complete user management with LGPD compliance.
 |:--------|:------------|
 | "Full Name" Field | Required text input |
 | "Email" Field | Required email input |
-| "Access Profile" Dropdown | Profile selection: Administrator, Analyst or Viewer |
+| "Access Profile" Dropdown | Profile selection: ADMIN, MANAGER or ANALYST |
 | "Cancel" Button | Closes the modal without saving |
 | "Create User" Button | Saves the new user |
 
 ### Business Rules
 
-- The created user receives an email with a first access link
-- Registration does not include a password — it will be set by the user during **First Access**
-- Data stored in PostgreSQL
+- The created user account is provisioned in Keycloak by the administrator
+- Password setup and first access are handled through Keycloak's own flows
+- Local user record stored in PostgreSQL (`TB_USER`) with a reference to the Keycloak subject ID (`KEYCLOAK_SUB`)
 
 ---
 
@@ -420,12 +388,12 @@ Complete user management with LGPD compliance.
 
 ## 8. Terms Management
 
-**Route:** `/terms-management`  
+**Route:** `/terms`  
 **Access:** **Administrator** profile only (restricted)
 
 ### Description
 
-Management of terms of use and privacy policies displayed in the First Access flow and re-displayed to users when active versions are updated.
+Management of terms of use and privacy policies displayed on the Consent page and re-displayed to users when active versions are updated.
 
 ---
 
@@ -507,7 +475,74 @@ Same layout as the creation modal, with fields pre-filled. Available only for te
 
 ---
 
-## 9. My Profile
+## 9. Consent Management
+
+**Route:** `/consents`  
+**Access:** All authenticated profiles
+
+### Description
+
+Allows the user to view their own consent history — which versions of the terms and privacy policy they have accepted, when, and from which IP.
+
+### Components
+
+| Element | Description |
+|:--------|:------------|
+| Consent History Table | Columns: Document type, Version, Accepted at, IP address |
+| Policy version details | Expandable row showing the full content of the accepted version |
+
+### Business Rules
+
+- Each user sees only their own consent records
+- Records are stored in `TB_CONSENT_LOG` as append-only entries with a deterministic integrity hash
+- Records cannot be modified or deleted (LGPD audit compliance)
+
+---
+
+## 10. Incident Notification
+
+**Route:** `/incident-notification`  
+**Access:** **Administrator** profile only (restricted)
+
+### Description
+
+Allows administrators to send email notifications to system users using predefined or custom templates — used for communicating planned maintenance, incidents, or service alerts.
+
+### Components
+
+| Element | Description |
+|:--------|:------------|
+| Template selector | List of available notification templates (GET `/admin/incident-notification/templates`) |
+| "Custom Subject" Field | Optional override for the email subject |
+| "Custom Body" Field | Optional override for the email body |
+| "Send Notification" Button | Dispatches the notification asynchronously to all active users |
+| Confirmation feedback | Shows recipient count and dispatch confirmation |
+
+### Business Rules
+
+- Sending is asynchronous (`202 Accepted`) — the API returns immediately while delivery happens in the background
+- Only administrators (`ADMIN` profile) can access this screen and trigger notifications
+- The event is logged with `admin_id`, `template_id`, and `recipient_count`
+
+---
+
+## 11. Goodbye
+
+**Route:** `/goodbye`  
+**Access:** Public (displayed after logout)
+
+### Description
+
+Post-logout screen displayed after the user signs out. Confirms the session was terminated and offers a button to log in again.
+
+### Business Rules
+
+- Displayed after a successful logout (backend revokes the session via `POST /auth/logout`)
+- No authenticated content is shown on this page
+
+---
+
+## 12. My Profile
 
 **Route:** `/profile`  
 **Access:** All authenticated profiles
@@ -549,9 +584,10 @@ Allows the user to view and update their personal data. Accessed via the avatar/
 - **Company:** Tecsys do Brasil
 - **Navigation:** Fixed side menu available on all authenticated screens
 - **Responsiveness:** Interface compatible with modern browsers (RNF03)
-- **LGPD:** User data (credentials, acceptances, profiles) stored exclusively in PostgreSQL; BDGD operational data in MongoDB
-- **Existing access profiles:** Administrator, Analyst, Viewer
+- **Authentication:** Keycloak (OAuth 2.0 + PKCE) — credentials never handled by the application itself
+- **LGPD:** User data (acceptances, profiles, session metadata) stored exclusively in PostgreSQL; BDGD operational data in MongoDB
+- **Existing access profiles:** ADMIN, MANAGER, ANALYST
 
 ---
 
-*Last updated: 03/17/2026*
+*Last updated: 05/31/2026*

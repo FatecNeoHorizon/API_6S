@@ -160,6 +160,24 @@ The repository manages specific collections for energy grid infrastructure and p
 
 This section documents backend API endpoints for developers, including upload processing flow, validation rules, temporary storage behavior, and load tracking.
 
+### Authentication Endpoints (`/auth`)
+
+| Method | Path | Purpose | Auth required |
+|:---|:---|:---|:---|
+| `GET` | `/auth/me` | Returns the current user's ID, username, profile and active status | Yes |
+| `POST` | `/auth/callback` | Exchanges OAuth authorization code for access + refresh tokens (rate-limited: 20/min) | No |
+| `POST` | `/auth/logout` | Revokes the current session; returns `204 No Content` | Yes (no consent check) |
+| `POST` | `/auth/refresh` | Exchanges a refresh token for a new access token | No |
+| `GET` | `/auth/me/export` | LGPD Art. 18 — exports the caller's personal data as a JSON file | Yes (no consent check) |
+| `GET` | `/auth/sessions` | Lists all active sessions for the current user | Yes (no consent check) |
+| `DELETE` | `/auth/sessions/{session_uuid}` | Revokes a specific session (cannot revoke the current one) | Yes (no consent check) |
+
+Notes:
+- `get_current_user` enforces both token validity **and** consent (pending-consent users are blocked from most routes).
+- `get_current_user_no_consent_check` enforces token validity only — used for logout, export, and session routes so users with pending consent can still sign out or access their data.
+
+---
+
 ### Upload Endpoints (`/upload`)
 
 - `POST /upload/` (status `202 Accepted`)
@@ -286,4 +304,4 @@ Full documentation: [`docs/LOGGING.md`](../docs/LOGGING.md)
 
 ---
 
-*Last updated: 05/03/2026*
+*Last updated: 05/31/2026*

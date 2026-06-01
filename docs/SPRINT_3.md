@@ -3,7 +3,7 @@
 [Back to main README](../README.md#sprint-backlog)
 
 > **Period:** May 11, 2026 to May 31, 2026  
-> **Status:** Waiting
+> **Status:** Completed
 
 ---
 
@@ -30,7 +30,9 @@
 
 ### Sprint Evolution (Burndown)
 
-<img src="../burndown/src/main/resources/static/burndown.png" alt="Sprint 3 Burndown Chart" width="960">
+<img src="../burndown/src/main/resources/static/sprint-3.png" alt="Sprint 3 burndown">
+
+For the full guide on local usage, execution and CI, see: [Burndown Documentation](../burndown/README.md)
 
 ### Definition of Ready (DoR)
 For a User Story to be ready to start in a sprint, the following criteria must be met:

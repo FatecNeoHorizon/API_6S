@@ -124,9 +124,9 @@ By centralizing processing in a dual‑database architecture (MongoDB for public
 <details>
 <summary><b>Sprint 3</b></summary><br>
 
-[View Sprint 3 documentation](docs/SPRINT_3.md)
+[View Sprint 3 documentation](docs/SPRINT3.md)
 
-- **Sprint video:** [Watch Sprint 1 demonstration](https://www.youtube.com/watch?v=kt6Q-J3AuBA)
+- **Sprint video:** [Watch Sprint 3 demonstration](https://www.youtube.com/watch?v=kt6Q-J3AuBA&feature=youtu.be)
 </details>
 
 ---

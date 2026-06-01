@@ -213,7 +213,7 @@ Adopting Keycloak reinforces the LGPD compliance principles documented in [LGPD.
 |:---|:---|
 | [LGPD.md](LGPD.md) | Compliance with Brazil's General Data Protection Law |
 | [BACKEND_INFRASTRUCTURE.md](BACKEND_INFRASTRUCTURE.md) | FastAPI backend architecture where the token is validated |
-| [RELATIONAL-DATABASE.md](RELATIONAL-DATABASE.md) | Data model — `TB_USER`, `TB_PROFILE`, `TB_SESSION` |
+| [RELATIONAL_DATABASE.md](RELATIONAL_DATABASE.md) | Data model — `TB_USER`, `TB_PROFILE`, `TB_SESSION` |
 | [INSTALLATION_MANUAL.md](INSTALLATION_MANUAL.md) | Docker Compose installation guide (includes Keycloak service) |
 | [LGPD_DATA_SEPARATION.md](LGPD_DATA_SEPARATION.md) | Sensitive data separation and Keycloak database |
 

@@ -3,7 +3,7 @@
 **Card 1 | General | LGPD / ROPA**
 
 **Related requirements:** RF11, RF10, RNF06, RNF08  
-**Related documents:** [LGPD.md](LGPD.md), [NON-RELATIONAL_DATABASE.md](NON-RELATIONAL_DATABASE.md), [RELATIONAL-DATABASE.md](RELATIONAL-DATABASE.md), README RF10/RF11  
+**Related documents:** [LGPD.md](LGPD.md), [NON_RELATIONAL_DATABASE.md](NON_RELATIONAL_DATABASE.md), [RELATIONAL_DATABASE.md](RELATIONAL_DATABASE.md), README RF10/RF11  
 **Validated with:** Professor Sakaue  
 **Last updated:** 05/10/2026
 

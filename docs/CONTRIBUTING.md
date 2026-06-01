@@ -195,19 +195,17 @@ Your message: "add login feature"
 ❌ feature/123-add_authentication   (underscore)
 ```
 
-### Automatic Creation
+### Automatic Suggestion
 
 ✅ **Workflow enabled:** `auto-create-branch.yml`
 
-When you create an issue:
+When you create an issue, the workflow triggers automatically and **posts a comment** with the suggested branch name and the git commands to run locally. The branch is **not created automatically** — it is the developer's responsibility to run the commands.
 
-1. **Add a label** (`type:feature`, `type:bug`, etc.)
-2. **GitHub Action triggers automatically**
-3. Branch is created: `type/123-description`
-4. A comment with the checkout command is posted on the issue
+Example comment posted on the issue:
 
 ```bash
-git checkout feature/123-add-login
+git checkout -b feature/123-add-login
+git push -u origin feature/123-add-login
 ```
 
 ---
@@ -230,8 +228,8 @@ git checkout feature/123-add-login
 │  ✅ Extracts number: 42                              │
 │  ✅ Extracts type: feature                           │
 │  ✅ Converts to kebab-case                           │
-│  ✅ Creates branch: feature/42-implement-validation  │
-│  ✅ Posts checkout command as issue comment           │
+│  ✅ Posts suggested branch name as issue comment     │
+│  ✅ Developer runs the commands locally to create it │
 └─────────────────────┬────────────────────────────────┘
                       │
                       ▼
@@ -721,7 +719,7 @@ git branch  # See current branch
 
 ## 📚 Related Documentation
 
-- **[ISSUE-TRACKING.md](ISSUE-TRACKING.md)** — How to track issues, branches, and PRs
+- **[ISSUE_TRACKING.md](ISSUE_TRACKING.md)** — How to track issues, branches, and PRs
 - **[Conventional Commits](https://www.conventionalcommits.org/)** — Official specification
 - **[Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)** — Branching model
 - **[DORA Metrics](https://cloud.google.com/blog/products/devops-sre/using-the-four-keys-to-measure-devops-performance)** — DevOps metrics
@@ -751,7 +749,7 @@ git reset --soft HEAD~1
 
 ## ❓ Questions?
 
-📖 See: [ISSUE-TRACKING.md](ISSUE-TRACKING.md)
+📖 See: [ISSUE_TRACKING.md](ISSUE_TRACKING.md)
 
 ---
 

@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, Loader2, Mail, Save, Shield, ShieldCheck, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { clearClientSession, getRefreshToken, saveClientSession } from "@/api/consent";
-import { refreshToken } from "@/api/auth";
+import { clearClientSession, getKeycloakIdToken, getRefreshToken, logoutUser, saveClientSession } from "@/api/consent";
+import { buildKeycloakLogoutUrl, refreshToken } from "@/api/auth";
 import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from "@/api/profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,8 +147,10 @@ export default function ProfilePage() {
 
     try {
       await deleteMyAccount(profile.user_uuid);
-      clearClientSession();
-      navigate("/goodbye", { replace: true });
+      const idToken = getKeycloakIdToken();
+      sessionStorage.setItem("post_logout_redirect", "goodbye");
+      await logoutUser();
+      window.location.href = buildKeycloakLogoutUrl(idToken);
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Não foi possível excluir sua conta."));
       setIsDeleting(false);

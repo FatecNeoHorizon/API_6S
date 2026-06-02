@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { initiateOAuthLogin, exchangeCodeForToken } from '@/api/auth'
+import { buildKeycloakLogoutUrl, initiateOAuthLogin, exchangeCodeForToken } from '@/api/auth'
 import { saveClientSession, logoutUser } from '@/api/consent'
 import zeusWelcomeImage from '@/assets/zeus_welcome_image.jpg'
 
 export function WelcomePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('kc_logout') === 'true') {
       window.history.replaceState(null, '', '/')
       logoutUser()
+
+      const postLogoutRedirect = sessionStorage.getItem('post_logout_redirect')
+      if (postLogoutRedirect) {
+        sessionStorage.removeItem('post_logout_redirect')
+        navigate(`/${postLogoutRedirect}`, { replace: true })
+      }
     }
-  }, [])
+  }, [navigate])
 
   async function handleLogin() {
     if (loading) return
@@ -60,7 +67,15 @@ export function WelcomePage() {
           if (res.kc_id_token) sessionStorage.setItem('kc_id_token', res.kc_id_token)
           navigate(res.pending_consent ? '/consent' : '/indicators')
         })
-        .catch(() => setLoading(false))
+        .catch((err) => {
+          setLoading(false)
+          const detail = err?.data?.detail
+          if (detail === 'user_not_registered' || detail === 'inactive_user') {
+            setLoginError('Sua conta não está registrada ou foi removida do sistema. Limpe a sessão e tente com outro acesso.')
+          } else {
+            setLoginError('Não foi possível autenticar. Tente novamente.')
+          }
+        })
     }
 
     window.addEventListener('message', handleMessage)
@@ -98,7 +113,7 @@ export function WelcomePage() {
         </h1>
 
         <button
-          onClick={handleLogin}
+          onClick={() => { setLoginError(''); handleLogin() }}
           disabled={loading}
           className="
             inline-flex items-center gap-2.5
@@ -112,6 +127,19 @@ export function WelcomePage() {
           {loading ? 'Aguardando login...' : 'Entrar no sistema'}
           {!loading && <span aria-hidden className="text-lg">→</span>}
         </button>
+
+        {loginError ? (
+          <div className="mt-6 max-w-xs rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive text-left">
+            <p>{loginError}</p>
+            <button
+              type="button"
+              className="mt-2 text-xs font-medium underline underline-offset-2 hover:opacity-80"
+              onClick={() => { window.location.href = buildKeycloakLogoutUrl(null) }}
+            >
+              Limpar sessão e tentar novamente
+            </button>
+          </div>
+        ) : null}
 
         <span className="mt-10 text-[11px] text-muted-foreground/50 tracking-widest uppercase">
           Powered by NeoHorizon

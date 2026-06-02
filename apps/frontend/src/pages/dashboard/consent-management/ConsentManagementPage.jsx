@@ -15,7 +15,8 @@ import {
   getMyProfile,
   updateMyConsentPreferences,
 } from "@/api/profile";
-import { clearClientSession } from "@/api/consent";
+import { clearClientSession, getKeycloakIdToken, logoutUser } from "@/api/consent";
+import { buildKeycloakLogoutUrl } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -151,6 +152,8 @@ export default function ConsentManagementPage() {
   const [loadError, setLoadError] = useState("");
   const [pendingChange, setPendingChange] = useState(null);
   const [confirmationText, setConfirmationText] = useState("");
+  const [revokeAllPending, setRevokeAllPending] = useState(false);
+  const [revokeAllConfirmText, setRevokeAllConfirmText] = useState("");
 
   async function loadData() {
     setLoading(true);
@@ -201,6 +204,41 @@ export default function ConsentManagementPage() {
     setConfirmationText("");
   }
 
+  function requestRevokeAll() {
+    setRevokeAllPending(true);
+    setRevokeAllConfirmText("");
+  }
+
+  function cancelRevokeAll() {
+    setRevokeAllPending(false);
+    setRevokeAllConfirmText("");
+  }
+
+  async function confirmRevokeAll() {
+    if (!profile?.user_uuid) return;
+
+    const acceptedConsents = consents.filter((c) => c.accepted);
+    if (acceptedConsents.length === 0) return;
+
+    setSaving(true);
+    try {
+      await updateMyConsentPreferences(
+        profile.user_uuid,
+        acceptedConsents.map((c) => ({ clause_id: c.clause_id, accepted: false })),
+      );
+      const idToken = getKeycloakIdToken();
+      sessionStorage.setItem("post_logout_redirect", "goodbye");
+      await logoutUser();
+      window.location.href = buildKeycloakLogoutUrl(idToken);
+    } catch {
+      toast.error("Não foi possível revogar todos os termos.");
+      setRevokeAllPending(false);
+      setRevokeAllConfirmText("");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function confirmPendingChange() {
     if (!pendingChange || !profile?.user_uuid) return;
 
@@ -215,8 +253,10 @@ export default function ConsentManagementPage() {
       ]);
 
       if (response.account_deleted) {
-        clearClientSession();
-        navigate("/goodbye", { replace: true });
+        const idToken = getKeycloakIdToken();
+        sessionStorage.setItem("post_logout_redirect", "goodbye");
+        await logoutUser();
+        window.location.href = buildKeycloakLogoutUrl(idToken);
         return;
       }
 
@@ -368,16 +408,86 @@ export default function ConsentManagementPage() {
         </CardContent>
       </Card>
 
-      <Button
-        type="button"
-        variant="outline"
-        className="w-fit"
-        onClick={loadData}
-        disabled={loading || saving}
-      >
-        <RotateCcw className="h-4 w-4" />
-        Recarregar preferências
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-fit"
+          onClick={loadData}
+          disabled={loading || saving}
+        >
+          <RotateCcw className="h-4 w-4" />
+          Recarregar preferências
+        </Button>
+
+        <Button
+          type="button"
+          variant="destructive"
+          className="w-fit"
+          onClick={requestRevokeAll}
+          disabled={loading || saving || consents.filter((c) => c.accepted).length === 0}
+        >
+          <ShieldOff className="h-4 w-4" />
+          Revogar todos os termos
+        </Button>
+      </div>
+
+      {revokeAllPending ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-destructive/10 p-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Revogar todos os termos
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Esta ação irá revogar todos os consentimentos aceitos.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-foreground">
+              <p className="font-semibold text-destructive">
+                Esta ação excluirá ou anonimizará permanentemente sua conta.
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>Sua conta e seus dados pessoais serão removidos ou anonimizados permanentemente.</li>
+                <li>Esta ação não poderá ser desfeita.</li>
+                <li>Você será deslogado imediatamente.</li>
+              </ul>
+
+              <label className="mt-4 block text-xs font-medium text-foreground">
+                Digite DELETE para confirmar
+              </label>
+              <Input
+                className="mt-2"
+                value={revokeAllConfirmText}
+                onChange={(e) => setRevokeAllConfirmText(e.target.value)}
+                placeholder="DELETE"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={cancelRevokeAll} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmRevokeAll}
+                disabled={saving || revokeAllConfirmText !== "DELETE"}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Confirmar exclusão
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ConfirmationModal
         pendingChange={pendingChange}

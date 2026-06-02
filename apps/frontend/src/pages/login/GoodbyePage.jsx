@@ -1,7 +1,14 @@
-import { Link } from "react-router-dom";
 import { ShieldAlert } from "lucide-react";
 
+import { buildKeycloakLogoutUrl } from "@/api/auth";
 import { Button } from "@/components/ui/button";
+
+function handleReturnToLogin() {
+  // Redireciona pelo logout do Keycloak para limpar a sessão SSO antes de
+  // voltar à tela de login. Sem isso, o Keycloak reautentica o usuário
+  // deletado automaticamente, sem exibir o formulário de login.
+  window.location.href = buildKeycloakLogoutUrl(null);
+}
 
 export default function GoodbyePage() {
   return (
@@ -21,8 +28,8 @@ export default function GoodbyePage() {
           gerenciamento de consentimentos da LGPD.
         </p>
 
-        <Button asChild className="mt-6">
-          <Link to="/login">Voltar ao login</Link>
+        <Button className="mt-6" onClick={handleReturnToLogin}>
+          Voltar ao login
         </Button>
       </div>
     </div>

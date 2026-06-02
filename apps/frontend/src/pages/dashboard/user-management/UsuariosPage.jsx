@@ -82,7 +82,7 @@ const getPerfilClassName = (profileName) => {
   return "bg-muted text-muted-foreground"
 }
 
-import { deactivateUserRequest } from "@/api/users"
+import { deleteUserRequest } from "@/api/users"
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   const detail = error?.response?.data?.detail ?? error?.detail ?? error?.data?.detail
@@ -349,15 +349,15 @@ export default function UsuariosPage() {
     const targetUserId = selectedUser.user_uuid
 
     try {
-      await deactivateUserRequest(targetUserId)
-      toast.success("Usuário desativado com sucesso")
+      await deleteUserRequest(targetUserId)
+      toast.success("Usuário excluído com sucesso")
       closeDeleteModal()
     } catch (error) {
       if (error?.status === 404) {
         toast.error("Usuário não encontrado.")
         closeDeleteModal()
       } else {
-        toast.error(getApiErrorMessage(error, "Não foi possível desativar o usuário. Tente novamente."))
+        toast.error(getApiErrorMessage(error, "Não foi possível excluir o usuário. Tente novamente."))
         setIsConfirmingDeleteAction(false)
         return
       }
@@ -368,7 +368,7 @@ export default function UsuariosPage() {
     try {
       await loadUsersAndProfiles()
     } catch {
-      toast.error("Usuário desativado, mas não foi possível atualizar a lista agora.")
+      toast.error("Usuário excluído, mas não foi possível atualizar a lista agora.")
     }
   }
 
@@ -377,7 +377,7 @@ export default function UsuariosPage() {
   )
 
   const createProfileOptions = profileOptions.length > 0 ? profileOptions : profiles
-  const deleteActionButtonLabel = "Desativar Usuário"
+  const deleteActionButtonLabel = "Excluir Usuário"
 
   return (
     <>
@@ -787,12 +787,12 @@ export default function UsuariosPage() {
               <div className="mb-4 rounded-full bg-destructive/10 p-3">
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-foreground">Desativar Usuário</h3>
+              <h3 className="mb-2 text-xl font-semibold text-foreground">Excluir Usuário</h3>
               <p className="mb-6 text-muted-foreground">
-                Você tem certeza que deseja desativar o usuário{" "}
+                Você tem certeza que deseja excluir permanentemente o usuário{" "}
                 <strong className="font-medium text-foreground">{selectedUser.username}</strong>?
                 <br />
-                O acesso será bloqueado imediatamente. A ação pode ser revertida.
+                Todos os dados do usuário serão removidos e o UUID será adicionado à blacklist. Esta ação é irreversível.
               </p>
             </div>
 
